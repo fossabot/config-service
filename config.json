@@ -1,0 +1,20 @@
+{
+    "port": 8080,
+    "mongo": {
+        "host": "localhost",
+        "port": 27017,        
+        "db": "caportalbe_db",
+        "user": "admin",
+        "password": "admin",
+        "useReplicaSet": false,
+        "replicaSet": ""
+
+    },
+    "logger":{
+        "level": "debug"
+    },
+    "telemetry": {
+        "jaegerAgentHost": "localhost",
+        "jaegerAgentPort": "32033"
+    }
+}
