@@ -23,7 +23,7 @@ func getClusters(c *gin.Context) {
 func getCluster(c *gin.Context) {
 	guid := c.Param(utils.GUID_FIELD)
 	if guid == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "cluster guid is required"})
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("cluster guid is required"))
 		return
 	}
 
@@ -39,11 +39,11 @@ func getCluster(c *gin.Context) {
 func postCluster(c *gin.Context) {
 	reqCluster := types.Cluster{}
 	if err := c.ShouldBindJSON(&reqCluster); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 	if reqCluster.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("cluster name is required"))
 		return
 	}
 
@@ -56,7 +56,7 @@ func postCluster(c *gin.Context) {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	} else if count > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "cluster name already exists"})
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("cluster with name %s already exists", reqCluster.Name))
 		return
 	}
 	clusterDoc := mongo.NewClusterDocument(reqCluster)
@@ -69,26 +69,29 @@ func postCluster(c *gin.Context) {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
-	c.JSON(http.StatusOK, "created")
+	c.JSON(http.StatusOK,  gin.H{"updated": true})
 }
 
 func putCluster(c *gin.Context) {
 	reqCluster := types.Cluster{}
 	if err := c.ShouldBindJSON(&reqCluster); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 	if guid := c.Param(utils.GUID_FIELD); guid != "" {
 		reqCluster.GUID = guid
 	}
 	if reqCluster.GUID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "cluster guid is required"})
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("cluster guid is required"))
 		return
 	}
+	utils.LogNTrace(fmt.Sprintf("put cluster %s - checking if cluster exists", reqCluster.GUID), c)
 	if !mongo.DocExists(c, reqCluster.GUID) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "cluster not found"})
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("cluster does not exist"))
 		return
 	}
+
+	utils.LogNTrace(fmt.Sprintf("post cluster %s - updating cluster", reqCluster.GUID), c)
 	clusterDoc := mongo.NewClusterDocument(reqCluster)
 	clusterDoc.ClearReadOnlyFields()
 	if _, err := mongo.GetWriteCollection(utils.CLUSTERS).UpdateOne(c.Request.Context(),
@@ -100,7 +103,7 @@ func putCluster(c *gin.Context) {
 		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to update cluster"))
 		return
 	}
-	c.JSON(http.StatusOK, "updated")
+	c.JSON(http.StatusOK, gin.H{"updated": true})
 }
 
 func getUniqueAcronym(name string, c *gin.Context) string {
