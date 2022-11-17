@@ -11,22 +11,22 @@ import (
 )
 
 func LogNTrace(msg string, c *gin.Context, fields ...zapcore.Field) {
-	doLog(msg, nil, c)
+	Log(msg, c, fields...)
 	AddEvent(msg, c)
 }
 
 func LogNTraceError(msg string, err error, c *gin.Context, fields ...zapcore.Field) {
-	doLog(msg, err, c)
+	LogError(msg, err, c, fields...)
 	AddEvent(msg, c)
 	TraceErrorSetStatus(msg, err, c)
 }
 
 func Log(msg string, c *gin.Context, fields ...zapcore.Field) {
-	doLog(msg, nil, c)
+	doLog(msg, nil, c, fields...)
 }
 
 func LogError(msg string, err error, c *gin.Context, fields ...zapcore.Field) {
-	doLog(msg, err, c)
+	doLog(msg, err, c, fields...)
 }
 
 func AddEvent(msg string, c *gin.Context) {
