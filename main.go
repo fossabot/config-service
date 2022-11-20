@@ -43,6 +43,10 @@ func setupRouter() *gin.Engine {
 	//recover from panics with 500 response
 	router.Use(ginzap.RecoveryWithZap(zapLogger, true))
 
+	router.GET("/readiness", func(c *gin.Context) {
+		c.JSON(http.StatusOK, nil)
+	})
+
 	//Public routes
 	login.AddRoutes(router)
 
