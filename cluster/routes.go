@@ -11,7 +11,7 @@ func AddRoutes(g *gin.Engine) {
 	cluster := g.Group("/cluster")
 
 	cluster.Use(func(c *gin.Context) {
-		//set clusters collection name in context
+		//set clusters collection name in context - used by mongo utils functions
 		c.Set(utils.COLLECTION, utils.CLUSTERS)
 		c.Next()
 	})
