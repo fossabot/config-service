@@ -15,7 +15,7 @@ func NewProjectionBuilder() *ProjectionBuilder {
 		filter: bson.D{},
 	}
 }
-func (f *ProjectionBuilder) Build() bson.D {
+func (f *ProjectionBuilder) Get() bson.D {
 	return f.filter
 }
 

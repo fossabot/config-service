@@ -7,10 +7,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-type Document interface {
-	GetCollectionName() string
-}
-
 type BaseDocument struct {
 	ID string `json:"_id" bson:"_id"`
 }

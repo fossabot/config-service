@@ -100,7 +100,8 @@ func login(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&loginDetails); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		c.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	c.SetCookie(utils.CUSTOMER_GUID, loginDetails.CustomerGUID, 2*60*60*24, "/", "", false, true)

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/go-multierror"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -14,21 +15,28 @@ import (
 
 //HandleDeleteDoc gin handler for delete document by id in collection in context
 func HandleDeleteDoc(c *gin.Context) {
-	if !DocExists(c, c.Param(utils.GUID_FIELD)) {
-		err := fmt.Errorf("document with id %s does not exist", c.Param(utils.GUID_FIELD))
-		utils.LogNTraceError("handle delete document failed", err, c)
-		c.AbortWithError(500, err)
+	collection, _, err := readContext(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := DeleteDoc(c, c.GetString(utils.COLLECTION), c.Param(utils.GUID_FIELD)); err != nil {
-		msg := fmt.Sprintf("failed to delete document GUID: %s  Collection: %s", c.Param(utils.GUID_FIELD), c.GetString(utils.COLLECTION))
-		utils.LogNTraceError(msg, err, c)
-		c.AbortWithError(500, err)
+	guid := c.Param(utils.GUID_FIELD)
+	if guid == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "guid is required"})
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{"deleted": true})
+
+	if res, err := GetWriteCollection(collection).DeleteOne(c.Request.Context(), bson.M{utils.ID_FIELD: guid}); err != nil {
+		msg := fmt.Sprintf("failed to delete document GUID: %s  Collection: %s", guid, collection)
+		utils.LogNTraceError(msg, err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	} else if res.DeletedCount == 0 {
+		c.JSON(http.StatusNotFound, fmt.Sprintf("document with id %s does not exist", guid))
+	}
+	c.JSON(http.StatusOK, "deleted")
 }
 
-//////////////////////////////////Sugar functions for mongo using values in gic context ///////////////////////////////////////////
+//////////////////////////////////Sugar functions for mongo using values in gin context ///////////////////////////////////////////
 
 //GetAllForCustomer returns all not delete docs for customer from customerGUID and collection in context
 func GetAllForCustomer[T any](c *gin.Context, result []T) ([]T, error) {
@@ -37,15 +45,11 @@ func GetAllForCustomer[T any](c *gin.Context, result []T) ([]T, error) {
 
 //GetAllForCustomerWithProjection returns all not delete docs for customer from customerGUID and collection in context
 func GetAllForCustomerWithProjection[T any](c *gin.Context, result []T, projection bson.D) ([]T, error) {
-	collection := c.GetString(utils.COLLECTION)
-	if collection == "" {
-		return nil, fmt.Errorf("collection name is not in context")
+	collection, _, err := readContext(c)
+	if err != nil {
+		return nil, err
 	}
-	customerGUID := c.GetString(utils.CUSTOMER_GUID)
-	if customerGUID == "" {
-		return nil, fmt.Errorf("customerGUID is not in context")
-	}
-	filter := NewFilterBuilder().WithNotDeleteForCustomer(c).Build()
+	filter := NewFilterBuilder().WithNotDeleteForCustomer(c).Get()
 	findOpts := options.Find().SetNoCursorTimeout(true)
 	if projection != nil {
 		findOpts.SetProjection(projection)
@@ -61,35 +65,63 @@ func GetAllForCustomerWithProjection[T any](c *gin.Context, result []T, projecti
 	return result, nil
 }
 
-//DCOExists returns true if document with _id exists for customer in context from collection in context
-func DocExists(c *gin.Context, id string) bool {
+func UpdateDocument[T any](c *gin.Context, id string, update bson.D, result *T) (*T, error) {
+	collection, _, err := readContext(c)
+	if err != nil {
+		return nil, err
+	}
+	filter := NewFilterBuilder().WithNotDeleteForCustomer(c).WithID(id).Get()
+	if err := GetWriteCollection(collection).FindOneAndUpdate(c.Request.Context(), filter, update,
+		options.FindOneAndUpdate().SetReturnDocument(options.After)).
+		Decode(result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+//DocExist returns true if at least one document with given filter exists for customer & collection in context
+func DocExist(c *gin.Context, f bson.D) (bool, error) {
+	collection, _, err := readContext(c)
+	if err != nil {
+		return false, err
+	}
 	filter := NewFilterBuilder().
 		WithNotDeleteForCustomer(c).
-		WithValue(utils.ID_FIELD, id).
-		Build()
-	n, _ := GetReadCollection(c.GetString(utils.COLLECTION)).CountDocuments(c.Request.Context(), filter, options.Count().SetLimit(1))
-	return n > 0
+		WithFilter(f).
+		Get()
+	n, err := GetReadCollection(collection).CountDocuments(c.Request.Context(), filter, options.Count().SetLimit(1))
+	return n > 0, err
 }
 
 //GetDocByGUID returns document by GUID for customer in context from collection in context
 func GetDocByGUID[T any](c *gin.Context, guid string, result *T) (*T, error) {
-	collection := c.GetString(utils.COLLECTION)
-	if collection == "" {
-		return nil, fmt.Errorf("collection name is not in context")
+	collection, _, err := readContext(c)
+	if err != nil {
+		return nil, err
 	}
-	customerGUID := c.GetString(utils.CUSTOMER_GUID)
-	if customerGUID == "" {
-		return nil, fmt.Errorf("customerGUID is not in context")
-	}
-	if err := GetReadCollection(collection).FindOne(c.Request.Context(),
-		NewFilterBuilder().
-			WithNotDeleteForCustomer(c).
-			WithGUID(guid).
-			Build()).Decode(result); err != nil {
+	if err := GetReadCollection(collection).
+		FindOne(c.Request.Context(),
+			NewFilterBuilder().
+				WithNotDeleteForCustomer(c).
+				WithGUID(guid).
+				Get()).
+		Decode(result); err != nil {
 		utils.LogNTraceError("failed to get document by id", err, c)
 		return nil, err
 	}
 	return result, nil
+}
+
+func CountDocs(c *gin.Context, f bson.D) (int64, error) {
+	collection, _, err := readContext(c)
+	if err != nil {
+		return 0, err
+	}
+	filter := NewFilterBuilder().
+		WithNotDeleteForCustomer(c).
+		WithFilter(f).
+		Get()
+	return GetReadCollection(collection).CountDocuments(c.Request.Context(), filter)
 }
 
 /////////////////////////////////////////mongo utils/////////////////////////////////////////
@@ -97,4 +129,41 @@ func GetDocByGUID[T any](c *gin.Context, guid string, result *T) (*T, error) {
 func DeleteDoc(c *gin.Context, collection string, id string) error {
 	_, err := GetWriteCollection(collection).DeleteOne(c.Request.Context(), bson.M{utils.ID_FIELD: id})
 	return err
+}
+
+func Map2BsonD(m map[string]interface{}, keyPrefix string) bson.D {
+	var result bson.D
+	for k, v := range m {
+		result = append(result, bson.E{Key: fmt.Sprintf("%s.%s", keyPrefix, k), Value: v})
+	}
+	return result
+}
+
+//helpers
+func readContext(c *gin.Context) (collection, customerGUID string, err error) {
+	collection, errCollection := readCollection(c)
+	if errCollection != nil {
+		err = multierror.Append(err, errCollection)
+	}
+	customerGUID, errGuid := readCustomerGUID(c)
+	if errGuid != nil {
+		err = multierror.Append(err, errGuid)
+	}
+	return collection, customerGUID, err
+}
+
+func readCustomerGUID(c *gin.Context) (customerGUID string, err error) {
+	customerGUID = c.GetString(utils.CUSTOMER_GUID)
+	if customerGUID == "" {
+		err = fmt.Errorf("customerGUID is not in context")
+	}
+	return customerGUID, err
+}
+
+func readCollection(c *gin.Context) (collection string, err error) {
+	collection = c.GetString(utils.COLLECTION)
+	if collection == "" {
+		err = fmt.Errorf("collection is not in context")
+	}
+	return collection, err
 }

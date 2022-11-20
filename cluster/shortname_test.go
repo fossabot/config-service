@@ -1,10 +1,10 @@
-package utils
+package cluster
 
 import (
 	"testing"
 )
 
-func TestGenerateAcronym(t *testing.T) {
+func TestGenerateShortName(t *testing.T) {
 	type args struct {
 		name              string
 		maxSize           int
@@ -110,9 +110,9 @@ func TestGenerateAcronym(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GenerateAcronym(tt.args.name, tt.args.maxSize, tt.args.versionsPerOption, tt.args.filter); got != tt.want {
+			if got := longName2short(tt.args.name, tt.args.maxSize, tt.args.versionsPerOption, tt.args.filter); got != tt.want {
 				//if got := GenerateAcronym(tt.args.name, tt.args.maxSize, tt.args.versionsPerOption, tt.args.filter); got != tt.want {
-				t.Errorf("%s GenerateAcronym() = %v, want %v", tt.name, got, tt.want)
+				t.Errorf("%s longName2short() = %v, want %v", tt.name, got, tt.want)
 			}
 		})
 	}

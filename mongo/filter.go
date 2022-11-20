@@ -11,14 +11,20 @@ type FilterBuilder struct {
 	filter bson.D
 }
 
-
 func NewFilterBuilder() *FilterBuilder {
 	return &FilterBuilder{
 		filter: bson.D{},
 	}
 }
 
-func (f *FilterBuilder) Build() bson.D {
+func (f *FilterBuilder) WithFilter(filter bson.D) *FilterBuilder {
+	for e := range filter {
+		f.filter = append(f.filter, filter[e])
+	}
+	return f
+}
+
+func (f *FilterBuilder) Get() bson.D {
 	return f.filter
 }
 
@@ -28,6 +34,10 @@ func (f *FilterBuilder) WithNotDeleteForCustomer(c *gin.Context) *FilterBuilder 
 
 func (f *FilterBuilder) WithGUID(guid string) *FilterBuilder {
 	return f.WithValue(utils.GUID_FIELD, guid)
+}
+
+func (f *FilterBuilder) WithID(id string) *FilterBuilder {
+	return f.WithValue(utils.ID_FIELD, id)
 }
 
 func (f *FilterBuilder) WithCustomer(c *gin.Context) *FilterBuilder {
@@ -71,4 +81,3 @@ func (f *FilterBuilder) AddNotExists(key string) *FilterBuilder {
 	f.filter = append(f.filter, bson.E{Key: key, Value: bson.D{{Key: "$exists", Value: false}}})
 	return f
 }
-

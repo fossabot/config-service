@@ -26,5 +26,5 @@ func AddRoutes(g *gin.Engine) {
 
 	cluster.PUT("/:"+utils.GUID_FIELD, putCluster)
 
-	cluster.DELETE("/"+utils.GUID_FIELD, mongo.HandleDeleteDoc)
+	cluster.DELETE("/:"+utils.GUID_FIELD, mongo.HandleDeleteDoc)
 }

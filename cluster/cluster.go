@@ -8,12 +8,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func getClusters(c *gin.Context) {
 	if clusters, err := mongo.GetAllForCustomer(c, []types.Cluster{}); err != nil {
 		utils.LogNTraceError("failed to read clusters", err, c)
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	} else {
 		c.JSON(http.StatusOK, clusters)
@@ -23,13 +24,13 @@ func getClusters(c *gin.Context) {
 func getCluster(c *gin.Context) {
 	guid := c.Param(utils.GUID_FIELD)
 	if guid == "" {
-		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("cluster guid is required"))
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster guid is required"})
 		return
 	}
 
 	if cluster, err := mongo.GetDocByGUID(c, guid, &types.Cluster{}); err != nil {
 		utils.LogNTraceError("failed to read cluster", err, c)
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	} else {
 		c.JSON(http.StatusOK, cluster)
@@ -39,92 +40,64 @@ func getCluster(c *gin.Context) {
 func postCluster(c *gin.Context) {
 	reqCluster := types.Cluster{}
 	if err := c.ShouldBindJSON(&reqCluster); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	if reqCluster.Name == "" {
-		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("cluster name is required"))
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster name is required"})
+		return
+	}
+	if exist, err := mongo.DocExist(c,
+		mongo.NewFilterBuilder().
+			WithValue("name", reqCluster.Name).
+			Get()); err != nil {
+		utils.LogNTraceError("failed to check if cluster name exist", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	} else if exist {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("cluster with name %s already exists", reqCluster.Name)})
 		return
 	}
 
-	nameFilter := mongo.NewFilterBuilder().
-		WithNotDeleteForCustomer(c).
-		WithValue("name", reqCluster.Name).
-		Build()
-	if count, err := mongo.GetReadCollection(utils.CLUSTERS).CountDocuments(c.Request.Context(), nameFilter); err != nil {
-		utils.LogNTraceError("failed to count cluster with name", err, c)
-		c.AbortWithError(http.StatusInternalServerError, err)
-		return
-	} else if count > 0 {
-		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("cluster with name %s already exists", reqCluster.Name))
-		return
-	}
 	clusterDoc := mongo.NewClusterDocument(reqCluster)
 	clusterDoc.Customers = append(clusterDoc.Customers, c.GetString(utils.CUSTOMER_GUID))
+	clusterDoc.Attributes[utils.SHORT_NAME_ATTRIBUTE] = getUniqueShortName(clusterDoc.Name, c)
 
-	clusterDoc.Attributes[utils.ACRONYM_ATTRIBUTE] = getUniqueAcronym(clusterDoc.Name, c)
-
-	if _, err := mongo.GetWriteCollection(utils.CLUSTERS).InsertOne(c.Request.Context(), clusterDoc); err != nil {
+	if result, err := mongo.GetWriteCollection(utils.CLUSTERS).InsertOne(c.Request.Context(), clusterDoc); err != nil {
 		utils.LogNTraceError("failed to create cluster", err, c)
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	} else {
+		c.JSON(http.StatusOK, gin.H{"GUID": result.InsertedID})
 	}
-	c.JSON(http.StatusOK,  gin.H{"updated": true})
 }
 
 func putCluster(c *gin.Context) {
 	reqCluster := types.Cluster{}
 	if err := c.ShouldBindJSON(&reqCluster); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	if guid := c.Param(utils.GUID_FIELD); guid != "" {
 		reqCluster.GUID = guid
 	}
 	if reqCluster.GUID == "" {
-		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("cluster guid is required"))
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster guid is required"})
 		return
 	}
-	utils.LogNTrace(fmt.Sprintf("put cluster %s - checking if cluster exists", reqCluster.GUID), c)
-	if !mongo.DocExists(c, reqCluster.GUID) {
-		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("cluster does not exist"))
+	//only attributes can be updated- so check if there are any attributes
+	if reqCluster.Attributes == nil || len(reqCluster.Attributes) == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster attributes are required"})
 		return
 	}
 
+	update := bson.D{bson.E{Key: "$set", Value: mongo.Map2BsonD(reqCluster.Attributes, utils.ATTRIBUTES_FIELD)}}
 	utils.LogNTrace(fmt.Sprintf("post cluster %s - updating cluster", reqCluster.GUID), c)
-	clusterDoc := mongo.NewClusterDocument(reqCluster)
-	clusterDoc.ClearReadOnlyFields()
-	if _, err := mongo.GetWriteCollection(utils.CLUSTERS).UpdateOne(c.Request.Context(),
-		mongo.NewFilterBuilder().
-			WithGUID(reqCluster.GUID).
-			Build(),
-		clusterDoc); err != nil {
+	if updatedCluster, err := mongo.UpdateDocument(c, reqCluster.GUID, update, &types.Cluster{}); err != nil {
 		utils.LogNTraceError("failed to update cluster", err, c)
-		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to update cluster"))
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"updated": true})
-}
-
-func getUniqueAcronym(name string, c *gin.Context) string {
-	existingAcronyms := getAllAcronyms(c)
-	return utils.MustGenerateAcronym(name, 5, existingAcronyms)
-}
-
-func getAllAcronyms(c *gin.Context) []string {
-	if clusters, err := mongo.GetAllForCustomerWithProjection(c, []types.Cluster{}, mongo.NewProjectionBuilder().
-		ExcludeID().
-		Include(utils.ACRONYM_FIELD).
-		Build()); err != nil {
-		utils.LogNTraceError("failed to read clusters", err, c)
-		return nil
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	} else {
-		var acrons []string
-		for _, doc := range clusters {
-			if doc.Attributes[utils.ACRONYM_ATTRIBUTE] != nil {
-				acrons = append(acrons, doc.Attributes[utils.ACRONYM_ATTRIBUTE].(string))
-			}
-		}
-		return acrons
+		c.JSON(http.StatusOK, updatedCluster)
 	}
+
 }

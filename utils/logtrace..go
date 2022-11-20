@@ -19,6 +19,9 @@ func LogNTraceError(msg string, err error, c *gin.Context, fields ...zapcore.Fie
 	LogError(msg, err, c, fields...)
 	AddEvent(msg, c)
 	TraceErrorSetStatus(msg, err, c)
+	if err != nil {
+		c.Error(err)
+	}
 }
 
 func Log(msg string, c *gin.Context, fields ...zapcore.Field) {
