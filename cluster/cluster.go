@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 func getClusters(c *gin.Context) {
@@ -85,13 +84,26 @@ func putCluster(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster guid is required"})
 		return
 	}
+	if reqCluster.Attributes == nil {
+		reqCluster.Attributes = map[string]interface{}{}
+	}
+	// if request does attributes does not include alias add if from the old cluster
+	if _, ok := reqCluster.Attributes[utils.SHORT_NAME_ATTRIBUTE]; !ok {
+		if oldCluster, err := mongo.GetDocByGUID(c, reqCluster.GUID, &types.Cluster{}); err != nil {
+			utils.LogNTraceError("failed to read cluster", err, c)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		} else {
+			reqCluster.Attributes[utils.SHORT_NAME_ATTRIBUTE] = oldCluster.Attributes[utils.SHORT_NAME_ATTRIBUTE]
+		}
+	}
 	//only attributes can be updated- so check if there are any attributes
-	if reqCluster.Attributes == nil || len(reqCluster.Attributes) == 0 {
+	if len(reqCluster.Attributes) == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster attributes are required"})
 		return
 	}
 
-	update := bson.D{bson.E{Key: "$set", Value: mongo.Map2BsonD(reqCluster.Attributes, utils.ATTRIBUTES_FIELD)}}
+	update := mongo.GetSetUpdate(reqCluster.Attributes, utils.ATTRIBUTES_FIELD)
 	utils.LogNTrace(fmt.Sprintf("post cluster %s - updating cluster", reqCluster.GUID), c)
 	if updatedCluster, err := mongo.UpdateDocument(c, reqCluster.GUID, update, &types.Cluster{}); err != nil {
 		utils.LogNTraceError("failed to update cluster", err, c)

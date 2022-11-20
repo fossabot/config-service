@@ -54,8 +54,8 @@ func requestLoggerWithFields(c *gin.Context) {
 }
 
 //requestSummary middleware logs request summary after request is served
-func requestSummary(logger *zap.Logger) func(c *gin.Context) {
-	return ginzap.GinzapWithConfig(logger, &ginzap.Config{
+func requestSummary() func(c *gin.Context) {
+	return ginzap.GinzapWithConfig(zapInfoLevelLogger, &ginzap.Config{
 		UTC:        true,
 		TimeFormat: time.RFC3339,
 		Context:    telemetryLogFields,

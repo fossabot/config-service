@@ -131,12 +131,25 @@ func DeleteDoc(c *gin.Context, collection string, id string) error {
 	return err
 }
 
-func Map2BsonD(m map[string]interface{}, keyPrefix string) bson.D {
+func Map2BsonD(m map[string]interface{}, fieldName string) bson.D {
 	var result bson.D
+	if fieldName != "" {
+		fieldName += "."
+	}
 	for k, v := range m {
-		result = append(result, bson.E{Key: fmt.Sprintf("%s.%s", keyPrefix, k), Value: v})
+		result = append(result, bson.E{Key: fmt.Sprintf("%s%s", fieldName, k), Value: v})
 	}
 	return result
+}
+
+//AddUpdate returns a bson.D for update document by adding values that are present in map, if keyPrefix not empty is added to keys in map
+func GetAddUpdate(m map[string]interface{}, fieldName string) bson.D {
+	return bson.D{bson.E{Key: "$set", Value: Map2BsonD(m, fieldName)}}
+}
+
+//GetSetUpdate returns a bson.D for update document by setting a new value for a field
+func GetSetUpdate(i interface{}, fieldName string) bson.D {
+	return bson.D{bson.E{Key: "$set", Value: bson.D{bson.E{Key: fieldName, Value: i}}}}
 }
 
 //helpers

@@ -24,6 +24,7 @@ import (
 )
 
 var zapLogger *zap.Logger
+var zapInfoLevelLogger *zap.Logger
 
 func initialize() (shutdown func()) {
 	conf := utils.GetConfig()
@@ -45,7 +46,7 @@ func initialize() (shutdown func()) {
 	return shutdown
 }
 
-func initLogger(config utils.LoggerConfig) *log.Logger {
+func initLogger(config utils.LoggerConfig) {
 	var err error
 	lvl := zap.NewAtomicLevel()
 	if config.Level == "" {
@@ -54,27 +55,40 @@ func initLogger(config utils.LoggerConfig) *log.Logger {
 	if err := lvl.UnmarshalText([]byte(config.Level)); err != nil {
 		panic(err)
 	}
-	ec := zap.NewProductionEncoderConfig()
-	ec.EncodeTime = zapcore.RFC3339NanoTimeEncoder
-	zapConf := zap.Config{DisableCaller: true, DisableStacktrace: true, Level: lvl,
-		Encoding: "json", EncoderConfig: ec,
-		OutputPaths: []string{"stdout"}, ErrorOutputPaths: []string{"stderr"}}
-	if config.LogFileName != "" { // empty string means the output is stdout
-		zapConf.OutputPaths = []string{config.LogFileName}
-		zapConf.ErrorOutputPaths = append(zapConf.ErrorOutputPaths, config.LogFileName)
-	}
+	// empty string means the output is stdout
+	zapConf := newZapConf(lvl, config)
 	zapLogger, err = zapConf.Build()
 	if err != nil {
 		panic(err)
 	}
 	zap.ReplaceGlobals(zapLogger)
 	zap.RedirectStdLog(zapLogger)
-	return zap.NewStdLog(zapLogger)
+	if lvl.Level() == zapcore.InfoLevel {
+		zapInfoLevelLogger = zapLogger
+	} else {
+		zapInfoLevelLogger, err = newZapConf(zap.NewAtomicLevelAt(zapcore.InfoLevel), config).Build()
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func newZapConf(lvl zap.AtomicLevel, config utils.LoggerConfig) zap.Config {
+	ec := zap.NewProductionEncoderConfig()
+	ec.EncodeTime = zapcore.RFC3339NanoTimeEncoder
+	zapConf := zap.Config{DisableCaller: true, DisableStacktrace: true, Level: lvl,
+		Encoding: "json", EncoderConfig: ec,
+		OutputPaths: []string{"stdout"}, ErrorOutputPaths: []string{"stderr"}}
+	if config.LogFileName != "" {
+		zapConf.OutputPaths = []string{config.LogFileName}
+		zapConf.ErrorOutputPaths = append(zapConf.ErrorOutputPaths, config.LogFileName)
+	}
+	return zapConf
 }
 
 //initTracer used to initialize tracer
 func initTracer(config utils.TelemetryConfig) *sdktrace.TracerProvider {
-	serviceName := "kubescape-config-service-Service"
+	serviceName := "kubescape-config-service"
 	hostName, _ := os.Hostname()
 	var err error
 	var exporter sdktrace.SpanExporter

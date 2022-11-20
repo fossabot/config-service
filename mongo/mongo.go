@@ -21,6 +21,7 @@ func MustConnect(config utils.MongoConfig) {
 		zap.L().Fatal("failed to connect to mongo", zap.Error(err))
 	}
 }
+
 func EnsureConnected() error {
 	wg := sync.WaitGroup{}
 	var dbPingError error
@@ -58,7 +59,6 @@ func EnsureConnected() error {
 
 func Connect(config utils.MongoConfig) error {
 	defaultOpts := options.Client().
-		SetRetryWrites(true).
 		SetRetryWrites(true)
 
 	dbOptionsWriteConcern := options.Database().

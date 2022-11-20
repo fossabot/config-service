@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.uber.org/zap"
@@ -20,23 +21,17 @@ import (
 func main() {
 	//initialize and deffer shutdown
 	defer initialize()()
-
 	//Create routes
 	router := setupRouter()
-
 	//Start server (blocking)
 	startServer(router)
 }
 
 func setupRouter() *gin.Engine {
-	//TODO: uncomment for production, disable gin default logger for more human friendly logs
-	//router := gin.Default()
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 
-	//recover from panics with 500 response
-	router.Use(gin.Recovery())
-
+	//general middlewares
 	//open telemetry middleware
 	router.Use(otelgin.Middleware("kubescape-config-service"))
 	//response trace headers middleware
@@ -44,9 +39,11 @@ func setupRouter() *gin.Engine {
 	//set a logger per request context with common fields
 	router.Use(requestLoggerWithFields)
 	//log request summary after served
-	router.Use(requestSummary(zapLogger))
+	router.Use(requestSummary())
+	//recover from panics with 500 response
+	router.Use(ginzap.RecoveryWithZap(zapLogger, true))
 
-	//login routes
+	//Public routes
 	login.AddRoutes(router)
 
 	//auth middleware
@@ -54,7 +51,6 @@ func setupRouter() *gin.Engine {
 
 	//add routes
 	cluster.AddRoutes(router)
-
 	return router
 }
 

@@ -1,5 +1,6 @@
 package types
 
+//TODO move the external repo for reuse with other projects
 type Base struct {
 	GUID       string                 `json:"guid"  bson:"guid,omitempty"`
 	Name       string                 `json:"name"  bson:"name,omitempty"`
@@ -15,11 +16,3 @@ type Cluster struct {
 //Old Types names for backward compatibility
 type PortalBase Base
 type PortalCluster Cluster
-
-func (d *Base) MergeAttributes(source *Base) {
-	for k, v := range source.Attributes {
-		if _, ok := d.Attributes[k]; !ok {
-			d.Attributes[k] = v
-		}
-	}
-}

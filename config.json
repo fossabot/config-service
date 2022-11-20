@@ -5,8 +5,7 @@
         "port": 27017,        
         "db": "caportalbe_db",
         "user": "admin",
-        "password": "admin",
-        "useReplicaSet": false,
+        "password": "admin",       
         "replicaSet": ""
 
     },

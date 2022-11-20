@@ -26,13 +26,12 @@ type LoggerConfig struct {
 }
 
 type MongoConfig struct {
-	Host          string `json:"host,omitempty"`
-	Port          string `json:"port,omitempty"`
-	User          string `json:"user,omitempty"`
-	Password      string `json:"password,omitempty"`
-	DB            string `json:"db,omitempty"`
-	UseReplicaSet bool   `json:"useReplicaSet"`
-	ReplicaSet    string `json:"replicaSet"`
+	Host       string `json:"host,omitempty"`
+	Port       string `json:"port,omitempty"`
+	User       string `json:"user,omitempty"`
+	Password   string `json:"password,omitempty"`
+	DB         string `json:"db,omitempty"`
+	ReplicaSet string `json:"replicaSet"`
 }
 
 // globalConfig with defaults
