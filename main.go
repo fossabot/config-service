@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"kubescape-config-service/cluster"
+	"kubescape-config-service/login"
 	"kubescape-config-service/utils"
 	"log"
 	"net/http"
@@ -45,8 +46,8 @@ func setupRouter() *gin.Engine {
 	//log request summary after served
 	router.Use(requestSummary(zapLogger))
 
-	//login route
-	router.POST("/login", login)
+	//login routes
+	login.AddRoutes(router)
 
 	//auth middleware
 	router.Use(authenticate)
@@ -90,20 +91,4 @@ func startServer(handler http.Handler) {
 		return
 	}
 	zapLogger.Info("Server exiting")
-}
-
-func login(c *gin.Context) {
-	loginDetails := struct {
-		CustomerGUID string `json:"customerGUID" binding:"required"`
-	}{
-		CustomerGUID: "",
-	}
-
-	if err := c.ShouldBindJSON(&loginDetails); err != nil {
-		c.Error(err)
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	c.SetCookie(utils.CUSTOMER_GUID, loginDetails.CustomerGUID, 2*60*60*24, "/", "", false, true)
-	c.JSON(http.StatusOK, nil)
 }
