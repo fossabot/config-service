@@ -10,83 +10,35 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func getClusters(c *gin.Context) {
-	if clusters, err := mongo.GetAllForCustomer(c, []types.Cluster{}); err != nil {
-		utils.LogNTraceError("failed to read clusters", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	} else {
-		c.JSON(http.StatusOK, clusters)
-	}
-}
-
-func getCluster(c *gin.Context) {
-	guid := c.Param(utils.GUID_FIELD)
-	if guid == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster guid is required"})
-		return
-	}
-
-	if cluster, err := mongo.GetDocByGUID(c, guid, &types.Cluster{}); err != nil {
-		utils.LogNTraceError("failed to read cluster", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	} else {
-		c.JSON(http.StatusOK, cluster)
-	}
-}
-
 func postCluster(c *gin.Context) {
-	reqCluster := types.Cluster{}
-	if err := c.ShouldBindJSON(&reqCluster); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	if reqCluster.Name == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster name is required"})
-		return
-	}
-	if exist, err := mongo.DocExist(c,
-		mongo.NewFilterBuilder().
-			WithValue("name", reqCluster.Name).
-			Get()); err != nil {
-		utils.LogNTraceError("failed to check if cluster name exist", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	} else if exist {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("cluster with name %s already exists", reqCluster.Name)})
-		return
-	}
-
-	clusterDoc := mongo.NewClusterDocument(reqCluster, c.GetString(utils.CUSTOMER_GUID))
-	clusterDoc.Content.Attributes[utils.SHORT_NAME_ATTRIBUTE] = getUniqueShortName(clusterDoc.Content.Name, c)
-
-	if result, err := mongo.GetWriteCollection(utils.CLUSTERS).InsertOne(c.Request.Context(), clusterDoc); err != nil {
-		utils.LogNTraceError("failed to create cluster", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	var reqCluster *types.Cluster
+	if iData, ok := c.Get("docData"); ok {
+		reqCluster = iData.(*types.Cluster)
 	} else {
-		c.JSON(http.StatusOK, gin.H{"GUID": result.InsertedID})
-	}
-}
-
-func putCluster(c *gin.Context) {
-	reqCluster := types.Cluster{}
-	if err := c.ShouldBindJSON(&reqCluster); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	if guid := c.Param(utils.GUID_FIELD); guid != "" {
-		reqCluster.GUID = guid
-	}
-	if reqCluster.GUID == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster guid is required"})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "docData is required"})
 		return
 	}
 	if reqCluster.Attributes == nil {
 		reqCluster.Attributes = map[string]interface{}{}
 	}
-	// if request does attributes does not include alias add if from the old cluster
+	reqCluster.Attributes[utils.SHORT_NAME_ATTRIBUTE] = getUniqueShortName(reqCluster.Name, c)
+	mongo.PostDoc(c, reqCluster)
+}
+
+func putCluster(c *gin.Context) {
+	var reqCluster *types.Cluster
+	if iData, ok := c.Get("docData"); ok {
+		reqCluster = iData.(*types.Cluster)
+	} else {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "docData is required"})
+		return
+	}
+	//only attributes can be updated - so check if there are any attributes
+	if len(reqCluster.Attributes) == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster attributes are required"})
+		return
+	}
+	// if request attributes do not include alias add it from the old cluster
 	if _, ok := reqCluster.Attributes[utils.SHORT_NAME_ATTRIBUTE]; !ok {
 		if oldCluster, err := mongo.GetDocByGUID(c, reqCluster.GUID, &types.Cluster{}); err != nil {
 			utils.LogNTraceError("failed to read cluster", err, c)
@@ -96,13 +48,8 @@ func putCluster(c *gin.Context) {
 			reqCluster.Attributes[utils.SHORT_NAME_ATTRIBUTE] = oldCluster.Attributes[utils.SHORT_NAME_ATTRIBUTE]
 		}
 	}
-	//only attributes can be updated- so check if there are any attributes
-	if len(reqCluster.Attributes) == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster attributes are required"})
-		return
-	}
-
-	update := mongo.GetUpdateValueCommand(reqCluster.Attributes, utils.ATTRIBUTES_FIELD)
+	//update only the attributes field
+	update := mongo.GetUpdateFieldValuesCommand(reqCluster.Attributes, utils.ATTRIBUTES_FIELD)
 	utils.LogNTrace(fmt.Sprintf("post cluster %s - updating cluster", reqCluster.GUID), c)
 	if updatedCluster, err := mongo.UpdateDocument(c, reqCluster.GUID, update, &types.Cluster{}); err != nil {
 		utils.LogNTraceError("failed to update cluster", err, c)
@@ -110,5 +57,4 @@ func putCluster(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusOK, updatedCluster)
 	}
-
 }

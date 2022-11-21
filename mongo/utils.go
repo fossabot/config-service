@@ -37,6 +37,99 @@ func HandleDeleteDoc(c *gin.Context) {
 	c.JSON(http.StatusOK, "deleted")
 }
 
+func HandleGetDocWithGUIDInPath[T DocData](c *gin.Context) {
+	guid := c.Param(utils.GUID_FIELD)
+	if guid == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "guid is required"})
+		return
+	}
+	var doc T
+	if policy, err := GetDocByGUID(c, guid, &doc); err != nil {
+		utils.LogNTraceError("failed to read document", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	} else {
+		c.JSON(http.StatusOK, policy)
+	}
+}
+
+func HandleGetAll[T DocData](c *gin.Context) {
+	if docs, err := GetAllForCustomer(c, []T{}); err != nil {
+		utils.LogNTraceError("failed to read all documents for customer", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	} else {
+		c.JSON(http.StatusOK, docs)
+	}
+}
+
+func HandlePostDocFromContext[T DocData](c *gin.Context) {
+	var doc T
+	if iData, ok := c.Get("docData"); ok {
+		doc = iData.(T)
+	} else {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "docData is required"})
+		return
+	}
+	PostDoc(c, doc)
+}
+
+func PostDoc[T DocData](c *gin.Context, doc T) {
+	collection, customerGUID, err := readContext(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	dbDoc := NewDocument(doc, customerGUID)
+	if result, err := GetWriteCollection(collection).InsertOne(c.Request.Context(), dbDoc); err != nil {
+		utils.LogNTraceError("failed to create document", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	} else {
+		c.JSON(http.StatusOK, gin.H{"GUID": result.InsertedID})
+	}
+}
+
+func PostValidation[T DocData](c *gin.Context) {
+	var doc T
+	if err := c.BindJSON(&doc); err != nil {
+		return
+	}
+	if doc.GetName() == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		return
+	}
+	if exist, err := DocExist(c,
+		NewFilterBuilder().
+			WithValue("name", doc.GetName()).
+			Get()); err != nil {
+		utils.LogNTraceError("PostValidation: failed to check if document with same name exist", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	} else if exist {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("document with name %s already exists", doc.GetName())})
+		return
+	}
+	c.Set("docData", doc)
+	c.Next()
+}
+
+func PutValidation[T DocData](c *gin.Context) {
+	var doc T
+	if err := c.BindJSON(&doc); err != nil {
+		return
+	}
+	if guid := c.Param(utils.GUID_FIELD); guid != "" {
+		doc.SetGUID(guid)
+	}
+	if doc.GetGUID() == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster guid is required"})
+		return
+	}
+	c.Set("docData", doc)
+	c.Next()
+}
+
 //////////////////////////////////Sugar functions for mongo using values in gin context ///////////////////////////////////////////
 
 //GetAllForCustomer returns all not delete docs for customer from customerGUID and collection in context
@@ -170,17 +263,15 @@ func Map2BsonD(m map[string]interface{}, fieldName string) bson.D {
 	return result
 }
 
-//AddUpdate returns a bson.D for update document by adding values that are present in map, if keyPrefix not empty is added to keys in map
-func GetUpdateValuesCommand(m map[string]interface{}, fieldPath string) bson.D {
-	return bson.D{bson.E{Key: "$set", Value: Map2BsonD(m, fieldPath)}}
+func GetUpdateFieldValuesCommand(m map[string]interface{}, fieldName string) bson.D {
+	return bson.D{bson.E{Key: "$set", Value: Map2BsonD(m, fieldName)}}
 }
 
-//GetSetUpdate returns a bson.D for update document by setting a new value for a field
-func GetUpdateValueCommand(i interface{}, fieldName string) bson.D {
+func GetUpdateFieldValueCommand(i interface{}, fieldName string) bson.D {
 	return bson.D{bson.E{Key: "$set", Value: bson.D{bson.E{Key: fieldName, Value: i}}}}
 }
 
-func GetUpdateDocCommand[T DocType](i T, excludeFields ...string) (bson.D, error) {
+func GetUpdateDocCommand[T DocData](i T, excludeFields ...string) (bson.D, error) {
 	var m map[string]interface{}
 	if data, err := json.Marshal(i); err != nil {
 		return nil, err
@@ -190,7 +281,7 @@ func GetUpdateDocCommand[T DocType](i T, excludeFields ...string) (bson.D, error
 	for _, f := range excludeFields {
 		delete(m, f)
 	}
-	return GetUpdateValuesCommand(m, ""), nil
+	return GetUpdateFieldValuesCommand(m, ""), nil
 }
 
 //helpers

@@ -2,23 +2,33 @@ package mongo
 
 import (
 	"kubescape-config-service/types"
-	"time"
 
-	"github.com/armosec/armoapi-go/armotypes"
 	uuid "github.com/satori/go.uuid"
 )
 
-type DocType interface {
-	*types.Cluster | *armotypes.PostureExceptionPolicy
+type DocData interface {
+	*types.Cluster | *types.PostureExceptionPolicy
+	InitNew()
+	GetGUID() string
+	SetGUID(guid string)
+	GetName() string
+	GetReadOnlyFields() []string
 }
 
-type Document[T DocType] struct {
+type Document[T DocData] struct {
 	ID        string   `json:"_id" bson:"_id"`
 	Customers []string `json:"customers" bson:"customers,omitempty"`
 	Content   T        `json:",inline" bson:"inline"`
 }
 
-func NewPostureExceptionDocument(e armotypes.PostureExceptionPolicy, customerGUID string) Document[*armotypes.PostureExceptionPolicy] {
+/*func NewDocument[T DocData](data T, customerGUID string) (Document[T], error) {
+	if cluster, ok := data.(*types.Cluster); ok {
+		return NewClusterDocument(*cluster, customerGUID), nil
+	}
+
+}
+
+func NewPostureExceptionDocument(e types.PostureExceptionPolicy, customerGUID string) Document[*types.PostureExceptionPolicy] {
 	if e.GUID == "" {
 		e.GUID = uuid.NewV4().String()
 	}
@@ -38,9 +48,23 @@ func NewClusterDocument(c types.Cluster, customerGUID string) Document[*types.Cl
 	return newDocument(c.GUID, customerGUID, &c)
 }
 
-func newDocument[T DocType](id, customerGUID string, content T) Document[T] {
+func initNewCluster(c types.Cluster, customerGUID string) types.Cluster {
+	if c.GUID == "" {
+		c.GUID = uuid.NewV4().String()
+	}
+	if c.Attributes == nil {
+		c.Attributes = make(map[string]interface{})
+	}
+	return c
+}
+*/
+func NewDocument[T DocData](content T, customerGUID string) Document[T] {
+	content.InitNew()
+	if content.GetGUID() == "" {
+		content.SetGUID(uuid.NewV4().String())
+	}
 	doc := Document[T]{
-		ID:      id,
+		ID:      content.GetGUID(),
 		Content: content,
 	}
 	if customerGUID != "" {

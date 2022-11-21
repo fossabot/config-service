@@ -1,6 +1,8 @@
 package posture_exception
 
 import (
+	"kubescape-config-service/mongo"
+	"kubescape-config-service/types"
 	"kubescape-config-service/utils"
 
 	"github.com/gin-gonic/gin"
@@ -16,10 +18,11 @@ func AddRoutes(g *gin.Engine) {
 	})
 
 	postureException.GET("/", getPostureExceptionPolicies)
-/*
-	postureException.GET("/:"+utils.GUID_FIELD, getPostureException)
-	*/
-	postureException.POST("/", postPostureExceptionPolicy)
+
+	postureException.GET("/:"+utils.GUID_FIELD, mongo.HandleGetDocWithGUIDInPath[*types.PostureExceptionPolicy])
+
+	postureException.Use(mongo.PostValidation[*types.PostureExceptionPolicy])
+	postureException.POST("/", mongo.HandlePostDocFromContext[*types.PostureExceptionPolicy])
 	/*
 		postureException.PUT("/", putPostureException)
 
