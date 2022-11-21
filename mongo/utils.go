@@ -90,6 +90,35 @@ func PostDoc[T DocData](c *gin.Context, doc T) {
 	}
 }
 
+func PutDoc[T DocData](c *gin.Context, doc T) {
+	update, err := GetUpdateDocCommand(doc, doc.GetReadOnlyFields()...)
+	if err != nil {
+		utils.LogNTraceError("failed to create update command", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	var res T
+	if res, err := UpdateDocument(c, doc.GetGUID(), update, &res); err != nil {
+		utils.LogNTraceError("failed to update document", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	} else {
+		c.JSON(http.StatusOK, res)
+	}
+}
+
+func HandlePutDocFromContext[T DocData](c *gin.Context) {
+	var doc T
+	if iData, ok := c.Get("docData"); ok {
+		doc = iData.(T)
+	} else {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "docData is required"})
+		return
+	}
+	PutDoc(c, doc)
+}
+
+
+
 func PostValidation[T DocData](c *gin.Context) {
 	var doc T
 	if err := c.BindJSON(&doc); err != nil {

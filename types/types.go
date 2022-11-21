@@ -12,8 +12,6 @@ var ClusterROFields = append([]string{"subscription_date"}, CommonROFields...)
 var PostureExceptionROFields = append([]string{"creationTime"}, CommonROFields...)
 var RepositoryROFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, CommonROFields...)
 
-// "creationTime", "creationDate", "provider", "owner", "repoName", "branchName"}
-
 type Cluster struct {
 	armotypes.PortalBase `json:",inline" bson:"inline"`
 	SubscriptionDate     string `json:"subscription_date,omitempty" bson:"subscription_date,omitempty"`

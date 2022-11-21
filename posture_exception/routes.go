@@ -18,16 +18,16 @@ func AddRoutes(g *gin.Engine) {
 	})
 
 	postureException.GET("/", getPostureExceptionPolicies)
-
 	postureException.GET("/:"+utils.GUID_FIELD, mongo.HandleGetDocWithGUIDInPath[*types.PostureExceptionPolicy])
+	postureException.DELETE("/:"+utils.GUID_FIELD, mongo.HandleDeleteDoc)
 
-	postureException.Use(mongo.PostValidation[*types.PostureExceptionPolicy])
-	postureException.POST("/", mongo.HandlePostDocFromContext[*types.PostureExceptionPolicy])
-	/*
-		postureException.PUT("/", putPostureException)
+	posturePost := postureException.Group("/")
+	posturePost.Use(mongo.PostValidation[*types.PostureExceptionPolicy])
+	posturePost.POST("/", mongo.HandlePostDocFromContext[*types.PostureExceptionPolicy])
 
-		posture_exception.PUT("/:"+utils.GUID_FIELD, putPostureException)
+	posturePut := postureException.Group("/")
+	posturePut.Use(mongo.PutValidation[*types.PostureExceptionPolicy])
+	posturePut.PUT("/", mongo.HandlePutDocFromContext[*types.PostureExceptionPolicy])
+	posturePut.PUT("/:"+utils.GUID_FIELD, mongo.HandlePutDocFromContext[*types.PostureExceptionPolicy])
 
-		posture_exception.DELETE("/:"+utils.GUID_FIELD, mongo.HandleDeleteDoc)
-	*/
 }
