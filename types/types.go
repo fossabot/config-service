@@ -12,12 +12,25 @@ var ClusterROFields = append([]string{"subscription_date"}, CommonROFields...)
 var PostureExceptionROFields = append([]string{"creationTime"}, CommonROFields...)
 var RepositoryROFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, CommonROFields...)
 
+type DocContent interface {
+	*Cluster | *PostureExceptionPolicy
+	InitNew()
+	GetGUID() string
+	SetGUID(guid string)
+	GetName() string
+	GetReadOnlyFields() []string
+}
+
+//TODO move to armotypes
 type Cluster struct {
 	armotypes.PortalBase `json:",inline" bson:"inline"`
 	SubscriptionDate     string `json:"subscription_date,omitempty" bson:"subscription_date,omitempty"`
 	LastLoginDate        string `json:"last_login_date,omitempty" bson:"last_login_date,omitempty"`
 }
 
+type PostureExceptionPolicy armotypes.PostureExceptionPolicy
+
+//Doc Content implementations
 func (c *Cluster) GetGUID() string {
 	return c.GUID
 }
@@ -38,8 +51,6 @@ func (c *Cluster) InitNew() {
 		c.Attributes = make(map[string]interface{})
 	}
 }
-
-type PostureExceptionPolicy armotypes.PostureExceptionPolicy
 
 func (p *PostureExceptionPolicy) GetGUID() string {
 	return p.GUID

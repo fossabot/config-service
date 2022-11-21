@@ -1,7 +1,7 @@
 package cluster
 
 import (
-	"kubescape-config-service/mongo"
+	"kubescape-config-service/dbhandler"
 	"kubescape-config-service/types"
 	"kubescape-config-service/utils"
 	"regexp"
@@ -16,7 +16,7 @@ import (
 
 //getAllShortNames returns the short names of all clusters for the customer in context
 func getAllShortNames(c *gin.Context) []string {
-	if clusters, err := mongo.GetAllForCustomerWithProjection(c, []types.Cluster{}, mongo.NewProjectionBuilder().
+	if clusters, err := dbhandler.GetAllForCustomerWithProjection(c, []types.Cluster{}, dbhandler.NewProjectionBuilder().
 		ExcludeID().
 		Include(utils.SHORT_NAME_FIELD).
 		Get()); err != nil {

@@ -1,7 +1,7 @@
 package posture_exception
 
 import (
-	"kubescape-config-service/mongo"
+	"kubescape-config-service/dbhandler"
 	"kubescape-config-service/types"
 	"kubescape-config-service/utils"
 	"net/http"
@@ -12,8 +12,8 @@ import (
 func getPostureExceptionPolicies(c *gin.Context) {
 	if _, list := c.GetQuery("list"); list {
 		//get all policies names
-		namesProjection := mongo.NewProjectionBuilder().Include("name").Get()
-		if policiesNames, err := mongo.GetAllForCustomerWithProjection(c, []string{}, namesProjection); err != nil {
+		namesProjection := dbhandler.NewProjectionBuilder().Include("name").Get()
+		if policiesNames, err := dbhandler.GetAllForCustomerWithProjection(c, []string{}, namesProjection); err != nil {
 			utils.LogNTraceError("failed to read polices", err, c)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -23,7 +23,7 @@ func getPostureExceptionPolicies(c *gin.Context) {
 		}
 	} else if policyName := c.Query("policyName"); policyName != "" {
 		//get policy by name
-		if policy, err := mongo.GetDocByName(c, policyName, &types.PostureExceptionPolicy{}); err != nil {
+		if policy, err := dbhandler.GetDocByName(c, policyName, &types.PostureExceptionPolicy{}); err != nil {
 			utils.LogNTraceError("failed to read policy", err, c)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -32,5 +32,5 @@ func getPostureExceptionPolicies(c *gin.Context) {
 			return
 		}
 	}
-	mongo.HandleGetAll[*types.PostureExceptionPolicy](c)
+	dbhandler.HandleGetAll[*types.PostureExceptionPolicy](c)
 }

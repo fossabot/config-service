@@ -2,7 +2,7 @@ package cluster
 
 import (
 	"fmt"
-	"kubescape-config-service/mongo"
+	"kubescape-config-service/dbhandler"
 	"kubescape-config-service/types"
 	"kubescape-config-service/utils"
 	"net/http"
@@ -22,7 +22,7 @@ func postCluster(c *gin.Context) {
 		reqCluster.Attributes = map[string]interface{}{}
 	}
 	reqCluster.Attributes[utils.SHORT_NAME_ATTRIBUTE] = getUniqueShortName(reqCluster.Name, c)
-	mongo.PostDoc(c, reqCluster)
+	dbhandler.PostDoc(c, reqCluster)
 }
 
 func putCluster(c *gin.Context) {
@@ -40,7 +40,7 @@ func putCluster(c *gin.Context) {
 	}
 	// if request attributes do not include alias add it from the old cluster
 	if _, ok := reqCluster.Attributes[utils.SHORT_NAME_ATTRIBUTE]; !ok {
-		if oldCluster, err := mongo.GetDocByGUID(c, reqCluster.GUID, &types.Cluster{}); err != nil {
+		if oldCluster, err := dbhandler.GetDocByGUID(c, reqCluster.GUID, &types.Cluster{}); err != nil {
 			utils.LogNTraceError("failed to read cluster", err, c)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -49,9 +49,9 @@ func putCluster(c *gin.Context) {
 		}
 	}
 	//update only the attributes field
-	update := mongo.GetUpdateFieldValuesCommand(reqCluster.Attributes, utils.ATTRIBUTES_FIELD)
+	update := dbhandler.GetUpdateFieldValuesCommand(reqCluster.Attributes, utils.ATTRIBUTES_FIELD)
 	utils.LogNTrace(fmt.Sprintf("post cluster %s - updating cluster", reqCluster.GUID), c)
-	if updatedCluster, err := mongo.UpdateDocument(c, reqCluster.GUID, update, &types.Cluster{}); err != nil {
+	if updatedCluster, err := dbhandler.UpdateDocument(c, reqCluster.GUID, update, &types.Cluster{}); err != nil {
 		utils.LogNTraceError("failed to update cluster", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	} else {

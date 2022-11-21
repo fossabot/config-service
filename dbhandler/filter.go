@@ -1,4 +1,4 @@
-package mongo
+package dbhandler
 
 import (
 	"kubescape-config-service/utils"
