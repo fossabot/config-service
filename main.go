@@ -4,6 +4,7 @@ import (
 	"context"
 	"kubescape-config-service/cluster"
 	"kubescape-config-service/login"
+	"kubescape-config-service/prob"
 	"kubescape-config-service/utils"
 	"log"
 	"net/http"
@@ -43,17 +44,16 @@ func setupRouter() *gin.Engine {
 	//recover from panics with 500 response
 	router.Use(ginzap.RecoveryWithZap(zapLogger, true))
 
-	router.GET("/readiness", func(c *gin.Context) {
-		c.JSON(http.StatusOK, nil)
-	})
-
 	//Public routes
+	//readiness and liveness probes
+	prob.AddRoutes(router)
+	//login routes
 	login.AddRoutes(router)
 
 	//auth middleware
 	router.Use(authenticate)
 
-	//add routes
+	//add protected routes
 	cluster.AddRoutes(router)
 	return router
 }

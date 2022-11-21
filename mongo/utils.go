@@ -1,6 +1,7 @@
 package mongo
 
 import (
+	"encoding/json"
 	"fmt"
 	"kubescape-config-service/utils"
 	"net/http"
@@ -93,6 +94,14 @@ func DocExist(c *gin.Context, f bson.D) (bool, error) {
 	return n > 0, err
 }
 
+//DocWithNameExist calls with given name filter
+func DocWithNameExist(c *gin.Context, name string) (bool, error) {
+	return DocExist(c,
+		NewFilterBuilder().
+			WithValue("name", name).
+			Get())
+}
+
 //GetDocByGUID returns document by GUID for customer in context from collection in context
 func GetDocByGUID[T any](c *gin.Context, guid string, result *T) (*T, error) {
 	collection, _, err := readContext(c)
@@ -104,6 +113,25 @@ func GetDocByGUID[T any](c *gin.Context, guid string, result *T) (*T, error) {
 			NewFilterBuilder().
 				WithNotDeleteForCustomer(c).
 				WithGUID(guid).
+				Get()).
+		Decode(result); err != nil {
+		utils.LogNTraceError("failed to get document by id", err, c)
+		return nil, err
+	}
+	return result, nil
+}
+
+//GetDocByGUID returns document by GUID for customer in context from collection in context
+func GetDocByName[T any](c *gin.Context, name string, result *T) (*T, error) {
+	collection, _, err := readContext(c)
+	if err != nil {
+		return nil, err
+	}
+	if err := GetReadCollection(collection).
+		FindOne(c.Request.Context(),
+			NewFilterBuilder().
+				WithNotDeleteForCustomer(c).
+				WithName(name).
 				Get()).
 		Decode(result); err != nil {
 		utils.LogNTraceError("failed to get document by id", err, c)
@@ -143,13 +171,26 @@ func Map2BsonD(m map[string]interface{}, fieldName string) bson.D {
 }
 
 //AddUpdate returns a bson.D for update document by adding values that are present in map, if keyPrefix not empty is added to keys in map
-func GetAddUpdate(m map[string]interface{}, fieldName string) bson.D {
-	return bson.D{bson.E{Key: "$set", Value: Map2BsonD(m, fieldName)}}
+func GetUpdateValuesCommand(m map[string]interface{}, fieldPath string) bson.D {
+	return bson.D{bson.E{Key: "$set", Value: Map2BsonD(m, fieldPath)}}
 }
 
 //GetSetUpdate returns a bson.D for update document by setting a new value for a field
-func GetSetUpdate(i interface{}, fieldName string) bson.D {
+func GetUpdateValueCommand(i interface{}, fieldName string) bson.D {
 	return bson.D{bson.E{Key: "$set", Value: bson.D{bson.E{Key: fieldName, Value: i}}}}
+}
+
+func GetUpdateDocCommand[T DocType](i T, excludeFields ...string) (bson.D, error) {
+	var m map[string]interface{}
+	if data, err := json.Marshal(i); err != nil {
+		return nil, err
+	} else if err := json.Unmarshal(data, &m); err != nil {
+		return nil, err
+	}
+	for _, f := range excludeFields {
+		delete(m, f)
+	}
+	return GetUpdateValuesCommand(m, ""), nil
 }
 
 //helpers

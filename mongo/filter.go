@@ -40,6 +40,10 @@ func (f *FilterBuilder) WithID(id string) *FilterBuilder {
 	return f.WithValue(utils.ID_FIELD, id)
 }
 
+func (f *FilterBuilder) WithName(name string) *FilterBuilder {
+	return f.WithValue(utils.NAME_FIELD, name)
+}
+
 func (f *FilterBuilder) WithCustomer(c *gin.Context) *FilterBuilder {
 	return f.WithValue(utils.CUSTOMERS, c.GetString(utils.CUSTOMER_GUID))
 }

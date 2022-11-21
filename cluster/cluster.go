@@ -58,9 +58,8 @@ func postCluster(c *gin.Context) {
 		return
 	}
 
-	clusterDoc := mongo.NewClusterDocument(reqCluster)
-	clusterDoc.Customers = append(clusterDoc.Customers, c.GetString(utils.CUSTOMER_GUID))
-	clusterDoc.Attributes[utils.SHORT_NAME_ATTRIBUTE] = getUniqueShortName(clusterDoc.Name, c)
+	clusterDoc := mongo.NewClusterDocument(reqCluster, c.GetString(utils.CUSTOMER_GUID))
+	clusterDoc.Content.Attributes[utils.SHORT_NAME_ATTRIBUTE] = getUniqueShortName(clusterDoc.Content.Name, c)
 
 	if result, err := mongo.GetWriteCollection(utils.CLUSTERS).InsertOne(c.Request.Context(), clusterDoc); err != nil {
 		utils.LogNTraceError("failed to create cluster", err, c)
@@ -103,7 +102,7 @@ func putCluster(c *gin.Context) {
 		return
 	}
 
-	update := mongo.GetSetUpdate(reqCluster.Attributes, utils.ATTRIBUTES_FIELD)
+	update := mongo.GetUpdateValueCommand(reqCluster.Attributes, utils.ATTRIBUTES_FIELD)
 	utils.LogNTrace(fmt.Sprintf("post cluster %s - updating cluster", reqCluster.GUID), c)
 	if updatedCluster, err := mongo.UpdateDocument(c, reqCluster.GUID, update, &types.Cluster{}); err != nil {
 		utils.LogNTraceError("failed to update cluster", err, c)

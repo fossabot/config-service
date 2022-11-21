@@ -106,6 +106,7 @@ func Disconnect() {
 }
 
 func GetReadCollection(collectionName string) *mongo.Collection {
+	mongoDB.Client().NumberSessionsInProgress()
 	return mongoDB.Collection(collectionName)
 }
 
@@ -157,14 +158,14 @@ func getPrimaryUrl(config utils.MongoConfig) string {
 							}
 						}
 					} else {
-						zap.L().Error("cannot find members in replSetGetStatus result", zap.Error(err))
+						zap.L().Warn("cannot find members in replSetGetStatus result", zap.Error(err))
 					}
 				} else {
-					zap.L().Error("failed to run replSetGetStatus command", zap.Error(err))
+					zap.L().Warn("failed to run replSetGetStatus command", zap.Error(err))
 				}
 			}
 		}
-		zap.L().Error("failed to get primary mongo url", zap.Error(err))
+		zap.L().Warn("failed to get primary mongo url from admin DB fallback to generated url", zap.Error(err))
 		//fallback to default url with replicaSet name if no primary found
 		return replicaSetUrl
 	}
