@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
@@ -144,21 +145,8 @@ func getPrimaryUrl(config utils.MongoConfig) string {
 			if rsDB != nil {
 				var result bson.M
 				if err := rsDB.RunCommand(context.TODO(), bson.D{{Key: "replSetGetStatus", Value: 1}}).Decode(result); err != nil {
-					if iMem, ok := result["members"]; ok {
-						if members, ok := iMem.([]interface{}); ok {
-							for _, iMember := range members {
-								if member, ok := iMember.(map[string]interface{}); ok {
-									if member["stateStr"] == "PRIMARY" {
-										if host, ok := member["name"].(string); ok {
-											zap.L().Info("primary mongo host", zap.String("host", host))
-											return generateMongoUrl(host, config.Port, config.User, config.Password)
-										}
-									}
-								}
-							}
-						}
-					} else {
-						zap.L().Warn("cannot find members in replSetGetStatus result", zap.Error(err))
+					if url := parseUrlFromReplicaSetStatusCommand(config, result); url != "" {
+						return url
 					}
 				} else {
 					zap.L().Warn("failed to run replSetGetStatus command", zap.Error(err))
@@ -170,5 +158,26 @@ func getPrimaryUrl(config utils.MongoConfig) string {
 		return replicaSetUrl
 	}
 	//no replicaSet defined
+	return ""
+}
+
+func parseUrlFromReplicaSetStatusCommand(config utils.MongoConfig, result primitive.M) string {
+	if iMem, ok := result["members"]; ok {
+		if members, ok := iMem.([]interface{}); ok {
+			for _, iMember := range members {
+				if member, ok := iMember.(map[string]interface{}); ok {
+					if member["stateStr"] == "PRIMARY" {
+						if host, ok := member["name"].(string); ok {
+							zap.L().Info("primary mongo host", zap.String("host", host))
+							return generateMongoUrl(host, config.Port, config.User, config.Password)
+						}
+					}
+				}
+			}
+		}
+	} else {
+		zap.L().Warn("cannot find members in replSetGetStatus result")
+	}
+	zap.L().Warn("cannot find primary in replSetGetStatus result")
 	return ""
 }
