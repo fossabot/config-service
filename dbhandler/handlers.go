@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"kubescape-config-service/mongo"
 	"kubescape-config-service/types"
-	"kubescape-config-service/utils"
 	"kubescape-config-service/utils/consts"
+	"kubescape-config-service/utils/log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -29,7 +29,7 @@ func HandleDeleteDoc(c *gin.Context) {
 
 	if res, err := mongo.GetWriteCollection(collection).DeleteOne(c.Request.Context(), bson.M{consts.ID_FIELD: guid}); err != nil {
 		msg := fmt.Sprintf("failed to delete document GUID: %s  Collection: %s", guid, collection)
-		utils.LogNTraceError(msg, err, c)
+		log.LogNTraceError(msg, err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	} else if res.DeletedCount == 0 {
@@ -46,7 +46,7 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 		return
 	}
 	if policy, err := GetDocByGUID[T](c, guid); err != nil {
-		utils.LogNTraceError("failed to read document", err, c)
+		log.LogNTraceError("failed to read document", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	} else {
@@ -56,7 +56,7 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 
 func HandleGetAll[T types.DocContent](c *gin.Context) {
 	if docs, err := GetAllForCustomer[T](c); err != nil {
-		utils.LogNTraceError("failed to read all documents for customer", err, c)
+		log.LogNTraceError("failed to read all documents for customer", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	} else {
@@ -101,7 +101,7 @@ func PostDoc[T types.DocContent](c *gin.Context, doc T) {
 	}
 	dbDoc := NewDocument(doc, customerGUID)
 	if result, err := mongo.GetWriteCollection(collection).InsertOne(c.Request.Context(), dbDoc); err != nil {
-		utils.LogNTraceError("failed to create document", err, c)
+		log.LogNTraceError("failed to create document", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	} else {
@@ -112,12 +112,12 @@ func PostDoc[T types.DocContent](c *gin.Context, doc T) {
 func PutDoc[T types.DocContent](c *gin.Context, doc T) {
 	update, err := GetUpdateDocCommand(doc, doc.GetReadOnlyFields()...)
 	if err != nil {
-		utils.LogNTraceError("failed to create update command", err, c)
+		log.LogNTraceError("failed to create update command", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	if res, err := UpdateDocument[T](c, doc.GetGUID(), update); err != nil {
-		utils.LogNTraceError("failed to update document", err, c)
+		log.LogNTraceError("failed to update document", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	} else {
 		c.JSON(http.StatusOK, res)
@@ -137,7 +137,7 @@ func PostValidation[T types.DocContent](c *gin.Context) {
 		NewFilterBuilder().
 			WithName(doc.GetName()).
 			Get()); err != nil {
-		utils.LogNTraceError("PostValidation: failed to check if document with same name exist", err, c)
+		log.LogNTraceError("PostValidation: failed to check if document with same name exist", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	} else if exist {

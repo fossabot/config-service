@@ -3,8 +3,8 @@ package dbhandler
 import (
 	"fmt"
 	"kubescape-config-service/mongo"
-	"kubescape-config-service/utils"
 	"kubescape-config-service/utils/consts"
+	"kubescape-config-service/utils/log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-multierror"
@@ -95,7 +95,7 @@ func GetDocByGUID[T any](c *gin.Context, guid string) (*T, error) {
 				WithGUID(guid).
 				Get()).
 		Decode(&result); err != nil {
-		utils.LogNTraceError("failed to get document by id", err, c)
+		log.LogNTraceError("failed to get document by id", err, c)
 		return nil, err
 	}
 	return &result, nil
@@ -115,7 +115,7 @@ func GetDocByName[T any](c *gin.Context, name string) (*T, error) {
 				WithName(name).
 				Get()).
 		Decode(&result); err != nil {
-		utils.LogNTraceError("failed to get document by id", err, c)
+		log.LogNTraceError("failed to get document by id", err, c)
 		return nil, err
 	}
 	return &result, nil

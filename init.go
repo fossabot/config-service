@@ -46,7 +46,7 @@ func initialize() (shutdown func()) {
 	return shutdown
 }
 
-func initLogger(config utils.LoggerConfig) {
+func initLogger(config log.LoggerConfig) {
 	var err error
 	lvl := zap.NewAtomicLevel()
 	if config.Level == "" {
@@ -73,7 +73,7 @@ func initLogger(config utils.LoggerConfig) {
 	}
 }
 
-func newZapConf(lvl zap.AtomicLevel, config utils.LoggerConfig) zap.Config {
+func newZapConf(lvl zap.AtomicLevel, config log.LoggerConfig) zap.Config {
 	ec := zap.NewProductionEncoderConfig()
 	ec.EncodeTime = zapcore.RFC3339NanoTimeEncoder
 	zapConf := zap.Config{DisableCaller: true, DisableStacktrace: true, Level: lvl,

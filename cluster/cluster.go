@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"kubescape-config-service/dbhandler"
 	"kubescape-config-service/types"
-	"kubescape-config-service/utils"
 	"kubescape-config-service/utils/consts"
+	"kubescape-config-service/utils/log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -43,7 +43,7 @@ func putCluster(c *gin.Context) {
 	// if request attributes do not include alias add it from the old cluster
 	if _, ok := reqCluster.Attributes[consts.SHORT_NAME_ATTRIBUTE]; !ok {
 		if oldCluster, err := dbhandler.GetDocByGUID[types.Cluster](c, reqCluster.GUID); err != nil {
-			utils.LogNTraceError("failed to read cluster", err, c)
+			log.LogNTraceError("failed to read cluster", err, c)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		} else {
@@ -52,9 +52,9 @@ func putCluster(c *gin.Context) {
 	}
 	//update only the attributes field
 	update := dbhandler.GetUpdateFieldValuesCommand(reqCluster.Attributes, consts.ATTRIBUTES_FIELD)
-	utils.LogNTrace(fmt.Sprintf("post cluster %s - updating cluster", reqCluster.GUID), c)
+	log.LogNTrace(fmt.Sprintf("post cluster %s - updating cluster", reqCluster.GUID), c)
 	if updatedCluster, err := dbhandler.UpdateDocument[types.Cluster](c, reqCluster.GUID, update); err != nil {
-		utils.LogNTraceError("failed to update cluster", err, c)
+		log.LogNTraceError("failed to update cluster", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	} else {
 		c.JSON(http.StatusOK, updatedCluster)

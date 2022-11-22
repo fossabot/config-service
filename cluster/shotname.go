@@ -5,6 +5,7 @@ import (
 	"kubescape-config-service/types"
 	"kubescape-config-service/utils"
 	"kubescape-config-service/utils/consts"
+	"kubescape-config-service/utils/log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,7 +22,7 @@ func getAllShortNames(c *gin.Context) []string {
 		ExcludeID().
 		Include(consts.SHORT_NAME_FIELD).
 		Get()); err != nil {
-		utils.LogNTraceError("failed to read clusters", err, c)
+		log.LogNTraceError("failed to read clusters", err, c)
 		return nil
 	} else {
 		var shortNames []string
