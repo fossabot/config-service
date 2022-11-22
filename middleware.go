@@ -17,7 +17,7 @@ import (
 
 //////////////////////////////////////////middleware handlers//////////////////////////////////////////
 
-//authenticate middleware for request authentication
+// authenticate middleware for request authentication
 func authenticate(c *gin.Context) {
 	customerGuid, err := c.Cookie(utils.CUSTOMER_GUID)
 	if err != nil || customerGuid == "" {
@@ -31,7 +31,7 @@ func authenticate(c *gin.Context) {
 	c.Next()
 }
 
-//traceAttributesNHeader middleware adds tracing header in response and request attributes in span
+// traceAttributesNHeader middleware adds tracing header in response and request attributes in span
 func traceAttributesNHeader(c *gin.Context) {
 	otel.GetTextMapPropagator().Inject(c.Request.Context(), propagation.HeaderCarrier(c.Writer.Header()))
 	if trace.SpanFromContext(c.Request.Context()).SpanContext().IsValid() {
@@ -41,7 +41,7 @@ func traceAttributesNHeader(c *gin.Context) {
 	c.Next()
 }
 
-//requestLogger middleware adds a logger with request attributes to the context
+// requestLogger middleware adds a logger with request attributes to the context
 func requestLoggerWithFields(c *gin.Context) {
 	fields := []zapcore.Field{
 		zap.String("method", c.Request.Method),
@@ -53,7 +53,7 @@ func requestLoggerWithFields(c *gin.Context) {
 	c.Next()
 }
 
-//requestSummary middleware logs request summary after request is served
+// requestSummary middleware logs request summary after request is served
 func requestSummary() func(c *gin.Context) {
 	return ginzap.GinzapWithConfig(zapInfoLevelLogger, &ginzap.Config{
 		UTC:        true,
@@ -64,7 +64,7 @@ func requestSummary() func(c *gin.Context) {
 
 /////////////////////////////////////helper functions/////////////////////////////////////
 
-//telemetryLogFields returns telemetry and customer id fields for  logging
+// telemetryLogFields returns telemetry and customer id fields for  logging
 func telemetryLogFields(c *gin.Context) []zapcore.Field {
 	fields := []zapcore.Field{}
 	// log request ID

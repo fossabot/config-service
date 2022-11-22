@@ -21,7 +21,7 @@ type DocContent interface {
 	GetReadOnlyFields() []string
 }
 
-//TODO move to armotypes
+// TODO move to armotypes
 type Cluster struct {
 	armotypes.PortalBase `json:",inline" bson:"inline"`
 	SubscriptionDate     string `json:"subscription_date,omitempty" bson:"subscription_date,omitempty"`
@@ -30,7 +30,7 @@ type Cluster struct {
 
 type PostureExceptionPolicy armotypes.PostureExceptionPolicy
 
-//Doc Content implementations
+// Doc Content implementations
 func (c *Cluster) GetGUID() string {
 	return c.GUID
 }

@@ -16,18 +16,11 @@ func AddRoutes(g *gin.Engine) {
 		c.Set(utils.COLLECTION, utils.POSTURE_EXCEPTION_POLICIES)
 		c.Next()
 	})
-
 	postureException.GET("/", getPostureExceptionPolicies)
 	postureException.GET("/:"+utils.GUID_FIELD, dbhandler.HandleGetDocWithGUIDInPath[*types.PostureExceptionPolicy])
+	postureException.POST("/", dbhandler.HandlePostDocWithValidation[*types.PostureExceptionPolicy]()...)
+	postureException.PUT("/", dbhandler.HandlePutDocWithValidation[*types.PostureExceptionPolicy]()...)
+	postureException.PUT("/:"+utils.GUID_FIELD, dbhandler.HandlePutDocWithValidation[*types.PostureExceptionPolicy]()...)
 	postureException.DELETE("/:"+utils.GUID_FIELD, dbhandler.HandleDeleteDoc)
-
-	posturePost := postureException.Group("/")
-	posturePost.Use(dbhandler.PostValidation[*types.PostureExceptionPolicy])
-	posturePost.POST("/", dbhandler.HandlePostDocFromContext[*types.PostureExceptionPolicy])
-
-	posturePut := postureException.Group("/")
-	posturePut.Use(dbhandler.PutValidation[*types.PostureExceptionPolicy])
-	posturePut.PUT("/", dbhandler.HandlePutDocFromContext[*types.PostureExceptionPolicy])
-	posturePut.PUT("/:"+utils.GUID_FIELD, dbhandler.HandlePutDocFromContext[*types.PostureExceptionPolicy])
 
 }

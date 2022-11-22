@@ -13,7 +13,7 @@ import (
 
 /////////////////////////////////////////gin handlers/////////////////////////////////////////
 
-//HandleDeleteDoc gin handler for delete document by id in collection in context
+// HandleDeleteDoc gin handler for delete document by id in collection in context
 func HandleDeleteDoc(c *gin.Context) {
 	collection, _, err := readContext(c)
 	if err != nil {
@@ -60,6 +60,13 @@ func HandleGetAll[T types.DocContent](c *gin.Context) {
 	} else {
 		c.JSON(http.StatusOK, docs)
 	}
+}
+func HandlePostDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
+	return []gin.HandlerFunc{PostValidation[T], HandlePostDocFromContext[T]}
+}
+
+func HandlePutDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
+	return []gin.HandlerFunc{PutValidation[T], HandlePutDocFromContext[T]}
 }
 
 func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
@@ -114,4 +121,44 @@ func PutDoc[T types.DocContent](c *gin.Context, doc T) {
 	} else {
 		c.JSON(http.StatusOK, res)
 	}
+}
+
+func PostValidation[T types.DocContent](c *gin.Context) {
+	var doc T
+	if err := c.BindJSON(&doc); err != nil {
+		return
+	}
+	if doc.GetName() == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		return
+	}
+	if exist, err := DocExist(c,
+		NewFilterBuilder().
+			WithValue("name", doc.GetName()).
+			Get()); err != nil {
+		utils.LogNTraceError("PostValidation: failed to check if document with same name exist", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	} else if exist {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("document with name %s already exists", doc.GetName())})
+		return
+	}
+	c.Set("docData", doc)
+	c.Next()
+}
+
+func PutValidation[T types.DocContent](c *gin.Context) {
+	var doc T
+	if err := c.BindJSON(&doc); err != nil {
+		return
+	}
+	if guid := c.Param(utils.GUID_FIELD); guid != "" {
+		doc.SetGUID(guid)
+	}
+	if doc.GetGUID() == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster guid is required"})
+		return
+	}
+	c.Set("docData", doc)
+	c.Next()
 }

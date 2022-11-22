@@ -14,7 +14,7 @@ import (
 	"k8s.io/utils/strings/slices"
 )
 
-//getAllShortNames returns the short names of all clusters for the customer in context
+// getAllShortNames returns the short names of all clusters for the customer in context
 func getAllShortNames(c *gin.Context) []string {
 	if clusters, err := dbhandler.GetAllForCustomerWithProjection(c, []types.Cluster{}, dbhandler.NewProjectionBuilder().
 		ExcludeID().
@@ -33,7 +33,7 @@ func getAllShortNames(c *gin.Context) []string {
 	}
 }
 
-//getUniqueShortName tries to create a short name from a long name and if it fails, it creates a random one
+// getUniqueShortName tries to create a short name from a long name and if it fails, it creates a random one
 func getUniqueShortName(name string, c *gin.Context) string {
 	maxSize := 5
 	filter := getAllShortNames(c)
@@ -52,7 +52,7 @@ func getUniqueShortName(name string, c *gin.Context) string {
 	return strings.ToUpper(rndStr.NewLen(maxSize))
 }
 
-//longName2short tries to create a short name from a long name
+// longName2short tries to create a short name from a long name
 func longName2short(name string, maxSize int, versionsPerOption int, filter []string) string {
 
 	snakeName := stringy.New(name).SnakeCase().ToUpper()
@@ -76,7 +76,7 @@ func longName2short(name string, maxSize int, versionsPerOption int, filter []st
 	return ""
 }
 
-//slicedLongName2Short
+// slicedLongName2Short
 func slicedLongName2Short(words []string, maxSize int, versionsPerOption int, filter []string) string {
 	maxWords := utils.Min(len(words), maxSize)
 	var initials string

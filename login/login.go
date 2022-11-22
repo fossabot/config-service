@@ -18,7 +18,7 @@ func AddRoutes(g *gin.Engine) {
 			CustomerGUID: "",
 		}
 
-		if err := c.BindJSON(&loginDetails); err != nil {			
+		if err := c.BindJSON(&loginDetails); err != nil {
 			return
 		}
 		c.SetCookie(utils.CUSTOMER_GUID, loginDetails.CustomerGUID, 2*60*60*24, "/", "", false, true)
