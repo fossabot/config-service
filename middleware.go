@@ -1,7 +1,7 @@
 package main
 
 import (
-	"kubescape-config-service/utils"
+	"kubescape-config-service/utils/consts"
 	"net/http"
 	"time"
 
@@ -17,31 +17,31 @@ import (
 
 //////////////////////////////////////////middleware handlers//////////////////////////////////////////
 
-//authenticate middleware for request authentication
+// authenticate middleware for request authentication
 func authenticate(c *gin.Context) {
-	customerGuid, err := c.Cookie(utils.CUSTOMER_GUID)
+	customerGuid, err := c.Cookie(consts.CUSTOMER_GUID)
 	if err != nil || customerGuid == "" {
-		customerGuid := c.Query(utils.CUSTOMER_GUID)
+		customerGuid := c.Query(consts.CUSTOMER_GUID)
 		if customerGuid == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			return
 		}
 	}
-	c.Set(utils.CUSTOMER_GUID, customerGuid)
+	c.Set(consts.CUSTOMER_GUID, customerGuid)
 	c.Next()
 }
 
-//traceAttributesNHeader middleware adds tracing header in response and request attributes in span
+// traceAttributesNHeader middleware adds tracing header in response and request attributes in span
 func traceAttributesNHeader(c *gin.Context) {
 	otel.GetTextMapPropagator().Inject(c.Request.Context(), propagation.HeaderCarrier(c.Writer.Header()))
 	if trace.SpanFromContext(c.Request.Context()).SpanContext().IsValid() {
-		trace.SpanFromContext(c.Request.Context()).SetAttributes(attribute.String(utils.CUSTOMER_GUID, c.GetString(utils.CUSTOMER_GUID)))
+		trace.SpanFromContext(c.Request.Context()).SetAttributes(attribute.String(consts.CUSTOMER_GUID, c.GetString(consts.CUSTOMER_GUID)))
 	}
 
 	c.Next()
 }
 
-//requestLogger middleware adds a logger with request attributes to the context
+// requestLogger middleware adds a logger with request attributes to the context
 func requestLoggerWithFields(c *gin.Context) {
 	fields := []zapcore.Field{
 		zap.String("method", c.Request.Method),
@@ -53,7 +53,7 @@ func requestLoggerWithFields(c *gin.Context) {
 	c.Next()
 }
 
-//requestSummary middleware logs request summary after request is served
+// requestSummary middleware logs request summary after request is served
 func requestSummary() func(c *gin.Context) {
 	return ginzap.GinzapWithConfig(zapInfoLevelLogger, &ginzap.Config{
 		UTC:        true,
@@ -64,12 +64,12 @@ func requestSummary() func(c *gin.Context) {
 
 /////////////////////////////////////helper functions/////////////////////////////////////
 
-//telemetryLogFields returns telemetry and customer id fields for  logging
+// telemetryLogFields returns telemetry and customer id fields for  logging
 func telemetryLogFields(c *gin.Context) []zapcore.Field {
 	fields := []zapcore.Field{}
 	// log request ID
-	if customerGUID := c.GetString(utils.CUSTOMER_GUID); customerGUID != "" {
-		fields = append(fields, zap.String(utils.CUSTOMER_GUID, customerGUID))
+	if customerGUID := c.GetString(consts.CUSTOMER_GUID); customerGUID != "" {
+		fields = append(fields, zap.String(consts.CUSTOMER_GUID, customerGUID))
 	}
 	// log trace and span ID
 	if trace.SpanFromContext(c.Request.Context()).SpanContext().IsValid() {

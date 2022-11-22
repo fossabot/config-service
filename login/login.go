@@ -1,7 +1,7 @@
 package login
 
 import (
-	"kubescape-config-service/utils"
+	"kubescape-config-service/utils/consts"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,12 +18,10 @@ func AddRoutes(g *gin.Engine) {
 			CustomerGUID: "",
 		}
 
-		if err := c.ShouldBindJSON(&loginDetails); err != nil {
-			c.Error(err)
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if err := c.BindJSON(&loginDetails); err != nil {
 			return
 		}
-		c.SetCookie(utils.CUSTOMER_GUID, loginDetails.CustomerGUID, 2*60*60*24, "/", "", false, true)
+		c.SetCookie(consts.CUSTOMER_GUID, loginDetails.CustomerGUID, 2*60*60*24, "/", "", false, true)
 		c.JSON(http.StatusOK, nil)
 	})
 }

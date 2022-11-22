@@ -1,8 +1,9 @@
 package cluster
 
 import (
-	"kubescape-config-service/mongo"
-	"kubescape-config-service/utils"
+	"kubescape-config-service/dbhandler"
+	"kubescape-config-service/types"
+	"kubescape-config-service/utils/consts"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,21 +11,12 @@ import (
 func AddRoutes(g *gin.Engine) {
 	cluster := g.Group("/cluster")
 
-	cluster.Use(func(c *gin.Context) {
-		//set clusters collection name in context - used by mongo utils functions
-		c.Set(utils.COLLECTION, utils.CLUSTERS)
-		c.Next()
-	})
+	cluster.Use(dbhandler.DBContextMiddleware(consts.CLUSTERS))
 
-	cluster.GET("/", getClusters)
-
-	cluster.GET("/:"+utils.GUID_FIELD, getCluster)
-
-	cluster.POST("/", postCluster)
-
-	cluster.PUT("/", putCluster)
-
-	cluster.PUT("/:"+utils.GUID_FIELD, putCluster)
-
-	cluster.DELETE("/:"+utils.GUID_FIELD, mongo.HandleDeleteDoc)
+	cluster.GET("/", dbhandler.HandleGetAll[*types.Cluster])
+	cluster.GET("/:"+consts.GUID_FIELD, dbhandler.HandleGetDocWithGUIDInPath[*types.Cluster])
+	cluster.POST("/", dbhandler.HandlePostValidation[*types.Cluster], postCluster)
+	cluster.PUT("/", dbhandler.HandlePutValidation[*types.Cluster], putCluster)
+	cluster.PUT("/:"+consts.GUID_FIELD, putCluster)
+	cluster.DELETE("/:"+consts.GUID_FIELD, dbhandler.HandleDeleteDoc)
 }

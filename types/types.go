@@ -1,18 +1,69 @@
 package types
 
-//TODO move the external repo for reuse with other projects
-type Base struct {
-	GUID       string                 `json:"guid"  bson:"guid,omitempty"`
-	Name       string                 `json:"name"  bson:"name,omitempty"`
-	Attributes map[string]interface{} `json:"attributes,omitempty" bson:"attributes,omitempty"`
+import (
+	"kubescape-config-service/utils/consts"
+	"time"
+
+	"github.com/armosec/armoapi-go/armotypes"
+)
+
+// Doc Content interface for data types embedded in DB documents
+type DocContent interface {
+	*Cluster | *PostureExceptionPolicy
+	InitNew()
+	GetGUID() string
+	SetGUID(guid string)
+	GetName() string
+	GetReadOnlyFields() []string
 }
 
-type Cluster struct {
-	Base             `json:",inline" bson:"inline"`
-	SubscriptionDate string `json:"subscription_date,omitempty" bson:"subscription_date,omitempty"`
-	LastLoginDate    string `json:"last_login_date,omitempty" bson:"last_login_date,omitempty"`
+// redefine types for Doc Content implementations
+
+type PostureExceptionPolicy armotypes.PostureExceptionPolicy
+
+// TODO move to armotypes
+type Cluster armotypes.PortalCluster
+
+func (c *Cluster) GetGUID() string {
+	return c.GUID
+}
+func (c *Cluster) SetGUID(guid string) {
+	c.GUID = guid
+}
+func (c *Cluster) GetName() string {
+	return c.Name
+}
+func (c *Cluster) GetReadOnlyFields() []string {
+	return clusterReadOnlyFields
+}
+func (c *Cluster) InitNew() {
+	if c.SubscriptionDate == "" {
+		c.SubscriptionDate = time.Now().UTC().Format(time.RFC3339)
+	}
+	if c.Attributes == nil {
+		c.Attributes = make(map[string]interface{})
+	}
 }
 
-//Old Types names for backward compatibility
-type PortalBase Base
-type PortalCluster Cluster
+func (p *PostureExceptionPolicy) GetGUID() string {
+	return p.GUID
+}
+func (p *PostureExceptionPolicy) SetGUID(guid string) {
+	p.GUID = guid
+}
+func (p *PostureExceptionPolicy) GetName() string {
+	return p.Name
+}
+func (p *PostureExceptionPolicy) GetReadOnlyFields() []string {
+	return postureExceptionReadOnlyFields
+}
+func (p *PostureExceptionPolicy) InitNew() {
+	if p.CreationTime == "" {
+		p.CreationTime = time.Now().UTC().Format("time.RFC3339")
+	}
+}
+
+var commonReadOnlyFields = []string{consts.ID_FIELD, consts.NAME_FIELD, consts.GUID_FIELD}
+var clusterReadOnlyFields = append([]string{"subscription_date"}, commonReadOnlyFields...)
+var postureExceptionReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
+var repositoryReadOnlyFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, commonReadOnlyFields...)

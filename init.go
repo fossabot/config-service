@@ -86,7 +86,7 @@ func newZapConf(lvl zap.AtomicLevel, config utils.LoggerConfig) zap.Config {
 	return zapConf
 }
 
-//initTracer used to initialize tracer
+// initTracer used to initialize tracer
 func initTracer(config utils.TelemetryConfig) *sdktrace.TracerProvider {
 	serviceName := "kubescape-config-service"
 	hostName, _ := os.Hostname()

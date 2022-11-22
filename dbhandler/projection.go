@@ -1,11 +1,12 @@
-package mongo
+package dbhandler
 
 import (
-	"kubescape-config-service/utils"
+	"kubescape-config-service/utils/consts"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+// ProjectionBuilder builds projection of queries results
 type ProjectionBuilder struct {
 	filter bson.D
 }
@@ -20,7 +21,7 @@ func (f *ProjectionBuilder) Get() bson.D {
 }
 
 func (f *ProjectionBuilder) ExcludeID(key ...string) *ProjectionBuilder {
-	return f.Exclude(utils.ID_FIELD)
+	return f.Exclude(consts.ID_FIELD)
 }
 
 func (f *ProjectionBuilder) Include(key ...string) *ProjectionBuilder {

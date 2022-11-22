@@ -1,12 +1,13 @@
-package mongo
+package dbhandler
 
 import (
-	"kubescape-config-service/utils"
+	"kubescape-config-service/utils/consts"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+// FilterBuilder builds filters for queries
 type FilterBuilder struct {
 	filter bson.D
 }
@@ -33,23 +34,27 @@ func (f *FilterBuilder) WithNotDeleteForCustomer(c *gin.Context) *FilterBuilder 
 }
 
 func (f *FilterBuilder) WithGUID(guid string) *FilterBuilder {
-	return f.WithValue(utils.GUID_FIELD, guid)
+	return f.WithValue(consts.GUID_FIELD, guid)
 }
 
 func (f *FilterBuilder) WithID(id string) *FilterBuilder {
-	return f.WithValue(utils.ID_FIELD, id)
+	return f.WithValue(consts.ID_FIELD, id)
+}
+
+func (f *FilterBuilder) WithName(name string) *FilterBuilder {
+	return f.WithValue(consts.NAME_FIELD, name)
 }
 
 func (f *FilterBuilder) WithCustomer(c *gin.Context) *FilterBuilder {
-	return f.WithValue(utils.CUSTOMERS, c.GetString(utils.CUSTOMER_GUID))
+	return f.WithValue(consts.CUSTOMERS, c.GetString(consts.CUSTOMER_GUID))
 }
 
 func (f *FilterBuilder) WithNotDeleted() *FilterBuilder {
-	return f.WithNotEqual(utils.DELETED_FIELD, true)
+	return f.WithNotEqual(consts.DELETED_FIELD, true)
 }
 
 func (f *FilterBuilder) WithDeleted() *FilterBuilder {
-	return f.WithValue(utils.DELETED_FIELD, true)
+	return f.WithValue(consts.DELETED_FIELD, true)
 }
 
 func (f *FilterBuilder) WithValue(key string, value interface{}) *FilterBuilder {

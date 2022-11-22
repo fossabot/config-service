@@ -1,9 +1,11 @@
 package cluster
 
 import (
-	"kubescape-config-service/mongo"
+	"kubescape-config-service/dbhandler"
 	"kubescape-config-service/types"
 	"kubescape-config-service/utils"
+	"kubescape-config-service/utils/consts"
+	"kubescape-config-service/utils/log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -14,26 +16,26 @@ import (
 	"k8s.io/utils/strings/slices"
 )
 
-//getAllShortNames returns the short names of all clusters for the customer in context
+// getAllShortNames returns the short names of all clusters for the customer in context
 func getAllShortNames(c *gin.Context) []string {
-	if clusters, err := mongo.GetAllForCustomerWithProjection(c, []types.Cluster{}, mongo.NewProjectionBuilder().
+	if clusters, err := dbhandler.GetAllForCustomerWithProjection[types.Cluster](c, dbhandler.NewProjectionBuilder().
 		ExcludeID().
-		Include(utils.SHORT_NAME_FIELD).
+		Include(consts.SHORT_NAME_FIELD).
 		Get()); err != nil {
-		utils.LogNTraceError("failed to read clusters", err, c)
+		log.LogNTraceError("failed to read clusters", err, c)
 		return nil
 	} else {
 		var shortNames []string
 		for _, doc := range clusters {
-			if doc.Attributes[utils.SHORT_NAME_ATTRIBUTE] != nil {
-				shortNames = append(shortNames, doc.Attributes[utils.SHORT_NAME_ATTRIBUTE].(string))
+			if doc.Attributes[consts.SHORT_NAME_ATTRIBUTE] != nil {
+				shortNames = append(shortNames, doc.Attributes[consts.SHORT_NAME_ATTRIBUTE].(string))
 			}
 		}
 		return shortNames
 	}
 }
 
-//getUniqueShortName tries to create a short name from a long name and if it fails, it creates a random one
+// getUniqueShortName tries to create a short name from a long name and if it fails, it creates a random one
 func getUniqueShortName(name string, c *gin.Context) string {
 	maxSize := 5
 	filter := getAllShortNames(c)
@@ -52,7 +54,7 @@ func getUniqueShortName(name string, c *gin.Context) string {
 	return strings.ToUpper(rndStr.NewLen(maxSize))
 }
 
-//longName2short tries to create a short name from a long name
+// longName2short tries to create a short name from a long name
 func longName2short(name string, maxSize int, versionsPerOption int, filter []string) string {
 
 	snakeName := stringy.New(name).SnakeCase().ToUpper()
@@ -76,7 +78,7 @@ func longName2short(name string, maxSize int, versionsPerOption int, filter []st
 	return ""
 }
 
-//slicedLongName2Short
+// slicedLongName2Short
 func slicedLongName2Short(words []string, maxSize int, versionsPerOption int, filter []string) string {
 	maxWords := utils.Min(len(words), maxSize)
 	var initials string
