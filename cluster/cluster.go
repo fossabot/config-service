@@ -51,7 +51,7 @@ func putCluster(c *gin.Context) {
 		}
 	}
 	//update only the attributes field
-	update := dbhandler.GetUpdateFieldValuesCommand(reqCluster.Attributes, consts.ATTRIBUTES_FIELD)
+	update := dbhandler.GetUpdateFieldValueCommand(reqCluster.Attributes, consts.ATTRIBUTES_FIELD)
 	log.LogNTrace(fmt.Sprintf("post cluster %s - updating cluster", reqCluster.GUID), c)
 	if updatedCluster, err := dbhandler.UpdateDocument[types.Cluster](c, reqCluster.GUID, update); err != nil {
 		log.LogNTraceError("failed to update cluster", err, c)

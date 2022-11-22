@@ -3,7 +3,7 @@ module kubescape-config-service
 go 1.18
 
 require (
-	github.com/armosec/armoapi-go v0.0.119
+	github.com/armosec/armoapi-go v0.0.120
 	github.com/dchest/uniuri v1.2.0
 	github.com/gin-contrib/zap v0.1.0
 	github.com/gin-gonic/gin v1.8.1
