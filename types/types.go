@@ -34,7 +34,7 @@ func (c *Cluster) GetName() string {
 	return c.Name
 }
 func (c *Cluster) GetReadOnlyFields() []string {
-	return ClusterROFields
+	return clusterReadOnlyFields
 }
 func (c *Cluster) InitNew() {
 	if c.SubscriptionDate == "" {
@@ -55,7 +55,7 @@ func (p *PostureExceptionPolicy) GetName() string {
 	return p.Name
 }
 func (p *PostureExceptionPolicy) GetReadOnlyFields() []string {
-	return PostureExceptionROFields
+	return postureExceptionReadOnlyFields
 }
 func (p *PostureExceptionPolicy) InitNew() {
 	if p.CreationTime == "" {
@@ -63,7 +63,7 @@ func (p *PostureExceptionPolicy) InitNew() {
 	}
 }
 
-var CommonROFields = []string{consts.ID_FIELD, consts.NAME_FIELD, consts.GUID_FIELD}
-var ClusterROFields = append([]string{"subscription_date"}, CommonROFields...)
-var PostureExceptionROFields = append([]string{"creationTime"}, CommonROFields...)
-var RepositoryROFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, CommonROFields...)
+var commonReadOnlyFields = []string{consts.ID_FIELD, consts.NAME_FIELD, consts.GUID_FIELD}
+var clusterReadOnlyFields = append([]string{"subscription_date"}, commonReadOnlyFields...)
+var postureExceptionReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
+var repositoryReadOnlyFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, commonReadOnlyFields...)
