@@ -30,8 +30,10 @@ func HandleDeleteDoc(c *gin.Context) {
 		msg := fmt.Sprintf("failed to delete document GUID: %s  Collection: %s", guid, collection)
 		utils.LogNTraceError(msg, err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	} else if res.DeletedCount == 0 {
 		c.JSON(http.StatusNotFound, fmt.Sprintf("document with id %s does not exist", guid))
+		return
 	}
 	c.JSON(http.StatusOK, "deleted")
 }
@@ -42,8 +44,7 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "guid is required"})
 		return
 	}
-	var doc T
-	if policy, err := GetDocByGUID(c, guid, &doc); err != nil {
+	if policy, err := GetDocByGUID[T](c, guid); err != nil {
 		utils.LogNTraceError("failed to read document", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -53,7 +54,7 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 }
 
 func HandleGetAll[T types.DocContent](c *gin.Context) {
-	if docs, err := GetAllForCustomer(c, []T{}); err != nil {
+	if docs, err := GetAllForCustomer[T](c); err != nil {
 		utils.LogNTraceError("failed to read all documents for customer", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -114,8 +115,7 @@ func PutDoc[T types.DocContent](c *gin.Context, doc T) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	var res T
-	if res, err := UpdateDocument(c, doc.GetGUID(), update, &res); err != nil {
+	if res, err := UpdateDocument[T](c, doc.GetGUID(), update); err != nil {
 		utils.LogNTraceError("failed to update document", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	} else {
@@ -134,7 +134,7 @@ func PostValidation[T types.DocContent](c *gin.Context) {
 	}
 	if exist, err := DocExist(c,
 		NewFilterBuilder().
-			WithValue("name", doc.GetName()).
+			WithName(doc.GetName()).
 			Get()); err != nil {
 		utils.LogNTraceError("PostValidation: failed to check if document with same name exist", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

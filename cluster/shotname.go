@@ -16,7 +16,7 @@ import (
 
 // getAllShortNames returns the short names of all clusters for the customer in context
 func getAllShortNames(c *gin.Context) []string {
-	if clusters, err := dbhandler.GetAllForCustomerWithProjection(c, []types.Cluster{}, dbhandler.NewProjectionBuilder().
+	if clusters, err := dbhandler.GetAllForCustomerWithProjection[types.Cluster](c, dbhandler.NewProjectionBuilder().
 		ExcludeID().
 		Include(utils.SHORT_NAME_FIELD).
 		Get()); err != nil {

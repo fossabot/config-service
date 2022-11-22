@@ -14,13 +14,14 @@ import (
 //////////////////////////////////Sugar functions for mongo using values in gin context ///////////////////////////////////////////
 
 // GetAllForCustomer returns all not delete docs for customer from customerGUID and collection in context
-func GetAllForCustomer[T any](c *gin.Context, result []T) ([]T, error) {
-	return GetAllForCustomerWithProjection(c, result, nil)
+func GetAllForCustomer[T any](c *gin.Context) ([]T, error) {
+	return GetAllForCustomerWithProjection[T](c, nil)
 }
 
 // GetAllForCustomerWithProjection returns all not delete docs for customer from customerGUID and collection in context
-func GetAllForCustomerWithProjection[T any](c *gin.Context, result []T, projection bson.D) ([]T, error) {
+func GetAllForCustomerWithProjection[T any](c *gin.Context, projection bson.D) ([]T, error) {
 	collection, _, err := readContext(c)
+	var result []T
 	if err != nil {
 		return nil, err
 	}
@@ -33,6 +34,7 @@ func GetAllForCustomerWithProjection[T any](c *gin.Context, result []T, projecti
 		Find(c.Request.Context(), filter, findOpts); err != nil {
 		return nil, err
 	} else {
+
 		if err := cur.All(c.Request.Context(), &result); err != nil {
 			return nil, err
 		}
@@ -40,18 +42,20 @@ func GetAllForCustomerWithProjection[T any](c *gin.Context, result []T, projecti
 	return result, nil
 }
 
-func UpdateDocument[T any](c *gin.Context, id string, update bson.D, result *T) (*T, error) {
+func UpdateDocument[T any](c *gin.Context, id string, update bson.D) (*T, error) {
+
 	collection, _, err := readContext(c)
 	if err != nil {
 		return nil, err
 	}
+	var result T
 	filter := NewFilterBuilder().WithNotDeleteForCustomer(c).WithID(id).Get()
 	if err := mongo.GetWriteCollection(collection).FindOneAndUpdate(c.Request.Context(), filter, update,
 		options.FindOneAndUpdate().SetReturnDocument(options.After)).
-		Decode(result); err != nil {
+		Decode(&result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return &result, nil
 }
 
 // DocExist returns true if at least one document with given filter exists for customer & collection in context
@@ -72,46 +76,48 @@ func DocExist(c *gin.Context, f bson.D) (bool, error) {
 func DocWithNameExist(c *gin.Context, name string) (bool, error) {
 	return DocExist(c,
 		NewFilterBuilder().
-			WithValue("name", name).
+			WithName(name).
 			Get())
 }
 
 // GetDocByGUID returns document by GUID for customer in context from collection in context
-func GetDocByGUID[T any](c *gin.Context, guid string, result *T) (*T, error) {
+func GetDocByGUID[T any](c *gin.Context, guid string) (*T, error) {
 	collection, _, err := readContext(c)
 	if err != nil {
 		return nil, err
 	}
+	var result T
 	if err := mongo.GetReadCollection(collection).
 		FindOne(c.Request.Context(),
 			NewFilterBuilder().
 				WithNotDeleteForCustomer(c).
 				WithGUID(guid).
 				Get()).
-		Decode(result); err != nil {
+		Decode(&result); err != nil {
 		utils.LogNTraceError("failed to get document by id", err, c)
 		return nil, err
 	}
-	return result, nil
+	return &result, nil
 }
 
 // GetDocByGUID returns document by GUID for customer in context from collection in context
-func GetDocByName[T any](c *gin.Context, name string, result *T) (*T, error) {
+func GetDocByName[T any](c *gin.Context, name string) (*T, error) {
 	collection, _, err := readContext(c)
 	if err != nil {
 		return nil, err
 	}
+	var result T
 	if err := mongo.GetReadCollection(collection).
 		FindOne(c.Request.Context(),
 			NewFilterBuilder().
 				WithNotDeleteForCustomer(c).
 				WithName(name).
 				Get()).
-		Decode(result); err != nil {
+		Decode(&result); err != nil {
 		utils.LogNTraceError("failed to get document by id", err, c)
 		return nil, err
 	}
-	return result, nil
+	return &result, nil
 }
 
 func CountDocs(c *gin.Context, f bson.D) (int64, error) {

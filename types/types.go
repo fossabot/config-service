@@ -7,7 +7,7 @@ import (
 	"github.com/armosec/armoapi-go/armotypes"
 )
 
-var CommonROFields = []string{utils.ID_FIELD, utils.GUID_FIELD, utils.NAME_FIELD}
+var CommonROFields = []string{utils.ID_FIELD, utils.GUID_FIELD, "name"}
 var ClusterROFields = append([]string{"subscription_date"}, CommonROFields...)
 var PostureExceptionROFields = append([]string{"creationTime"}, CommonROFields...)
 var RepositoryROFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, CommonROFields...)
@@ -23,7 +23,7 @@ type DocContent interface {
 
 // TODO move to armotypes
 type Cluster struct {
-	armotypes.PortalBase `json:",inline" bson:"inline"`
+	armotypes.PortalBase `json:",inline"`
 	SubscriptionDate     string `json:"subscription_date,omitempty" bson:"subscription_date,omitempty"`
 	LastLoginDate        string `json:"last_login_date,omitempty" bson:"last_login_date,omitempty"`
 }

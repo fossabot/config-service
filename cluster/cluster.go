@@ -40,7 +40,7 @@ func putCluster(c *gin.Context) {
 	}
 	// if request attributes do not include alias add it from the old cluster
 	if _, ok := reqCluster.Attributes[utils.SHORT_NAME_ATTRIBUTE]; !ok {
-		if oldCluster, err := dbhandler.GetDocByGUID(c, reqCluster.GUID, &types.Cluster{}); err != nil {
+		if oldCluster, err := dbhandler.GetDocByGUID[types.Cluster](c, reqCluster.GUID); err != nil {
 			utils.LogNTraceError("failed to read cluster", err, c)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -51,7 +51,7 @@ func putCluster(c *gin.Context) {
 	//update only the attributes field
 	update := dbhandler.GetUpdateFieldValuesCommand(reqCluster.Attributes, utils.ATTRIBUTES_FIELD)
 	utils.LogNTrace(fmt.Sprintf("post cluster %s - updating cluster", reqCluster.GUID), c)
-	if updatedCluster, err := dbhandler.UpdateDocument(c, reqCluster.GUID, update, &types.Cluster{}); err != nil {
+	if updatedCluster, err := dbhandler.UpdateDocument[types.Cluster](c, reqCluster.GUID, update); err != nil {
 		utils.LogNTraceError("failed to update cluster", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	} else {
