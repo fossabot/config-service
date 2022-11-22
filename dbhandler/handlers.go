@@ -5,6 +5,7 @@ import (
 	"kubescape-config-service/mongo"
 	"kubescape-config-service/types"
 	"kubescape-config-service/utils"
+	"kubescape-config-service/utils/consts"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,13 +21,13 @@ func HandleDeleteDoc(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	guid := c.Param(utils.GUID_FIELD)
+	guid := c.Param(consts.GUID_FIELD)
 	if guid == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "guid is required"})
 		return
 	}
 
-	if res, err := mongo.GetWriteCollection(collection).DeleteOne(c.Request.Context(), bson.M{utils.ID_FIELD: guid}); err != nil {
+	if res, err := mongo.GetWriteCollection(collection).DeleteOne(c.Request.Context(), bson.M{consts.ID_FIELD: guid}); err != nil {
 		msg := fmt.Sprintf("failed to delete document GUID: %s  Collection: %s", guid, collection)
 		utils.LogNTraceError(msg, err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -39,7 +40,7 @@ func HandleDeleteDoc(c *gin.Context) {
 }
 
 func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
-	guid := c.Param(utils.GUID_FIELD)
+	guid := c.Param(consts.GUID_FIELD)
 	if guid == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "guid is required"})
 		return
@@ -152,7 +153,7 @@ func PutValidation[T types.DocContent](c *gin.Context) {
 	if err := c.BindJSON(&doc); err != nil {
 		return
 	}
-	if guid := c.Param(utils.GUID_FIELD); guid != "" {
+	if guid := c.Param(consts.GUID_FIELD); guid != "" {
 		doc.SetGUID(guid)
 	}
 	if doc.GetGUID() == "" {

@@ -1,17 +1,12 @@
 package types
 
 import (
-	"kubescape-config-service/utils"
 	"time"
 
 	"github.com/armosec/armoapi-go/armotypes"
 )
 
-var CommonROFields = []string{utils.ID_FIELD, utils.GUID_FIELD, "name"}
-var ClusterROFields = append([]string{"subscription_date"}, CommonROFields...)
-var PostureExceptionROFields = append([]string{"creationTime"}, CommonROFields...)
-var RepositoryROFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, CommonROFields...)
-
+// Doc Content interface for data types embedded in DB documents
 type DocContent interface {
 	*Cluster | *PostureExceptionPolicy
 	InitNew()
@@ -21,6 +16,10 @@ type DocContent interface {
 	GetReadOnlyFields() []string
 }
 
+// redefine types for Doc Content implementations
+
+type PostureExceptionPolicy armotypes.PostureExceptionPolicy
+
 // TODO move to armotypes
 type Cluster struct {
 	armotypes.PortalBase `json:",inline"`
@@ -28,9 +27,6 @@ type Cluster struct {
 	LastLoginDate        string `json:"last_login_date,omitempty" bson:"last_login_date,omitempty"`
 }
 
-type PostureExceptionPolicy armotypes.PostureExceptionPolicy
-
-// Doc Content implementations
 func (c *Cluster) GetGUID() string {
 	return c.GUID
 }
@@ -69,3 +65,8 @@ func (p *PostureExceptionPolicy) InitNew() {
 		p.CreationTime = time.Now().UTC().Format("2006-01-02T15:04:05.999")
 	}
 }
+
+var CommonROFields = []string{"guid", "name"}
+var ClusterROFields = append([]string{"subscription_date"}, CommonROFields...)
+var PostureExceptionROFields = append([]string{"creationTime"}, CommonROFields...)
+var RepositoryROFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, CommonROFields...)

@@ -1,4 +1,4 @@
-package utils
+package consts
 
 const (
 	COLLECTION                 = "collection"

@@ -4,6 +4,7 @@ import (
 	"kubescape-config-service/dbhandler"
 	"kubescape-config-service/types"
 	"kubescape-config-service/utils"
+	"kubescape-config-service/utils/consts"
 	"regexp"
 	"strconv"
 	"strings"
@@ -18,15 +19,15 @@ import (
 func getAllShortNames(c *gin.Context) []string {
 	if clusters, err := dbhandler.GetAllForCustomerWithProjection[types.Cluster](c, dbhandler.NewProjectionBuilder().
 		ExcludeID().
-		Include(utils.SHORT_NAME_FIELD).
+		Include(consts.SHORT_NAME_FIELD).
 		Get()); err != nil {
 		utils.LogNTraceError("failed to read clusters", err, c)
 		return nil
 	} else {
 		var shortNames []string
 		for _, doc := range clusters {
-			if doc.Attributes[utils.SHORT_NAME_ATTRIBUTE] != nil {
-				shortNames = append(shortNames, doc.Attributes[utils.SHORT_NAME_ATTRIBUTE].(string))
+			if doc.Attributes[consts.SHORT_NAME_ATTRIBUTE] != nil {
+				shortNames = append(shortNames, doc.Attributes[consts.SHORT_NAME_ATTRIBUTE].(string))
 			}
 		}
 		return shortNames

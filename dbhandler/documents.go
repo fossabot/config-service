@@ -14,7 +14,9 @@ type Document[T types.DocContent] struct {
 
 func NewDocument[T types.DocContent](content T, customerGUID string) Document[T] {
 	content.InitNew()
-	content.SetGUID(uuid.NewV4().String())
+	if content.GetGUID() == "" {
+		content.SetGUID(uuid.NewV4().String())
+	}
 	doc := Document[T]{
 		ID:      content.GetGUID(),
 		Content: content,

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"kubescape-config-service/mongo"
 	"kubescape-config-service/utils"
+	"kubescape-config-service/utils/consts"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-multierror"
@@ -146,7 +147,7 @@ func readContext(c *gin.Context) (collection, customerGUID string, err error) {
 }
 
 func readCustomerGUID(c *gin.Context) (customerGUID string, err error) {
-	customerGUID = c.GetString(utils.CUSTOMER_GUID)
+	customerGUID = c.GetString(consts.CUSTOMER_GUID)
 	if customerGUID == "" {
 		err = fmt.Errorf("customerGUID is not in context")
 	}
@@ -154,7 +155,7 @@ func readCustomerGUID(c *gin.Context) (customerGUID string, err error) {
 }
 
 func readCollection(c *gin.Context) (collection string, err error) {
-	collection = c.GetString(utils.COLLECTION)
+	collection = c.GetString(consts.COLLECTION)
 	if collection == "" {
 		err = fmt.Errorf("collection is not in context")
 	}

@@ -13,7 +13,7 @@ func AddRoutes(g *gin.Engine) {
 	})
 
 	g.GET("/readiness", func(c *gin.Context) {
-		//TODO check number of openn mongo sessions
+		//TODO check number of open mongo sessions
 		c.JSON(http.StatusOK, nil)
 	})
 

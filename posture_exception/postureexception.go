@@ -4,6 +4,7 @@ import (
 	"kubescape-config-service/dbhandler"
 	"kubescape-config-service/types"
 	"kubescape-config-service/utils"
+	"kubescape-config-service/utils/consts"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +12,7 @@ import (
 
 func getPostureExceptionPolicies(c *gin.Context) {
 	if _, list := c.GetQuery("list"); list {
-		namesProjection := dbhandler.NewProjectionBuilder().Include(utils.NAME_FIELD).ExcludeID().Get()
+		namesProjection := dbhandler.NewProjectionBuilder().Include(consts.NAME_FIELD).ExcludeID().Get()
 		if policiesNames, err := dbhandler.GetAllForCustomerWithProjection[types.PostureExceptionPolicy](c, namesProjection); err != nil {
 			utils.LogNTraceError("failed to read polices", err, c)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
