@@ -7,6 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+// FilterBuilder builds filters for queries
 type FilterBuilder struct {
 	filter bson.D
 }

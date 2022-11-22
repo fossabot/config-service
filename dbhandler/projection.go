@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+// ProjectionBuilder builds projection of queries results
 type ProjectionBuilder struct {
 	filter bson.D
 }

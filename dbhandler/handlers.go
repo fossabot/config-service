@@ -14,7 +14,7 @@ import (
 
 /////////////////////////////////////////gin handlers/////////////////////////////////////////
 
-// HandleDeleteDoc gin handler for delete document by id in collection in context
+// HandleDeleteDoc  - delete document by id in path for collection in context
 func HandleDeleteDoc(c *gin.Context) {
 	collection, _, err := readContext(c)
 	if err != nil {
@@ -39,6 +39,7 @@ func HandleDeleteDoc(c *gin.Context) {
 	c.JSON(http.StatusOK, "deleted")
 }
 
+// HandleGetDocWithGUIDInPath - get document of type T by id in path for collection in context
 func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 	guid := c.Param(consts.GUID_FIELD)
 	if guid == "" {
@@ -54,6 +55,7 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 	}
 }
 
+// HandleGetAll - get all documents of type T for collection in context
 func HandleGetAll[T types.DocContent](c *gin.Context) {
 	if docs, err := GetAllForCustomer[T](c); err != nil {
 		log.LogNTraceError("failed to read all documents for customer", err, c)
@@ -63,14 +65,18 @@ func HandleGetAll[T types.DocContent](c *gin.Context) {
 		c.JSON(http.StatusOK, docs)
 	}
 }
+
+// HandlePostDocWithValidation - chains validation and post document handlers
 func HandlePostDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
-	return []gin.HandlerFunc{PostValidation[T], HandlePostDocFromContext[T]}
+	return []gin.HandlerFunc{HandlePostValidation[T], HandlePostDocFromContext[T]}
 }
 
+// HandlePutDocWithValidation - chains validation and put document handlers
 func HandlePutDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
-	return []gin.HandlerFunc{PutValidation[T], HandlePutDocFromContext[T]}
+	return []gin.HandlerFunc{HandlePutValidation[T], HandlePutDocFromContext[T]}
 }
 
+// HandlePostDocFromContext - post document of type T from context
 func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
 	var doc T
 	if iData, ok := c.Get("docData"); ok {
@@ -82,6 +88,7 @@ func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
 	PostDoc(c, doc)
 }
 
+// HandlePutDocFromContext - put document of type T from context
 func HandlePutDocFromContext[T types.DocContent](c *gin.Context) {
 	var doc T
 	if iData, ok := c.Get("docData"); ok {
@@ -93,6 +100,50 @@ func HandlePutDocFromContext[T types.DocContent](c *gin.Context) {
 	PutDoc(c, doc)
 }
 
+// HandlePostValidation validate post request and if valid set DocContent in context for next handler, otherwise abort request
+
+func HandlePostValidation[T types.DocContent](c *gin.Context) {
+	var doc T
+	if err := c.BindJSON(&doc); err != nil {
+		return
+	}
+	if doc.GetName() == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		return
+	}
+	if exist, err := DocExist(c,
+		NewFilterBuilder().
+			WithName(doc.GetName()).
+			Get()); err != nil {
+		log.LogNTraceError("HandlePostValidation: failed to check if document with same name exist", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	} else if exist {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("document with name %s already exists", doc.GetName())})
+		return
+	}
+	c.Set("docData", doc)
+	c.Next()
+}
+
+// HandlePutValidation validate put request and if valid set DocContent in context for next handler, otherwise abort request
+func HandlePutValidation[T types.DocContent](c *gin.Context) {
+	var doc T
+	if err := c.BindJSON(&doc); err != nil {
+		return
+	}
+	if guid := c.Param(consts.GUID_FIELD); guid != "" {
+		doc.SetGUID(guid)
+	}
+	if doc.GetGUID() == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster guid is required"})
+		return
+	}
+	c.Set("docData", doc)
+	c.Next()
+}
+
+// PostDoc - helper to post document of type T an be used by custom handlers
 func PostDoc[T types.DocContent](c *gin.Context, doc T) {
 	collection, customerGUID, err := readContext(c)
 	if err != nil {
@@ -109,6 +160,7 @@ func PostDoc[T types.DocContent](c *gin.Context, doc T) {
 	}
 }
 
+// PutDoc - helper to put document of type T an be used by custom handlers
 func PutDoc[T types.DocContent](c *gin.Context, doc T) {
 	update, err := GetUpdateDocCommand(doc, doc.GetReadOnlyFields()...)
 	if err != nil {
@@ -122,44 +174,4 @@ func PutDoc[T types.DocContent](c *gin.Context, doc T) {
 	} else {
 		c.JSON(http.StatusOK, res)
 	}
-}
-
-func PostValidation[T types.DocContent](c *gin.Context) {
-	var doc T
-	if err := c.BindJSON(&doc); err != nil {
-		return
-	}
-	if doc.GetName() == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
-		return
-	}
-	if exist, err := DocExist(c,
-		NewFilterBuilder().
-			WithName(doc.GetName()).
-			Get()); err != nil {
-		log.LogNTraceError("PostValidation: failed to check if document with same name exist", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	} else if exist {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("document with name %s already exists", doc.GetName())})
-		return
-	}
-	c.Set("docData", doc)
-	c.Next()
-}
-
-func PutValidation[T types.DocContent](c *gin.Context) {
-	var doc T
-	if err := c.BindJSON(&doc); err != nil {
-		return
-	}
-	if guid := c.Param(consts.GUID_FIELD); guid != "" {
-		doc.SetGUID(guid)
-	}
-	if doc.GetGUID() == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster guid is required"})
-		return
-	}
-	c.Set("docData", doc)
-	c.Next()
 }

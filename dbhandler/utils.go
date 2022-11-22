@@ -12,14 +12,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-//////////////////////////////////Sugar functions for mongo using values in gin context ///////////////////////////////////////////
+//////////////////////////////////Sugar functions for mongo using values in gin context /////////////////////////////////////////
+/////////////////////////////////all methods are expecting collection and customerGUID from context/////////////////////////////
 
-// GetAllForCustomer returns all not delete docs for customer from customerGUID and collection in context
+// GetAllForCustomer returns all docs for customer
 func GetAllForCustomer[T any](c *gin.Context) ([]T, error) {
 	return GetAllForCustomerWithProjection[T](c, nil)
 }
 
-// GetAllForCustomerWithProjection returns all not delete docs for customer from customerGUID and collection in context
+// GetAllForCustomerWithProjection returns all docs for customer with projection
 func GetAllForCustomerWithProjection[T any](c *gin.Context, projection bson.D) ([]T, error) {
 	collection, _, err := readContext(c)
 	var result []T
@@ -43,6 +44,7 @@ func GetAllForCustomerWithProjection[T any](c *gin.Context, projection bson.D) (
 	return result, nil
 }
 
+// UpdateDocument updates document by GUID and update command
 func UpdateDocument[T any](c *gin.Context, id string, update bson.D) (*T, error) {
 
 	collection, _, err := readContext(c)
@@ -59,7 +61,7 @@ func UpdateDocument[T any](c *gin.Context, id string, update bson.D) (*T, error)
 	return &result, nil
 }
 
-// DocExist returns true if at least one document with given filter exists for customer & collection in context
+// DocExist returns true if at least one document with given filter exists
 func DocExist(c *gin.Context, f bson.D) (bool, error) {
 	collection, _, err := readContext(c)
 	if err != nil {
@@ -73,7 +75,7 @@ func DocExist(c *gin.Context, f bson.D) (bool, error) {
 	return n > 0, err
 }
 
-// DocWithNameExist calls with given name filter
+// DocWithNameExist returns true if at least one document with given name exists
 func DocWithNameExist(c *gin.Context, name string) (bool, error) {
 	return DocExist(c,
 		NewFilterBuilder().
@@ -81,7 +83,7 @@ func DocWithNameExist(c *gin.Context, name string) (bool, error) {
 			Get())
 }
 
-// GetDocByGUID returns document by GUID for customer in context from collection in context
+// GetDocByGUID returns document by GUID
 func GetDocByGUID[T any](c *gin.Context, guid string) (*T, error) {
 	collection, _, err := readContext(c)
 	if err != nil {
@@ -101,7 +103,7 @@ func GetDocByGUID[T any](c *gin.Context, guid string) (*T, error) {
 	return &result, nil
 }
 
-// GetDocByGUID returns document by GUID for customer in context from collection in context
+// GetDocByName returns document by name
 func GetDocByName[T any](c *gin.Context, name string) (*T, error) {
 	collection, _, err := readContext(c)
 	if err != nil {
@@ -121,6 +123,7 @@ func GetDocByName[T any](c *gin.Context, name string) (*T, error) {
 	return &result, nil
 }
 
+// CountDocs counts documents that match the filter
 func CountDocs(c *gin.Context, f bson.D) (int64, error) {
 	collection, _, err := readContext(c)
 	if err != nil {
@@ -134,6 +137,8 @@ func CountDocs(c *gin.Context, f bson.D) (int64, error) {
 }
 
 // helpers
+
+// readContext reads collection and customerGUID from context
 func readContext(c *gin.Context) (collection, customerGUID string, err error) {
 	collection, errCollection := readCollection(c)
 	if errCollection != nil {
