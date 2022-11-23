@@ -23,7 +23,7 @@ func AddPolicyRoutes[T types.DocContent](g *gin.Engine, path, dbCollection strin
 	routerGroup.POST("/", HandlePostDocWithValidation[T]()...)
 	routerGroup.PUT("/", HandlePutDocWithValidation[T]()...)
 	routerGroup.PUT("/:"+consts.GUID_FIELD, HandlePutDocWithValidation[T]()...)
-	routerGroup.DELETE("/:"+consts.GUID_FIELD, HandleDeleteDoc)
+	routerGroup.DELETE("/:"+consts.GUID_FIELD, HandleDeleteDoc[T])
 
 }
 
