@@ -7,6 +7,7 @@ import (
 	"kubescape-config-service/utils/consts"
 	"kubescape-config-service/utils/log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -144,6 +145,12 @@ func GetByScopeParams[T types.DocContent](c *gin.Context, conf *scopeParamsConfi
 			log.LogNTraceError("invalid query param", err, c)
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return true
+		}
+		var err error
+		if v, e := url.QueryUnescape(values[0]); e != nil {
+			log.LogNTraceError("failed to unescape query param", err, c)
+		} else {
+			values[0] = v
 		}
 		var field, key = keys[0], keys[1]
 		if queryConfig, ok := conf.params2Query[field]; !ok {
