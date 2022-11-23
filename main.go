@@ -31,7 +31,7 @@ func main() {
 }
 
 func setupRouter() *gin.Engine {
-	//gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	//readiness and liveness probes
 	prob.AddRoutes(router)

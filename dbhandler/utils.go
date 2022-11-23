@@ -86,20 +86,32 @@ func FindForCustomer[T any](c *gin.Context, filterBuilder *FilterBuilder, projec
 }
 
 // UpdateDocument updates document by GUID and update command
-func UpdateDocument[T any](c *gin.Context, id string, update bson.D) (*T, error) {
+func UpdateDocument[T any](c *gin.Context, id string, update bson.D) ([]T, error) {
 
 	collection, _, err := readContext(c)
 	if err != nil {
 		return nil, err
 	}
-	var result T
+
+	var oldDoc T
+	if err := mongo.GetReadCollection(collection).
+		FindOne(c.Request.Context(),
+			NewFilterBuilder().
+				WithNotDeleteForCustomer(c).
+				WithID(id).
+				Get()).
+		Decode(&oldDoc); err != nil {
+		log.LogNTraceError("failed to get document by id", err, c)
+		return nil, err
+	}
+	var newDoc T
 	filter := NewFilterBuilder().WithNotDeleteForCustomer(c).WithID(id).Get()
 	if err := mongo.GetWriteCollection(collection).FindOneAndUpdate(c.Request.Context(), filter, update,
 		options.FindOneAndUpdate().SetReturnDocument(options.After)).
-		Decode(&result); err != nil {
+		Decode(&newDoc); err != nil {
 		return nil, err
 	}
-	return &result, nil
+	return []T{oldDoc, newDoc}, nil
 }
 
 // DocExist returns true if at least one document with given filter exists
