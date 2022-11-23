@@ -28,6 +28,7 @@ func EnsureConnected() error {
 	var dbPingError error
 	var primaryDBPingError error
 
+	zap.L().Info("checking mongo connectivity")
 	if mongoDB != nil {
 		wg.Add(1)
 		go func() {
