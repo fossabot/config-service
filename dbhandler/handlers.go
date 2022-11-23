@@ -7,6 +7,7 @@ import (
 	"kubescape-config-service/utils/consts"
 	"kubescape-config-service/utils/log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -55,6 +56,17 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 	}
 }
 
+// HandleGetListByNameOrAll - chains HandleGetNamesList->HandleGetByName-> HandleGetAll
+func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *scopeParamsConfig) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !GetNamesList[T](c) &&
+			!GetByNameParam[T](c, nameParam) &&
+			!GetByScopeParams[T](c, paramConf) {
+			HandleGetAll[T](c)
+		}
+	}
+}
+
 // HandleGetAll - get all documents of type T for collection in context
 func HandleGetAll[T types.DocContent](c *gin.Context) {
 	if docs, err := GetAllForCustomer[T](c); err != nil {
@@ -63,6 +75,108 @@ func HandleGetAll[T types.DocContent](c *gin.Context) {
 		return
 	} else {
 		c.JSON(http.StatusOK, docs)
+	}
+}
+
+// GetNamesList check for "list" query param and return list of names, returns false if not served by this handler
+func GetNamesList[T types.DocContent](c *gin.Context) bool {
+	if _, list := c.GetQuery(consts.LIST_PARAM); list {
+		namesProjection := NewProjectionBuilder().Include(consts.NAME_FIELD).ExcludeID().Get()
+		if docNames, err := GetAllForCustomerWithProjection[T](c, namesProjection); err != nil {
+			log.LogNTraceError("failed to read documents with name projection", err, c)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return true
+		} else {
+			var names []string
+			for _, docContent := range docNames {
+				names = append(names, docContent.GetName())
+			}
+			c.JSON(http.StatusOK, names)
+			return true
+		}
+	}
+	return false
+}
+
+// HandleGetNameList check for <nameParam> query param and return the element with this name, returns false if not served by this handler
+func GetByNameParam[T types.DocContent](c *gin.Context, nameParam string) bool {
+	if nameParam == "" {
+		return false
+	}
+	if name := c.Query(nameParam); name != "" {
+		//get policy by name
+		if policy, err := GetDocByName[T](c, name); err != nil {
+			log.LogNTraceError("failed to read policy", err, c)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return true
+		} else {
+			c.JSON(http.StatusOK, policy)
+			c.Done()
+			return true
+		}
+	}
+	return false
+}
+
+func GetByScopeParams[T types.DocContent](c *gin.Context, conf *scopeParamsConfig) bool {
+	if conf == nil {
+		return false // not served by this handler
+	}
+
+	//keep filter builder per field name
+	filterBuilders := map[string]*FilterBuilder{}
+	getFilterBuilder := func(paramName string) *FilterBuilder {
+		if filterBuilder, ok := filterBuilders[paramName]; ok {
+			return filterBuilder
+		}
+		filterBuilder := NewFilterBuilder()
+		filterBuilders[paramName] = filterBuilder
+		return filterBuilder
+	}
+
+	qParams := c.Request.URL.Query()
+	for paramKey, value := range qParams {
+		keys := strings.Split(paramKey, ".")
+		if len(keys) != 2 || len(value) != 1 {
+			err := fmt.Errorf("invalid query param %s %s", paramKey, strings.Join(value, ","))
+			log.LogNTraceError("invalid query param", err, c)
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return true
+		}
+		var field, key = keys[0], keys[1]
+		if queryConfig, ok := conf.params2Query[field]; !ok {
+			continue
+		} else if queryConfig.isArray {
+			if queryConfig.pathInArray != "" {
+				key = queryConfig.pathInArray + "." + key
+
+			}
+		} else {
+			key = queryConfig.fieldName + "." + key
+		}
+
+		filterBuilder := getFilterBuilder(field)
+		filterBuilder.WithValue(key, value[0])
+	}
+
+	allQueriesFilter := NewFilterBuilder()
+	for key, filterBuilder := range filterBuilders {
+		queryConfig := conf.params2Query[key]
+		if queryConfig.isArray {
+			filterBuilder.WarpElementMatch().WarpWithField(queryConfig.fieldName)
+		}
+		allQueriesFilter.WithFilter(filterBuilder.Get())
+	}
+	if len(allQueriesFilter.Get()) == 0 {
+		return false //not served by this handler
+	}
+	if docs, err := FindForCustomer[T](c, allQueriesFilter, nil); err != nil {
+		log.LogNTraceError("failed to read documents", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return true
+	} else {
+		c.JSON(http.StatusOK, docs)
+		return true
 	}
 }
 
@@ -78,11 +192,8 @@ func HandlePutDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
 
 // HandlePostDocFromContext - post document of type T from context
 func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
-	var doc T
-	if iData, ok := c.Get("docData"); ok {
-		doc = iData.(T)
-	} else {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "docData is required"})
+	doc, err := MustGetDocContentFromContext[T](c)
+	if err != nil {
 		return
 	}
 	PostDoc(c, doc)
@@ -90,11 +201,8 @@ func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
 
 // HandlePutDocFromContext - put document of type T from context
 func HandlePutDocFromContext[T types.DocContent](c *gin.Context) {
-	var doc T
-	if iData, ok := c.Get("docData"); ok {
-		doc = iData.(T)
-	} else {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "docData is required"})
+	doc, err := MustGetDocContentFromContext[T](c)
+	if err != nil {
 		return
 	}
 	PutDoc(c, doc)
@@ -104,7 +212,9 @@ func HandlePutDocFromContext[T types.DocContent](c *gin.Context) {
 
 func HandlePostValidation[T types.DocContent](c *gin.Context) {
 	var doc T
-	if err := c.BindJSON(&doc); err != nil {
+	if err := c.ShouldBindJSON(&doc); err != nil {
+		log.LogNTraceError("failed to bind json", err, c)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	if doc.GetName() == "" {
@@ -122,14 +232,16 @@ func HandlePostValidation[T types.DocContent](c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("document with name %s already exists", doc.GetName())})
 		return
 	}
-	c.Set("docData", doc)
+	c.Set(consts.DOC_CONTENT_KEY, doc)
 	c.Next()
 }
 
 // HandlePutValidation validate put request and if valid set DocContent in context for next handler, otherwise abort request
 func HandlePutValidation[T types.DocContent](c *gin.Context) {
 	var doc T
-	if err := c.BindJSON(&doc); err != nil {
+	if err := c.ShouldBindJSON(&doc); err != nil {
+		log.LogNTraceError("failed to bind json", err, c)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	if guid := c.Param(consts.GUID_FIELD); guid != "" {
@@ -139,7 +251,7 @@ func HandlePutValidation[T types.DocContent](c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster guid is required"})
 		return
 	}
-	c.Set("docData", doc)
+	c.Set(consts.DOC_CONTENT_KEY, doc)
 	c.Next()
 }
 

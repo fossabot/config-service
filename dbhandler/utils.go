@@ -3,14 +3,29 @@ package dbhandler
 import (
 	"fmt"
 	"kubescape-config-service/mongo"
+	"kubescape-config-service/types"
 	"kubescape-config-service/utils/consts"
 	"kubescape-config-service/utils/log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-multierror"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+// AddPolicyRoutes adds common routes for policy
+func AddPolicyRoutes[T types.DocContent](g *gin.Engine, path, dbCollection string, paramConf *scopeParamsConfig) {
+	routerGroup := g.Group(path)
+	routerGroup.Use(DBContextMiddleware(dbCollection))
+	routerGroup.GET("/", HandleGetByQueryOrAll[T](consts.POLICY_NAME_PARAM, paramConf))
+	routerGroup.GET("/:"+consts.GUID_FIELD, HandleGetDocWithGUIDInPath[T])
+	routerGroup.POST("/", HandlePostDocWithValidation[T]()...)
+	routerGroup.PUT("/", HandlePutDocWithValidation[T]()...)
+	routerGroup.PUT("/:"+consts.GUID_FIELD, HandlePutDocWithValidation[T]()...)
+	routerGroup.DELETE("/:"+consts.GUID_FIELD, HandleDeleteDoc)
+
+}
 
 //////////////////////////////////Sugar functions for mongo using values in gin context /////////////////////////////////////////
 /////////////////////////////////all methods are expecting collection and customerGUID from context/////////////////////////////
@@ -28,6 +43,32 @@ func GetAllForCustomerWithProjection[T any](c *gin.Context, projection bson.D) (
 		return nil, err
 	}
 	filter := NewFilterBuilder().WithNotDeleteForCustomer(c).Get()
+	findOpts := options.Find().SetNoCursorTimeout(true)
+	if projection != nil {
+		findOpts.SetProjection(projection)
+	}
+	if cur, err := mongo.GetReadCollection(collection).
+		Find(c.Request.Context(), filter, findOpts); err != nil {
+		return nil, err
+	} else {
+
+		if err := cur.All(c.Request.Context(), &result); err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+func FindForCustomer[T any](c *gin.Context, filterBuilder *FilterBuilder, projection bson.D) ([]T, error) {
+	collection, _, err := readContext(c)
+	var result []T
+	if err != nil {
+		return nil, err
+	}
+	if filterBuilder == nil {
+		filterBuilder = NewFilterBuilder()
+	}
+	filter := filterBuilder.WithNotDeleteForCustomer(c).Get()
 	findOpts := options.Find().SetNoCursorTimeout(true)
 	if projection != nil {
 		findOpts.SetProjection(projection)
@@ -137,6 +178,19 @@ func CountDocs(c *gin.Context, f bson.D) (int64, error) {
 }
 
 // helpers
+
+func MustGetDocContentFromContext[T types.DocContent](c *gin.Context) (T, error) {
+	var doc T
+	if iData, ok := c.Get(consts.DOC_CONTENT_KEY); ok {
+		doc = iData.(T)
+	} else {
+		err := fmt.Errorf("failed to get doc content from context")
+		log.LogNTraceError(err.Error(), err, c)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return nil, err
+	}
+	return doc, nil
+}
 
 // readContext reads collection and customerGUID from context
 func readContext(c *gin.Context) (collection, customerGUID string, err error) {

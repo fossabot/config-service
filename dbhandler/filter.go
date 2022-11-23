@@ -46,7 +46,7 @@ func (f *FilterBuilder) WithName(name string) *FilterBuilder {
 }
 
 func (f *FilterBuilder) WithCustomer(c *gin.Context) *FilterBuilder {
-	return f.WithValue(consts.CUSTOMERS, c.GetString(consts.CUSTOMER_GUID))
+	return f.WithValue(consts.CUSTOMERS_FIELD, c.GetString(consts.CUSTOMER_GUID))
 }
 
 func (f *FilterBuilder) WithNotDeleted() *FilterBuilder {
@@ -84,5 +84,15 @@ func (f *FilterBuilder) WithExists(key string, value bool) *FilterBuilder {
 
 func (f *FilterBuilder) AddNotExists(key string) *FilterBuilder {
 	f.filter = append(f.filter, bson.E{Key: key, Value: bson.D{{Key: "$exists", Value: false}}})
+	return f
+}
+
+func (f *FilterBuilder) WarpElementMatch() *FilterBuilder {
+	f.filter = bson.D{{Key: "$elemMatch", Value: f.filter}}
+	return f
+}
+
+func (f *FilterBuilder) WarpWithField(field string) *FilterBuilder {
+	f.filter = bson.D{{Key: field, Value: f.filter}}
 	return f
 }
