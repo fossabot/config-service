@@ -9,7 +9,7 @@ import (
 
 // Doc Content interface for data types embedded in DB documents
 type DocContent interface {
-	*Cluster | *PostureExceptionPolicy
+	*Cluster | *PostureExceptionPolicy | *VulnerabilityExceptionPolicy
 	InitNew()
 	GetGUID() string
 	SetGUID(guid string)
@@ -20,9 +20,8 @@ type DocContent interface {
 // redefine types for Doc Content implementations
 
 type PostureExceptionPolicy armotypes.PostureExceptionPolicy
-
-// TODO move to armotypes
 type Cluster armotypes.PortalCluster
+type VulnerabilityExceptionPolicy armotypes.VulnerabilityExceptionPolicy
 
 func (c *Cluster) GetGUID() string {
 	return c.GUID
@@ -37,12 +36,26 @@ func (c *Cluster) GetReadOnlyFields() []string {
 	return clusterReadOnlyFields
 }
 func (c *Cluster) InitNew() {
-	if c.SubscriptionDate == "" {
-		c.SubscriptionDate = time.Now().UTC().Format(time.RFC3339)
-	}
+	c.SubscriptionDate = time.Now().UTC().Format(time.RFC3339)
 	if c.Attributes == nil {
 		c.Attributes = make(map[string]interface{})
 	}
+}
+
+func (c *VulnerabilityExceptionPolicy) GetGUID() string {
+	return c.GUID
+}
+func (c *VulnerabilityExceptionPolicy) SetGUID(guid string) {
+	c.GUID = guid
+}
+func (c *VulnerabilityExceptionPolicy) GetName() string {
+	return c.Name
+}
+func (c *VulnerabilityExceptionPolicy) GetReadOnlyFields() []string {
+	return exceptionPolicyReadOnlyFields
+}
+func (c *VulnerabilityExceptionPolicy) InitNew() {
+	c.CreationTime = time.Now().UTC().Format(time.RFC3339)
 }
 
 func (p *PostureExceptionPolicy) GetGUID() string {
@@ -55,15 +68,13 @@ func (p *PostureExceptionPolicy) GetName() string {
 	return p.Name
 }
 func (p *PostureExceptionPolicy) GetReadOnlyFields() []string {
-	return postureExceptionReadOnlyFields
+	return exceptionPolicyReadOnlyFields
 }
 func (p *PostureExceptionPolicy) InitNew() {
-	if p.CreationTime == "" {
-		p.CreationTime = time.Now().UTC().Format("time.RFC3339")
-	}
+	p.CreationTime = time.Now().UTC().Format("time.RFC3339")
 }
 
 var commonReadOnlyFields = []string{consts.ID_FIELD, consts.NAME_FIELD, consts.GUID_FIELD}
 var clusterReadOnlyFields = append([]string{"subscription_date"}, commonReadOnlyFields...)
-var postureExceptionReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
+var exceptionPolicyReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
 var repositoryReadOnlyFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, commonReadOnlyFields...)

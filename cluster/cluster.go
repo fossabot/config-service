@@ -12,11 +12,8 @@ import (
 )
 
 func postCluster(c *gin.Context) {
-	var reqCluster *types.Cluster
-	if iData, ok := c.Get("docData"); ok {
-		reqCluster = iData.(*types.Cluster)
-	} else {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "docData is required"})
+	reqCluster, err := dbhandler.MustGetDocContentFromContext[*types.Cluster](c)
+	if err != nil {
 		return
 	}
 	if reqCluster.Attributes == nil {
@@ -27,12 +24,8 @@ func postCluster(c *gin.Context) {
 }
 
 func putCluster(c *gin.Context) {
-	var reqCluster *types.Cluster
-	//get cluster body from context
-	if iData, ok := c.Get("docData"); ok {
-		reqCluster = iData.(*types.Cluster)
-	} else {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "docData is required"})
+	reqCluster, err := dbhandler.MustGetDocContentFromContext[*types.Cluster](c)
+	if err != nil {
 		return
 	}
 	//only attributes can be updated - so check if there are any attributes

@@ -11,8 +11,13 @@ import (
 // helpers to build db update commands
 
 // GetUpdateFieldValuesCommand creates update command for multiple values for a field
+//note - if the field is an array, the values will be added to the array
 func GetUpdateFieldValuesCommand(m map[string]interface{}, fieldName string) bson.D {
 	return bson.D{bson.E{Key: "$set", Value: map2BsonD(m, fieldName)}}
+}
+
+func GetUpdateDocValuesCommand(m map[string]interface{}) bson.D {
+	return bson.D{bson.E{Key: "$set", Value: map2BsonD(m, "")}}
 }
 
 // GetUpdateFieldValueCommand creates update command for a single value for a field
@@ -31,7 +36,7 @@ func GetUpdateDocCommand[T types.DocContent](i T, excludeFields ...string) (bson
 	for _, f := range excludeFields {
 		delete(m, f)
 	}
-	return GetUpdateFieldValuesCommand(m, ""), nil
+	return GetUpdateDocValuesCommand(m), nil
 }
 
 // helper to build bson.D from map

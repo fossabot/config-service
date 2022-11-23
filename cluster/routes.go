@@ -9,9 +9,9 @@ import (
 )
 
 func AddRoutes(g *gin.Engine) {
-	cluster := g.Group("/cluster")
+	cluster := g.Group(consts.CLUSTER_PATH)
 
-	cluster.Use(dbhandler.DBContextMiddleware(consts.CLUSTERS))
+	cluster.Use(dbhandler.DBContextMiddleware(consts.CLUSTERS_COLLECTION))
 
 	cluster.GET("/", dbhandler.HandleGetAll[*types.Cluster])
 	cluster.GET("/:"+consts.GUID_FIELD, dbhandler.HandleGetDocWithGUIDInPath[*types.Cluster])
