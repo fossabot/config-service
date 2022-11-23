@@ -11,7 +11,7 @@ import (
 // helpers to build db update commands
 
 // GetUpdateFieldValuesCommand creates update command for multiple values for a field
-//note - if the field is an array, the values will be added to the array
+// note - if the field is an array, the values will be added to the array
 func GetUpdateFieldValuesCommand(m map[string]interface{}, fieldName string) bson.D {
 	return bson.D{bson.E{Key: "$set", Value: map2BsonD(m, fieldName)}}
 }
