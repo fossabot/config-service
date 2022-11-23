@@ -49,7 +49,7 @@ func setupRouter() *gin.Engine {
 	router.Use(ginzap.RecoveryWithZap(zapLogger, true))
 
 	//Public routes
-	
+
 	//login routes
 	login.AddRoutes(router)
 
