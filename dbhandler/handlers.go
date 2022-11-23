@@ -178,6 +178,7 @@ func GetByScopeParams[T types.DocContent](c *gin.Context, conf *scopeParamsConfi
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return true
 	} else {
+		log.LogNTrace(fmt.Sprintf("scope query found %d documents", len(docs)), c)
 		c.JSON(http.StatusOK, docs)
 		return true
 	}
