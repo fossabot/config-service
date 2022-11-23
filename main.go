@@ -33,6 +33,8 @@ func main() {
 func setupRouter() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
+	//readiness and liveness probes
+	prob.AddRoutes(router)
 
 	//general middlewares
 	//open telemetry middleware
@@ -47,8 +49,7 @@ func setupRouter() *gin.Engine {
 	router.Use(ginzap.RecoveryWithZap(zapLogger, true))
 
 	//Public routes
-	//readiness and liveness probes
-	prob.AddRoutes(router)
+	
 	//login routes
 	login.AddRoutes(router)
 

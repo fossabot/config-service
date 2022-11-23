@@ -45,8 +45,8 @@ func traceAttributesNHeader(c *gin.Context) {
 func requestLoggerWithFields(c *gin.Context) {
 	fields := []zapcore.Field{
 		zap.String("method", c.Request.Method),
-		zap.String("query", c.Request.URL.Path),
-		zap.String("path", c.Request.URL.RawQuery),
+		zap.String("query", c.Request.URL.RawQuery),
+		zap.String("path", c.Request.URL.Path),
 	}
 	fields = append(fields, telemetryLogFields(c)...)
 	c.Set("zapLogger", zapLogger.WithOptions(zap.Fields(fields...)))
