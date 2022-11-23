@@ -92,7 +92,7 @@ func UpdateDocument[T any](c *gin.Context, id string, update bson.D) ([]T, error
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var oldDoc T
 	if err := mongo.GetReadCollection(collection).
 		FindOne(c.Request.Context(),
@@ -110,8 +110,8 @@ func UpdateDocument[T any](c *gin.Context, id string, update bson.D) ([]T, error
 		options.FindOneAndUpdate().SetReturnDocument(options.After)).
 		Decode(&newDoc); err != nil {
 		return nil, err
-	}	
-	return []T{oldDoc,newDoc}, nil
+	}
+	return []T{oldDoc, newDoc}, nil
 }
 
 // DocExist returns true if at least one document with given filter exists
