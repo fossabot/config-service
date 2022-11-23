@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	"k8s.io/utils/strings/slices"
 )
 
 /////////////////////////////////////////gin handlers/////////////////////////////////////////
@@ -135,10 +136,11 @@ func GetByScopeParams[T types.DocContent](c *gin.Context, conf *scopeParamsConfi
 	}
 
 	qParams := c.Request.URL.Query()
-	for paramKey, value := range qParams {
+	for paramKey, vals := range qParams {
 		keys := strings.Split(paramKey, ".")
-		if len(keys) != 2 || len(value) != 1 {
-			err := fmt.Errorf("invalid query param %s %s", paramKey, strings.Join(value, ","))
+		values := slices.Filter([]string{}, vals, func(s string) bool { return s != "" })
+		if len(keys) != 2 || len(values) != 1 {
+			err := fmt.Errorf("invalid query param %s %s", paramKey, strings.Join(values, ","))
 			log.LogNTraceError("invalid query param", err, c)
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return true
@@ -156,7 +158,7 @@ func GetByScopeParams[T types.DocContent](c *gin.Context, conf *scopeParamsConfi
 		}
 
 		filterBuilder := getFilterBuilder(field)
-		filterBuilder.WithValue(key, value[0])
+		filterBuilder.WithValue(key, values[0])
 	}
 
 	allQueriesFilter := NewFilterBuilder()

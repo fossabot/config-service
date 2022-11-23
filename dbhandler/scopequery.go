@@ -29,6 +29,11 @@ func GetPostureExceptionQueryConfig() *scopeParamsConfig {
 		pathInArray: "attributes",
 		isArray:     true,
 	}
+	config.params2Query["resources"] = queryConfig{
+		fieldName:   "resources",
+		pathInArray: "",
+		isArray:     true,
+	}
 	config.params2Query["posturePolicies"] = queryConfig{
 		fieldName:   "posturePolicies",
 		pathInArray: "",
@@ -42,6 +47,11 @@ func GetVulnerabilityExceptionConfig() *scopeParamsConfig {
 	config.params2Query["scope"] = queryConfig{
 		fieldName:   "designators",
 		pathInArray: "attributes",
+		isArray:     true,
+	}
+	config.params2Query["designators"] = queryConfig{
+		fieldName:   "designators",
+		pathInArray: "",
 		isArray:     true,
 	}
 	config.params2Query["vulnerabilities"] = queryConfig{
