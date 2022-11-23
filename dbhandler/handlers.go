@@ -18,7 +18,7 @@ import (
 /////////////////////////////////////////gin handlers/////////////////////////////////////////
 
 // HandleDeleteDoc  - delete document by id in path for collection in context
-func HandleDeleteDoc(c *gin.Context) {
+func HandleDeleteDoc[T types.DocContent](c *gin.Context) {
 	collection, _, err := readContext(c)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -27,6 +27,19 @@ func HandleDeleteDoc(c *gin.Context) {
 	guid := c.Param(consts.GUID_FIELD)
 	if guid == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "guid is required"})
+		return
+	}
+
+	var oldDoc T
+	if err := mongo.GetReadCollection(collection).
+		FindOne(c.Request.Context(),
+			NewFilterBuilder().
+				WithNotDeleteForCustomer(c).
+				WithGUID(guid).
+				Get()).
+		Decode(&oldDoc); err != nil {
+		log.LogNTraceError("failed to read document before delete", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -39,7 +52,7 @@ func HandleDeleteDoc(c *gin.Context) {
 		c.JSON(http.StatusNotFound, fmt.Sprintf("document with id %s does not exist", guid))
 		return
 	}
-	c.JSON(http.StatusOK, "deleted")
+	c.JSON(http.StatusOK, []T{oldDoc})
 }
 
 // HandleGetDocWithGUIDInPath - get document of type T by id in path for collection in context
