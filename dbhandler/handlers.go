@@ -172,6 +172,7 @@ func GetByScopeParams[T types.DocContent](c *gin.Context, conf *scopeParamsConfi
 	if len(allQueriesFilter.Get()) == 0 {
 		return false //not served by this handler
 	}
+	log.LogNTrace(fmt.Sprintf("query params: %v search query %v", qParams, allQueriesFilter.Get()), c)
 	if docs, err := FindForCustomer[T](c, allQueriesFilter, nil); err != nil {
 		log.LogNTraceError("failed to read documents", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

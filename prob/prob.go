@@ -7,12 +7,13 @@ import (
 )
 
 func AddRoutes(g *gin.Engine) {
+	prob := g.Group("/")
 
-	g.GET("/liveliness", func(c *gin.Context) {
+	prob.GET("liveliness", func(c *gin.Context) {
 		c.JSON(http.StatusOK, nil)
 	})
 
-	g.GET("/readiness", func(c *gin.Context) {
+	prob.GET("readiness", func(c *gin.Context) {
 		//TODO check number of open mongo sessions
 		c.JSON(http.StatusOK, nil)
 	})
