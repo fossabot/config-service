@@ -123,11 +123,10 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 		if len(values) == 0 {
 			continue
 		}
-		if len(keys) != 2 {
-			err := fmt.Errorf("invalid query param %s %s", paramKey, strings.Join(values, ","))
-			log.LogNTraceError("invalid query param", err, c)
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return true
+		if len(keys) < 2 {
+			keys = []string{conf.defaultContext, keys[0]}
+		} else if len(keys) > 2 {
+			keys = []string{keys[0], strings.Join(keys[1:], ".")}
 		}
 		//escape in case of bad formatted query params
 		for i := range values {
