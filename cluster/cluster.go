@@ -20,7 +20,7 @@ func postCluster(c *gin.Context) {
 		reqCluster.Attributes = map[string]interface{}{}
 	}
 	reqCluster.Attributes[consts.SHORT_NAME_ATTRIBUTE] = getUniqueShortName(reqCluster.Name, c)
-	dbhandler.PostDoc(c, reqCluster)
+	dbhandler.PostDocHandler(c, reqCluster)
 }
 
 func putCluster(c *gin.Context) {

@@ -17,45 +17,9 @@ import (
 
 /////////////////////////////////////////gin handlers/////////////////////////////////////////
 
-// HandleDeleteDoc  - delete document by id in path for collection in context
-func HandleDeleteDoc[T types.DocContent](c *gin.Context) {
-	collection, _, err := readContext(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	guid := c.Param(consts.GUID_FIELD)
-	if guid == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "guid is required"})
-		return
-	}
+// ////////////////////////////////////////GET///////////////////////////////////////////////
 
-	var deletedDoc T
-	if err := mongo.GetReadCollection(collection).
-		FindOne(c.Request.Context(),
-			NewFilterBuilder().
-				WithNotDeleteForCustomer(c).
-				WithGUID(guid).
-				Get()).
-		Decode(&deletedDoc); err != nil {
-		log.LogNTraceError("failed to read document before delete", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	if res, err := mongo.GetWriteCollection(collection).DeleteOne(c.Request.Context(), bson.M{consts.ID_FIELD: guid}); err != nil {
-		msg := fmt.Sprintf("failed to delete document GUID: %s  Collection: %s", guid, collection)
-		log.LogNTraceError(msg, err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	} else if res.DeletedCount == 0 {
-		c.JSON(http.StatusNotFound, fmt.Sprintf("document with id %s does not exist", guid))
-		return
-	}
-	c.JSON(http.StatusOK, deletedDoc)
-}
-
-// HandleGetDocWithGUIDInPath - get document of type T by id in path for collection in context
+// HandleGetDocWithGUIDInPath - get document of type T by id in path
 func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 	guid := c.Param(consts.GUID_FIELD)
 	if guid == "" {
@@ -74,9 +38,9 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 // HandleGetListByNameOrAll - chains HandleGetNamesList->HandleGetByName-> HandleGetAll
 func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *scopeParamsConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !GetNamesList[T](c) &&
-			!GetByNameParam[T](c, nameParam) &&
-			!GetByScopeParams[T](c, paramConf) {
+		if !GetNamesListHandler[T](c) &&
+			!GetByNameParamHandler[T](c, nameParam) &&
+			!GetByScopeParamsHandler[T](c, paramConf) {
 			HandleGetAll[T](c)
 		}
 	}
@@ -94,7 +58,7 @@ func HandleGetAll[T types.DocContent](c *gin.Context) {
 }
 
 // GetNamesList check for "list" query param and return list of names, returns false if not served by this handler
-func GetNamesList[T types.DocContent](c *gin.Context) bool {
+func GetNamesListHandler[T types.DocContent](c *gin.Context) bool {
 	if _, list := c.GetQuery(consts.LIST_PARAM); list {
 		namesProjection := NewProjectionBuilder().Include(consts.NAME_FIELD).ExcludeID().Get()
 		if docNames, err := GetAllForCustomerWithProjection[T](c, namesProjection); err != nil {
@@ -114,7 +78,7 @@ func GetNamesList[T types.DocContent](c *gin.Context) bool {
 }
 
 // HandleGetNameList check for <nameParam> query param and return the element with this name, returns false if not served by this handler
-func GetByNameParam[T types.DocContent](c *gin.Context, nameParam string) bool {
+func GetByNameParamHandler[T types.DocContent](c *gin.Context, nameParam string) bool {
 	if nameParam == "" {
 		return false
 	}
@@ -133,7 +97,8 @@ func GetByNameParam[T types.DocContent](c *gin.Context, nameParam string) bool {
 	return false
 }
 
-func GetByScopeParams[T types.DocContent](c *gin.Context, conf *scopeParamsConfig) bool {
+// GetByScopeParams parse scope params and return elements with this scope, returns false if not served by this handler
+func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopeParamsConfig) bool {
 	if conf == nil {
 		return false // not served by this handler
 	}
@@ -204,36 +169,13 @@ func GetByScopeParams[T types.DocContent](c *gin.Context, conf *scopeParamsConfi
 	}
 }
 
+// ////////////////////////////////////////POST///////////////////////////////////////////////
 // HandlePostDocWithValidation - chains validation and post document handlers
 func HandlePostDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
 	return []gin.HandlerFunc{HandlePostValidation[T], HandlePostDocFromContext[T]}
 }
 
-// HandlePutDocWithValidation - chains validation and put document handlers
-func HandlePutDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
-	return []gin.HandlerFunc{HandlePutValidation[T], HandlePutDocFromContext[T]}
-}
-
-// HandlePostDocFromContext - post document of type T from context
-func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
-	doc, err := MustGetDocContentFromContext[T](c)
-	if err != nil {
-		return
-	}
-	PostDoc(c, doc)
-}
-
-// HandlePutDocFromContext - put document of type T from context
-func HandlePutDocFromContext[T types.DocContent](c *gin.Context) {
-	doc, err := MustGetDocContentFromContext[T](c)
-	if err != nil {
-		return
-	}
-	PutDoc(c, doc)
-}
-
-// HandlePostValidation validate post request and if valid set DocContent in context for next handler, otherwise abort request
-
+// HandlePutValidation validate post request and if valid set DocContent in context for next handler, otherwise abort request
 func HandlePostValidation[T types.DocContent](c *gin.Context) {
 	var doc T
 	if err := c.ShouldBindJSON(&doc); err != nil {
@@ -260,6 +202,39 @@ func HandlePostValidation[T types.DocContent](c *gin.Context) {
 	c.Next()
 }
 
+// HandlePutDocFromContext - handles create a document of type T
+func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
+	doc, err := MustGetDocContentFromContext[T](c)
+	if err != nil {
+		return
+	}
+	PostDocHandler(c, doc)
+}
+
+// PostDoc - helper to put document of type T, custom handler should use this function to do the final POST handling
+func PostDocHandler[T types.DocContent](c *gin.Context, doc T) {
+	collection, customerGUID, err := readContext(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	dbDoc := NewDocument(doc, customerGUID)
+	if result, err := mongo.GetWriteCollection(collection).InsertOne(c.Request.Context(), dbDoc); err != nil {
+		log.LogNTraceError("failed to create document", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	} else {
+		c.JSON(http.StatusOK, gin.H{"GUID": result.InsertedID})
+	}
+}
+
+// ////////////////////////////////////////PUT///////////////////////////////////////////////
+
+// HandlePutDocWithValidation - chains validation and put document handlers
+func HandlePutDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
+	return []gin.HandlerFunc{HandlePutValidation[T], HandlePutDocFromContext[T]}
+}
+
 // HandlePutValidation validate put request and if valid set DocContent in context for next handler, otherwise abort request
 func HandlePutValidation[T types.DocContent](c *gin.Context) {
 	var doc T
@@ -279,25 +254,17 @@ func HandlePutValidation[T types.DocContent](c *gin.Context) {
 	c.Next()
 }
 
-// PostDoc - helper to post document of type T an be used by custom handlers
-func PostDoc[T types.DocContent](c *gin.Context, doc T) {
-	collection, customerGUID, err := readContext(c)
+// HandlePutDocFromContext - handles updates a document of type T
+func HandlePutDocFromContext[T types.DocContent](c *gin.Context) {
+	doc, err := MustGetDocContentFromContext[T](c)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	dbDoc := NewDocument(doc, customerGUID)
-	if result, err := mongo.GetWriteCollection(collection).InsertOne(c.Request.Context(), dbDoc); err != nil {
-		log.LogNTraceError("failed to create document", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	} else {
-		c.JSON(http.StatusOK, gin.H{"GUID": result.InsertedID})
-	}
+	PutDocHandler(c, doc)
 }
 
-// PutDoc - helper to put document of type T an be used by custom handlers
-func PutDoc[T types.DocContent](c *gin.Context, doc T) {
+// PutDoc - helper to put document of type T, custom handler should use this function to do the final PUT handling
+func PutDocHandler[T types.DocContent](c *gin.Context, doc T) {
 	update, err := GetUpdateDocCommand(doc, doc.GetReadOnlyFields()...)
 	if err != nil {
 		log.LogNTraceError("failed to create update command", err, c)
@@ -310,4 +277,78 @@ func PutDoc[T types.DocContent](c *gin.Context, doc T) {
 	} else {
 		c.JSON(http.StatusOK, res)
 	}
+}
+
+// ////////////////////////////////////////DELETE///////////////////////////////////////////////
+
+// HandleDeleteDoc  - delete document by id in path for collection in context
+func HandleDeleteDoc[T types.DocContent](c *gin.Context) {
+	guid := c.Param(consts.GUID_FIELD)
+	if guid == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "guid is required"})
+		return
+	}
+	DeleteDocByGUIDHandler[T](c, guid)
+}
+
+// HandleDeleteDoc  - delete document by id in path for collection in context
+func HandleDeleteDocByName[T types.DocContent](nameParam string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		name := c.Query(nameParam)
+		if name == "" {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "guid is required"})
+			return
+		}
+		DeleteDocByNameHandler[T](c, name)
+	}
+}
+
+func DeleteDocByGUIDHandler[T types.DocContent](c *gin.Context, guid string) {
+	collection, _, err := readContext(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	toBeDeleted, err := GetDocByGUID[T](c, guid)
+	if err != nil {
+		log.LogNTraceError("failed to read document before delete", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if res, err := mongo.GetWriteCollection(collection).DeleteOne(c.Request.Context(), bson.M{consts.ID_FIELD: guid}); err != nil {
+		msg := fmt.Sprintf("failed to delete document GUID: %s  Collection: %s", guid, collection)
+		log.LogNTraceError(msg, err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	} else if res.DeletedCount == 0 {
+		c.JSON(http.StatusNotFound, fmt.Sprintf("document with id %s does not exist", guid))
+		return
+	}
+	c.JSON(http.StatusOK, toBeDeleted)
+}
+
+func DeleteDocByNameHandler[T types.DocContent](c *gin.Context, name string) {
+	collection, _, err := readContext(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	toBeDeleted, err := GetDocByName[T](c, name)
+	if err != nil {
+		log.LogNTraceError("failed to read document before delete", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	filter := NewFilterBuilder().WithNotDeleteForCustomer(c).WithName(name)
+
+	if res, err := mongo.GetWriteCollection(collection).DeleteOne(c.Request.Context(), filter); err != nil {
+		msg := fmt.Sprintf("failed to delete document with name: %s  Collection: %s", name, collection)
+		log.LogNTraceError(msg, err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	} else if res.DeletedCount == 0 {
+		c.JSON(http.StatusNotFound, fmt.Sprintf("document with name %s does not exist", name))
+		return
+	}
+	c.JSON(http.StatusOK, toBeDeleted)
 }
