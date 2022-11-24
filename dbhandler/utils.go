@@ -14,18 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// AddPolicyRoutes adds common routes for policy
-func AddPolicyRoutes[T types.DocContent](g *gin.Engine, path, dbCollection string, paramConf *scopeParamsConfig) {
-	routerGroup := g.Group(path)
-	routerGroup.Use(DBContextMiddleware(dbCollection))
-	routerGroup.GET("/", HandleGetByQueryOrAll[T](consts.POLICY_NAME_PARAM, paramConf))
-	routerGroup.GET("/:"+consts.GUID_FIELD, HandleGetDocWithGUIDInPath[T])
-	routerGroup.POST("/", HandlePostDocWithValidation[T]()...)
-	routerGroup.PUT("/", HandlePutDocWithValidation[T]()...)
-	routerGroup.PUT("/:"+consts.GUID_FIELD, HandlePutDocWithValidation[T]()...)
-	routerGroup.DELETE("/:"+consts.GUID_FIELD, HandleDeleteDoc[T])
 
-}
 
 //////////////////////////////////Sugar functions for mongo using values in gin context /////////////////////////////////////////
 /////////////////////////////////all methods are expecting collection and customerGUID from context/////////////////////////////
@@ -38,7 +27,7 @@ func GetAllForCustomer[T any](c *gin.Context) ([]T, error) {
 // GetAllForCustomerWithProjection returns all docs for customer with projection
 func GetAllForCustomerWithProjection[T any](c *gin.Context, projection bson.D) ([]T, error) {
 	collection, _, err := readContext(c)
-	var result []T
+	result := []T{}
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +50,7 @@ func GetAllForCustomerWithProjection[T any](c *gin.Context, projection bson.D) (
 
 func FindForCustomer[T any](c *gin.Context, filterBuilder *FilterBuilder, projection bson.D) ([]T, error) {
 	collection, _, err := readContext(c)
-	var result []T
+	result := []T{}
 	if err != nil {
 		return nil, err
 	}
