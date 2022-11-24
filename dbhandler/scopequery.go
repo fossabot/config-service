@@ -1,7 +1,8 @@
 package dbhandler
 
 type scopeParamsConfig struct {
-	params2Query map[string]queryConfig
+	params2Query   map[string]queryConfig
+	defaultContext string
 }
 
 type queryConfig struct {
@@ -12,6 +13,7 @@ type queryConfig struct {
 
 func defaultConfig() *scopeParamsConfig {
 	return &scopeParamsConfig{
+		defaultContext: "attributes",
 		params2Query: map[string]queryConfig{
 			"attributes": {
 				fieldName:   "attributes",
@@ -44,6 +46,7 @@ func GetPostureExceptionQueryConfig() *scopeParamsConfig {
 
 func GetVulnerabilityExceptionConfig() *scopeParamsConfig {
 	config := defaultConfig()
+	config.defaultContext = "designators"
 	config.params2Query["scope"] = queryConfig{
 		fieldName:   "designators",
 		pathInArray: "attributes",
@@ -55,8 +58,8 @@ func GetVulnerabilityExceptionConfig() *scopeParamsConfig {
 		isArray:     true,
 	}
 	config.params2Query["vulnerabilities"] = queryConfig{
-		fieldName:   "designators",
-		pathInArray: "attributes",
+		fieldName:   "vulnerabilities",
+		pathInArray: "",
 		isArray:     true,
 	}
 	return config

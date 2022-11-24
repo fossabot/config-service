@@ -14,8 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-
-
 //////////////////////////////////Sugar functions for mongo using values in gin context /////////////////////////////////////////
 /////////////////////////////////all methods are expecting collection and customerGUID from context/////////////////////////////
 
