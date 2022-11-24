@@ -120,7 +120,10 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 		keys := strings.Split(paramKey, ".")
 		//clean whitespaces
 		values := slices.Filter([]string{}, vals, func(s string) bool { return s != "" })
-		if len(keys) != 2 || len(values) == 0 {
+		if len(values) == 0 {
+			continue
+		}
+		if len(keys) != 2 {
 			err := fmt.Errorf("invalid query param %s %s", paramKey, strings.Join(values, ","))
 			log.LogNTraceError("invalid query param", err, c)
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
