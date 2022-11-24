@@ -92,6 +92,16 @@ func (f *FilterBuilder) WarpElementMatch() *FilterBuilder {
 	return f
 }
 
+func (f *FilterBuilder) WarpOr() *FilterBuilder {
+	m := bson.M{}
+	for i := range f.filter {
+		m[f.filter[i].Key] = f.filter[i].Value
+
+	}
+	f.filter = bson.D{{Key: "$or", Value: bson.A{m}}}
+	return f
+}
+
 func (f *FilterBuilder) WarpWithField(field string) *FilterBuilder {
 	f.filter = bson.D{{Key: field, Value: f.filter}}
 	return f

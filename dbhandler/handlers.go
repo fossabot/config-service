@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	mongoDB "go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/utils/strings/slices"
 )
 
@@ -117,19 +118,23 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 	qParams := c.Request.URL.Query()
 	for paramKey, vals := range qParams {
 		keys := strings.Split(paramKey, ".")
+		//clean whitespaces
 		values := slices.Filter([]string{}, vals, func(s string) bool { return s != "" })
-		if len(keys) != 2 || len(values) != 1 {
+		if len(keys) != 2 || len(values) == 0 {
 			err := fmt.Errorf("invalid query param %s %s", paramKey, strings.Join(values, ","))
 			log.LogNTraceError("invalid query param", err, c)
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return true
 		}
-		var err error
-		if v, e := url.QueryUnescape(values[0]); e != nil {
-			log.LogNTraceError("failed to unescape query param", err, c)
-		} else {
-			values[0] = v
+		//escape in case of bad formatted query params
+		for i := range values {
+			if v, err := url.QueryUnescape(values[i]); err != nil {
+				log.LogNTraceError("failed to unescape query param", err, c)
+			} else {
+				values[i] = v
+			}
 		}
+		//calculate field name
 		var field, key = keys[0], keys[1]
 		if queryConfig, ok := conf.params2Query[field]; !ok {
 			continue
@@ -141,11 +146,20 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 		} else {
 			key = queryConfig.fieldName + "." + key
 		}
-
+		//get the field filter builder
 		filterBuilder := getFilterBuilder(field)
-		filterBuilder.WithValue(key, values[0])
+		//case of single value
+		if len(values) == 1 {
+			filterBuilder.WithValue(key, values[0])
+		} else { //case of multiple values
+			fb := NewFilterBuilder()
+			for _, v := range values {
+				fb.WithValue(key, v)
+			}
+			filterBuilder.WithFilter(fb.WarpOr().Get())
+		}
 	}
-
+	//aggregate all filters
 	allQueriesFilter := NewFilterBuilder()
 	for key, filterBuilder := range filterBuilders {
 		queryConfig := conf.params2Query[key]
@@ -311,6 +325,10 @@ func DeleteDocByGUIDHandler[T types.DocContent](c *gin.Context, guid string) {
 	}
 	toBeDeleted, err := GetDocByGUID[T](c, guid)
 	if err != nil {
+		if err == mongoDB.ErrNoDocuments {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("document with guid %s not found", guid)})
+			return
+		}
 		log.LogNTraceError("failed to read document before delete", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -335,6 +353,10 @@ func DeleteDocByNameHandler[T types.DocContent](c *gin.Context, name string) {
 	}
 	toBeDeleted, err := GetDocByName[T](c, name)
 	if err != nil {
+		if err == mongoDB.ErrNoDocuments {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("document with name %s not found", name)})
+			return
+		}
 		log.LogNTraceError("failed to read document before delete", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
