@@ -209,6 +209,9 @@ func HandlePostValidation[T types.DocContent](c *gin.Context) {
 	}
 
 	//validate
+	if len(docs) == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "no documents to post"})
+	}
 	filter := NewFilterBuilder()
 	names := []string{}
 	for _, doc := range docs {
@@ -266,20 +269,20 @@ func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
 	}
 
 	if len(dbDocs) == 1 {
-		if result, err := mongo.GetWriteCollection(collection).InsertOne(c.Request.Context(), dbDocs[0]); err != nil {
+		if _, err := mongo.GetWriteCollection(collection).InsertOne(c.Request.Context(), dbDocs[0]); err != nil {
 			log.LogNTraceError("failed to create document", err, c)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		} else {
-			c.JSON(http.StatusOK, gin.H{"GUID": result.InsertedID})
+			c.JSON(http.StatusOK, docs[0])
 		}
 	} else {
-		if result, err := mongo.GetWriteCollection(collection).InsertMany(c.Request.Context(), dbDocs); err != nil {
+		if _, err := mongo.GetWriteCollection(collection).InsertMany(c.Request.Context(), dbDocs); err != nil {
 			log.LogNTraceError("failed to create document", err, c)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		} else {
-			c.JSON(http.StatusOK, gin.H{"GUIDs": result.InsertedIDs})
+			c.JSON(http.StatusOK, docs)
 		}
 	}
 }
