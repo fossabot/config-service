@@ -12,19 +12,21 @@ import (
 )
 
 func postCluster(c *gin.Context) {
-	reqCluster, err := dbhandler.MustGetDocContentFromContext[*types.Cluster](c)
+	_, clusters, err := dbhandler.MustGetDocContentFromContext[*types.Cluster](c)
 	if err != nil {
 		return
 	}
-	if reqCluster.Attributes == nil {
-		reqCluster.Attributes = map[string]interface{}{}
+	for i := range clusters {
+		if clusters[i].Attributes == nil {
+			clusters[i].Attributes = map[string]interface{}{}
+		}
+		clusters[i].Attributes[consts.SHORT_NAME_ATTRIBUTE] = getUniqueShortName(clusters[i].Name, c)
 	}
-	reqCluster.Attributes[consts.SHORT_NAME_ATTRIBUTE] = getUniqueShortName(reqCluster.Name, c)
-	dbhandler.PostDocHandler(c, reqCluster)
+	dbhandler.PostDocHandler(c, clusters)
 }
 
 func putCluster(c *gin.Context) {
-	reqCluster, err := dbhandler.MustGetDocContentFromContext[*types.Cluster](c)
+	reqCluster, _, err := dbhandler.MustGetDocContentFromContext[*types.Cluster](c)
 	if err != nil {
 		return
 	}

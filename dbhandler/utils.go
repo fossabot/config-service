@@ -178,17 +178,26 @@ func CountDocs(c *gin.Context, f bson.D) (int64, error) {
 
 // helpers
 
-func MustGetDocContentFromContext[T types.DocContent](c *gin.Context) (T, error) {
+func MustGetDocContentFromContext[T types.DocContent](c *gin.Context) (T, []T, error) {
 	var doc T
+	var docs []T
 	if iData, ok := c.Get(consts.DOC_CONTENT_KEY); ok {
-		doc = iData.(T)
+		if doc, ok = iData.(T); ok {
+			docs = append(docs, doc)
+		} else if docs, ok = iData.([]T); ok {
+			if len(docs) > 0 {
+				doc = docs[0]
+			}
+		} else {
+			return nil, nil, fmt.Errorf("invalid doc content type")
+		}
 	} else {
 		err := fmt.Errorf("failed to get doc content from context")
 		log.LogNTraceError(err.Error(), err, c)
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return nil, err
+		return nil, nil, err
 	}
-	return doc, nil
+	return doc, docs, nil
 }
 
 // readContext reads collection and customerGUID from context

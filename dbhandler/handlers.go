@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"go.mongodb.org/mongo-driver/bson"
 	mongoDB "go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/utils/strings/slices"
@@ -194,53 +195,90 @@ func HandlePostDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
 // HandlePutValidation validate post request and if valid set DocContent in context for next handler, otherwise abort request
 func HandlePostValidation[T types.DocContent](c *gin.Context) {
 	var doc T
-	if err := c.ShouldBindJSON(&doc); err != nil {
-		log.LogNTraceError("failed to bind json", err, c)
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	var docs []T
+	if err := c.ShouldBindBodyWith(&doc, binding.JSON); err != nil {
+		if err := c.ShouldBindBodyWith(&docs, binding.JSON); err != nil {
+			log.LogNTraceError("failed to bind json", err, c)
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		docs = append(docs, doc)
 	}
-	if doc.GetName() == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
-		return
+
+	//validate
+	filter := NewFilterBuilder()
+	names := []string{}
+	for _, doc := range docs {
+		if doc.GetName() == "" {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+			return
+		}
+		if slices.Contains(names, doc.GetName()) {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("name %s is duplicated", doc.GetName())})
+			return
+		}
+		names = append(names, doc.GetName())
 	}
-	if exist, err := DocExist(c,
-		NewFilterBuilder().
-			WithName(doc.GetName()).
-			Get()); err != nil {
-		log.LogNTraceError("HandlePostValidation: failed to check if document with same name exist", err, c)
+
+	if len(docs) > 1 {
+		filter.WithIn("name", names)
+	} else {
+		filter.WithValue("name", names[0])
+	}
+	if existingDocs, err := FindForCustomer[T](c, filter, NewProjectionBuilder().Include("name").Get()); err != nil {
+		log.LogNTraceError("failed to read documents", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
-	} else if exist {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("document with name %s already exists", doc.GetName())})
+	} else if len(existingDocs) > 0 {
+		existingNames := []string{}
+		for _, doc := range existingDocs {
+			existingNames = append(existingNames, doc.GetName())
+		}
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("document(s) with name(s) %s already exists", strings.Join(existingNames, ","))})
 		return
 	}
-	c.Set(consts.DOC_CONTENT_KEY, doc)
+	c.Set(consts.DOC_CONTENT_KEY, docs)
 	c.Next()
 }
 
 // HandlePutDocFromContext - handles create a document of type T
 func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
-	doc, err := MustGetDocContentFromContext[T](c)
+	_, docs, err := MustGetDocContentFromContext[T](c)
 	if err != nil {
 		return
 	}
-	PostDocHandler(c, doc)
+	PostDocHandler(c, docs)
 }
 
 // PostDoc - helper to put document of type T, custom handler should use this function to do the final POST handling
-func PostDocHandler[T types.DocContent](c *gin.Context, doc T) {
+func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
 	collection, customerGUID, err := readContext(c)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	dbDoc := NewDocument(doc, customerGUID)
-	if result, err := mongo.GetWriteCollection(collection).InsertOne(c.Request.Context(), dbDoc); err != nil {
-		log.LogNTraceError("failed to create document", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	dbDocs := []interface{}{}
+	for i := range docs {
+		dbDocs = append(dbDocs, NewDocument(docs[i], customerGUID))
+	}
+
+	if len(dbDocs) == 1 {
+		if result, err := mongo.GetWriteCollection(collection).InsertOne(c.Request.Context(), dbDocs[0]); err != nil {
+			log.LogNTraceError("failed to create document", err, c)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		} else {
+			c.JSON(http.StatusOK, gin.H{"GUID": result.InsertedID})
+		}
 	} else {
-		c.JSON(http.StatusOK, gin.H{"GUID": result.InsertedID})
+		if result, err := mongo.GetWriteCollection(collection).InsertMany(c.Request.Context(), dbDocs); err != nil {
+			log.LogNTraceError("failed to create document", err, c)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		} else {
+			c.JSON(http.StatusOK, gin.H{"GUIDs": result.InsertedIDs})
+		}
 	}
 }
 
@@ -272,7 +310,7 @@ func HandlePutValidation[T types.DocContent](c *gin.Context) {
 
 // HandlePutDocFromContext - handles updates a document of type T
 func HandlePutDocFromContext[T types.DocContent](c *gin.Context) {
-	doc, err := MustGetDocContentFromContext[T](c)
+	doc, _, err := MustGetDocContentFromContext[T](c)
 	if err != nil {
 		return
 	}
@@ -310,12 +348,32 @@ func HandleDeleteDoc[T types.DocContent](c *gin.Context) {
 // HandleDeleteDoc  - delete document by id in path for collection in context
 func HandleDeleteDocByName[T types.DocContent](nameParam string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		name := c.Query(nameParam)
-		if name == "" {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "guid is required"})
+		names, ok := c.GetQueryArray(nameParam)
+		if !ok || len(names) == 0 {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("%s is required", nameParam)})
 			return
 		}
-		DeleteDocByNameHandler[T](c, name)
+		if len(names) == 1 {
+			DeleteDocByNameHandler[T](c, names[0])
+		} else {
+			BulkDeleteDocByNameHandler[T](c, names)
+		}
+
+	}
+}
+
+func BulkDeleteDocByNameHandler[T types.DocContent](c *gin.Context, names []string) {
+	collection, err := readCollection(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	filter := NewFilterBuilder().WithIn("name", names).WithNotDeleteForCustomer(c)
+	if res, err := mongo.GetWriteCollection(collection).DeleteMany(c.Request.Context(), filter.Get()); err != nil {
+		log.LogNTraceError("failed to delete document", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	} else {
+		c.JSON(http.StatusOK, res)
 	}
 }
 
