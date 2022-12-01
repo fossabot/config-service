@@ -211,6 +211,7 @@ func HandlePostValidation[T types.DocContent](c *gin.Context) {
 	//validate
 	if len(docs) == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "no documents to post"})
+		return
 	}
 	filter := NewFilterBuilder()
 	names := []string{}
