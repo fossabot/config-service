@@ -192,17 +192,19 @@ func HandlePostDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
 	return []gin.HandlerFunc{HandlePostValidation[T], HandlePostDocFromContext[T]}
 }
 
-// HandlePutValidation validate post request and if valid set DocContent in context for next handler, otherwise abort request
+// HandlePutValidation validate post request and if valid sets one or many DocContents in context for next handler, otherwise abort request
 func HandlePostValidation[T types.DocContent](c *gin.Context) {
 	var doc T
 	var docs []T
 	if err := c.ShouldBindBodyWith(&doc, binding.JSON); err != nil {
+		//check if bulk request
 		if err := c.ShouldBindBodyWith(&docs, binding.JSON); err != nil {
 			log.LogNTraceError("failed to bind json", err, c)
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 	} else {
+		//single request, append to slice
 		docs = append(docs, doc)
 	}
 
@@ -242,16 +244,16 @@ func HandlePostValidation[T types.DocContent](c *gin.Context) {
 	c.Next()
 }
 
-// HandlePutDocFromContext - handles create a document of type T
+// HandlePutDocFromContext - handles creation of document(s) of type T
 func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
-	_, docs, err := MustGetDocContentFromContext[T](c)
+	docs, err := MustGetDocContentFromContext[T](c)
 	if err != nil {
 		return
 	}
 	PostDocHandler(c, docs)
 }
 
-// PostDoc - helper to put document of type T, custom handler should use this function to do the final POST handling
+// PostDoc - helper to put document(s) of type T, custom handler should use this function to do the final POST handling
 func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
 	collection, customerGUID, err := readContext(c)
 	if err != nil {
@@ -310,11 +312,11 @@ func HandlePutValidation[T types.DocContent](c *gin.Context) {
 
 // HandlePutDocFromContext - handles updates a document of type T
 func HandlePutDocFromContext[T types.DocContent](c *gin.Context) {
-	doc, _, err := MustGetDocContentFromContext[T](c)
+	docs, err := MustGetDocContentFromContext[T](c)
 	if err != nil {
 		return
 	}
-	PutDocHandler(c, doc)
+	PutDocHandler(c, docs[0])
 }
 
 // PutDoc - helper to put document of type T, custom handler should use this function to do the final PUT handling
@@ -335,7 +337,7 @@ func PutDocHandler[T types.DocContent](c *gin.Context, doc T) {
 
 // ////////////////////////////////////////DELETE///////////////////////////////////////////////
 
-// HandleDeleteDoc  - delete document by id in path for collection in context
+// HandleDeleteDoc  - delete document by id in path
 func HandleDeleteDoc[T types.DocContent](c *gin.Context) {
 	guid := c.Param(consts.GUID_FIELD)
 	if guid == "" {
@@ -345,7 +347,7 @@ func HandleDeleteDoc[T types.DocContent](c *gin.Context) {
 	DeleteDocByGUIDHandler[T](c, guid)
 }
 
-// HandleDeleteDoc  - delete document by id in path for collection in context
+// HandleDeleteDocByName  - delete document(s) by name in path
 func HandleDeleteDocByName[T types.DocContent](nameParam string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		names, ok := c.GetQueryArray(nameParam)
