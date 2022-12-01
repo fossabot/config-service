@@ -179,16 +179,11 @@ func CountDocs(c *gin.Context, f bson.D) (int64, error) {
 // helpers
 // MustGetDocContentFromContext returns document(s) content from context and aborts if not found
 func MustGetDocContentFromContext[T types.DocContent](c *gin.Context) ([]T, error) {
-	var doc T
 	var docs []T
 	if iData, ok := c.Get(consts.DOC_CONTENT_KEY); ok {
-		if doc, ok = iData.(T); ok {
+		if doc, ok := iData.(T); ok {
 			docs = append(docs, doc)
-		} else if docs, ok = iData.([]T); ok {
-			if len(docs) > 0 {
-				doc = docs[0]
-			}
-		} else {
+		} else if docs, ok = iData.([]T); !ok {
 			return nil, fmt.Errorf("invalid doc content type")
 		}
 	} else {

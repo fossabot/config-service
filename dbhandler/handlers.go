@@ -244,7 +244,7 @@ func HandlePostValidation[T types.DocContent](c *gin.Context) {
 	c.Next()
 }
 
-// HandlePutDocFromContext - handles creation of document(s) of type T
+// HandlePostDocFromContext - handles creation of document(s) of type T
 func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
 	docs, err := MustGetDocContentFromContext[T](c)
 	if err != nil {
