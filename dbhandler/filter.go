@@ -33,28 +33,40 @@ func (f *FilterBuilder) WithNotDeleteForCustomer(c *gin.Context) *FilterBuilder 
 	return f.WithCustomer(c).WithNotDeleted()
 }
 
+func (f *FilterBuilder) WithGlobalNotDelete() *FilterBuilder {
+	return f.WithValue(consts.CustomersField, "").WithNotDeleted()
+}
+
+func (f *FilterBuilder) WithNotDeleteForCustomerAndGlobal(c *gin.Context) *FilterBuilder {
+	return f.WithCustomerAndGlobal(c).WithNotDeleted()
+}
+
 func (f *FilterBuilder) WithGUID(guid string) *FilterBuilder {
-	return f.WithValue(consts.GUID_FIELD, guid)
+	return f.WithValue(consts.GUIDField, guid)
 }
 
 func (f *FilterBuilder) WithID(id string) *FilterBuilder {
-	return f.WithValue(consts.ID_FIELD, id)
+	return f.WithValue(consts.IdField, id)
 }
 
 func (f *FilterBuilder) WithName(name string) *FilterBuilder {
-	return f.WithValue(consts.NAME_FIELD, name)
+	return f.WithValue(consts.NameField, name)
 }
 
 func (f *FilterBuilder) WithCustomer(c *gin.Context) *FilterBuilder {
-	return f.WithValue(consts.CUSTOMERS_FIELD, c.GetString(consts.CUSTOMER_GUID))
+	return f.WithValue(consts.CustomersField, c.GetString(consts.CustomerGUID))
+}
+
+func (f *FilterBuilder) WithCustomerAndGlobal(c *gin.Context) *FilterBuilder {
+	return f.WithIn(consts.CustomersField, []string{c.GetString(consts.CustomerGUID), ""})
 }
 
 func (f *FilterBuilder) WithNotDeleted() *FilterBuilder {
-	return f.WithNotEqual(consts.DELETED_FIELD, true)
+	return f.WithNotEqual(consts.DeletedField, true)
 }
 
 func (f *FilterBuilder) WithDeleted() *FilterBuilder {
-	return f.WithValue(consts.DELETED_FIELD, true)
+	return f.WithValue(consts.DeletedField, true)
 }
 
 func (f *FilterBuilder) WithValue(key string, value interface{}) *FilterBuilder {

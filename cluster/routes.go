@@ -9,14 +9,14 @@ import (
 )
 
 func AddRoutes(g *gin.Engine) {
-	cluster := g.Group(consts.CLUSTER_PATH)
+	cluster := g.Group(consts.ClusterPath)
 
-	cluster.Use(dbhandler.DBContextMiddleware(consts.CLUSTERS_COLLECTION))
+	cluster.Use(dbhandler.DBContextMiddleware(consts.ClustersCollection))
 
 	cluster.GET("/", dbhandler.HandleGetAll[*types.Cluster])
-	cluster.GET("/:"+consts.GUID_FIELD, dbhandler.HandleGetDocWithGUIDInPath[*types.Cluster])
+	cluster.GET("/:"+consts.GUIDField, dbhandler.HandleGetDocWithGUIDInPath[*types.Cluster])
 	cluster.POST("/", dbhandler.HandlePostValidation[*types.Cluster], postCluster)
 	cluster.PUT("/", dbhandler.HandlePutValidation[*types.Cluster], putCluster)
-	cluster.PUT("/:"+consts.GUID_FIELD, putCluster)
-	cluster.DELETE("/:"+consts.GUID_FIELD, dbhandler.HandleDeleteDoc[*types.Cluster])
+	cluster.PUT("/:"+consts.GUIDField, putCluster)
+	cluster.DELETE("/:"+consts.GUIDField, dbhandler.HandleDeleteDoc[*types.Cluster])
 }

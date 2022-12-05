@@ -3,12 +3,13 @@ module kubescape-config-service
 go 1.18
 
 require (
-	github.com/armosec/armoapi-go v0.0.120
+	github.com/armosec/armoapi-go v0.0.121
 	github.com/dchest/uniuri v1.2.0
 	github.com/gin-contrib/zap v0.1.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/gobeam/stringy v0.0.5
 	github.com/hashicorp/go-multierror v1.1.1
+	github.com/imdario/mergo v0.3.13
 	github.com/satori/go.uuid v1.2.0
 	github.com/tkanos/gonfig v0.0.0-20210106201359-53e13348de2f
 	go.mongodb.org/mongo-driver v1.11.0

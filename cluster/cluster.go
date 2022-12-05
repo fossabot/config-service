@@ -20,7 +20,7 @@ func postCluster(c *gin.Context) {
 		if clusters[i].Attributes == nil {
 			clusters[i].Attributes = map[string]interface{}{}
 		}
-		clusters[i].Attributes[consts.SHORT_NAME_ATTRIBUTE] = getUniqueShortName(clusters[i].Name, c)
+		clusters[i].Attributes[consts.ShotNameAttribute] = getUniqueShortName(clusters[i].Name, c)
 	}
 	dbhandler.PostDocHandler(c, clusters)
 }
@@ -37,17 +37,20 @@ func putCluster(c *gin.Context) {
 		return
 	}
 	// if request attributes do not include alias add it from the old cluster
-	if _, ok := reqCluster.Attributes[consts.SHORT_NAME_ATTRIBUTE]; !ok {
+	if _, ok := reqCluster.Attributes[consts.ShotNameAttribute]; !ok {
 		if oldCluster, err := dbhandler.GetDocByGUID[types.Cluster](c, reqCluster.GUID); err != nil {
 			log.LogNTraceError("failed to read cluster", err, c)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
+		} else if oldCluster == nil {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("cluster with guid %s not found", reqCluster.GUID)})
+			return
 		} else {
-			reqCluster.Attributes[consts.SHORT_NAME_ATTRIBUTE] = oldCluster.Attributes[consts.SHORT_NAME_ATTRIBUTE]
+			reqCluster.Attributes[consts.ShotNameAttribute] = oldCluster.Attributes[consts.ShotNameAttribute]
 		}
 	}
 	//update only the attributes field
-	update := dbhandler.GetUpdateFieldValueCommand(reqCluster.Attributes, consts.ATTRIBUTES_FIELD)
+	update := dbhandler.GetUpdateFieldValueCommand(reqCluster.Attributes, consts.AttributesField)
 	log.LogNTrace(fmt.Sprintf("post cluster %s - updating cluster", reqCluster.GUID), c)
 	if oldAndUpdated, err := dbhandler.UpdateDocument[types.Cluster](c, reqCluster.GUID, update); err != nil {
 		log.LogNTraceError("failed to update cluster", err, c)

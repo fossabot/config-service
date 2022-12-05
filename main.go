@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"kubescape-config-service/cluster"
+	"kubescape-config-service/customer_config"
 	"kubescape-config-service/login"
 	"kubescape-config-service/posture_exception"
 	"kubescape-config-service/prob"
@@ -60,6 +61,8 @@ func setupRouter() *gin.Engine {
 	cluster.AddRoutes(router)
 	posture_exception.AddRoutes(router)
 	vulnerability_exception.AddRoutes(router)
+	customer_config.AddRoutes(router)
+	
 	return router
 }
 

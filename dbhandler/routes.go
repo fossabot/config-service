@@ -11,11 +11,11 @@ import (
 func AddPolicyRoutes[T types.DocContent](g *gin.Engine, path, dbCollection string, paramConf *scopeParamsConfig) {
 	routerGroup := g.Group(path)
 	routerGroup.Use(DBContextMiddleware(dbCollection))
-	routerGroup.GET("/", HandleGetByQueryOrAll[T](consts.POLICY_NAME_PARAM, paramConf))
-	routerGroup.GET("/:"+consts.GUID_FIELD, HandleGetDocWithGUIDInPath[T])
+	routerGroup.GET("/", HandleGetByQueryOrAll[T](consts.PolicyNameParam, paramConf, true))
+	routerGroup.GET("/:"+consts.GUIDField, HandleGetDocWithGUIDInPath[T])
 	routerGroup.POST("/", HandlePostDocWithValidation[T]()...)
 	routerGroup.PUT("/", HandlePutDocWithValidation[T]()...)
-	routerGroup.PUT("/:"+consts.GUID_FIELD, HandlePutDocWithValidation[T]()...)	
-	routerGroup.DELETE("/", HandleDeleteDocByName[T](consts.POLICY_NAME_PARAM))
-	routerGroup.DELETE("/:"+consts.GUID_FIELD,  HandleDeleteDoc[T])
+	routerGroup.PUT("/:"+consts.GUIDField, HandlePutDocWithValidation[T]()...)
+	routerGroup.DELETE("/", HandleDeleteDocByName[T](consts.PolicyNameParam))
+	routerGroup.DELETE("/:"+consts.GUIDField, HandleDeleteDoc[T])
 }

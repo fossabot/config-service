@@ -24,7 +24,7 @@ func AddRoutes(g *gin.Engine) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		c.SetCookie(consts.CUSTOMER_GUID, loginDetails.CustomerGUID, 2*60*60*24, "/", "", false, true)
+		c.SetCookie(consts.CustomerGUID, loginDetails.CustomerGUID, 2*60*60*24, "/", "", false, true)
 		c.JSON(http.StatusOK, nil)
 	})
 }

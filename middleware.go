@@ -19,15 +19,15 @@ import (
 
 // authenticate middleware for request authentication
 func authenticate(c *gin.Context) {
-	customerGuid, err := c.Cookie(consts.CUSTOMER_GUID)
+	customerGuid, err := c.Cookie(consts.CustomerGUID)
 	if err != nil || customerGuid == "" {
-		customerGuid := c.Query(consts.CUSTOMER_GUID)
+		customerGuid := c.Query(consts.CustomerGUID)
 		if customerGuid == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			return
 		}
 	}
-	c.Set(consts.CUSTOMER_GUID, customerGuid)
+	c.Set(consts.CustomerGUID, customerGuid)
 	c.Next()
 }
 
@@ -35,7 +35,7 @@ func authenticate(c *gin.Context) {
 func traceAttributesNHeader(c *gin.Context) {
 	otel.GetTextMapPropagator().Inject(c.Request.Context(), propagation.HeaderCarrier(c.Writer.Header()))
 	if trace.SpanFromContext(c.Request.Context()).SpanContext().IsValid() {
-		trace.SpanFromContext(c.Request.Context()).SetAttributes(attribute.String(consts.CUSTOMER_GUID, c.GetString(consts.CUSTOMER_GUID)))
+		trace.SpanFromContext(c.Request.Context()).SetAttributes(attribute.String(consts.CustomerGUID, c.GetString(consts.CustomerGUID)))
 	}
 
 	c.Next()
@@ -68,8 +68,8 @@ func requestSummary() func(c *gin.Context) {
 func telemetryLogFields(c *gin.Context) []zapcore.Field {
 	fields := []zapcore.Field{}
 	// log request ID
-	if customerGUID := c.GetString(consts.CUSTOMER_GUID); customerGUID != "" {
-		fields = append(fields, zap.String(consts.CUSTOMER_GUID, customerGUID))
+	if customerGUID := c.GetString(consts.CustomerGUID); customerGUID != "" {
+		fields = append(fields, zap.String(consts.CustomerGUID, customerGUID))
 	}
 	// log trace and span ID
 	if trace.SpanFromContext(c.Request.Context()).SpanContext().IsValid() {
