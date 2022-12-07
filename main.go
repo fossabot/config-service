@@ -62,7 +62,7 @@ func setupRouter() *gin.Engine {
 	posture_exception.AddRoutes(router)
 	vulnerability_exception.AddRoutes(router)
 	customer_config.AddRoutes(router)
-	
+
 	return router
 }
 

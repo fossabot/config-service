@@ -12,7 +12,7 @@ func AddRoutes(g *gin.Engine) {
 	login := g.Group("/login")
 
 	//login routes
-	login.POST("/", func(c *gin.Context) {
+	login.POST("", func(c *gin.Context) {
 		loginDetails := struct {
 			CustomerGUID string `json:"customerGUID" binding:"required"`
 		}{

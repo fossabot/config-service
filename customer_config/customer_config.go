@@ -1,7 +1,6 @@
 package customer_config
 
 import (
-	"fmt"
 	"kubescape-config-service/dbhandler"
 	"kubescape-config-service/types"
 	"kubescape-config-service/utils/consts"
@@ -60,7 +59,7 @@ func getCustomerConfigByNameHandler(c *gin.Context) bool {
 	} else if unmerged, _ := c.GetQuery("unmerged"); unmerged != "" {
 		//case unmerged is requested - return the unmerged config if exists
 		if doc == nil {
-			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("no document with name %s", configName)})
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
 			return true
 		} else {
 			c.JSON(http.StatusOK, doc)
@@ -143,7 +142,7 @@ func putCustomerConfigValidation(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	} else if existingDoc == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("no document with name %s", configName)})
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"error": "document not found"}})
 		return
 	} else {
 		doc.SetGUID(existingDoc.GetGUID())

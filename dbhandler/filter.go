@@ -2,6 +2,7 @@ package dbhandler
 
 import (
 	"kubescape-config-service/utils/consts"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -105,16 +106,46 @@ func (f *FilterBuilder) WarpElementMatch() *FilterBuilder {
 }
 
 func (f *FilterBuilder) WarpOr() *FilterBuilder {
-	m := bson.M{}
+	a := bson.A{}
 	for i := range f.filter {
-		m[f.filter[i].Key] = f.filter[i].Value
-
+		a = append(a, bson.D{{Key: f.filter[i].Key, Value: f.filter[i].Value}})
 	}
-	f.filter = bson.D{{Key: "$or", Value: bson.A{m}}}
+	f.filter = bson.D{{Key: "$or", Value: a}}
 	return f
 }
 
 func (f *FilterBuilder) WarpWithField(field string) *FilterBuilder {
 	f.filter = bson.D{{Key: field, Value: f.filter}}
+	return f
+}
+
+func (f *FilterBuilder) WrapDupKeysWithOr() *FilterBuilder {
+	dupFound := false
+	keys := make(map[string]bson.D)
+	for i := range f.filter {
+		if strings.HasPrefix(f.filter[i].Key, "$") {
+			continue
+		}
+		keys[f.filter[i].Key] = append(keys[f.filter[i].Key], f.filter[i])
+		if len(keys[f.filter[i].Key]) > 1 {
+			dupFound = true
+		}
+	}
+	if !dupFound {
+		return f
+	}
+	newF := bson.D{}
+	for k := range keys {
+		if len(keys[k]) > 1 {
+			a := bson.A{}
+			for i := range keys[k] {
+				a = append(a, bson.D{{Key: keys[k][i].Key, Value: keys[k][i].Value}})
+			}
+			newF = append(newF, bson.E{Key: "$or", Value: a})
+		} else {
+			newF = append(newF, keys[k][0])
+		}
+	}
+	f.filter = newF
 	return f
 }

@@ -43,7 +43,7 @@ func putCluster(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		} else if oldCluster == nil {
-			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("cluster with guid %s not found", reqCluster.GUID)})
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
 			return
 		} else {
 			reqCluster.Attributes[consts.ShotNameAttribute] = oldCluster.Attributes[consts.ShotNameAttribute]
@@ -55,6 +55,8 @@ func putCluster(c *gin.Context) {
 	if oldAndUpdated, err := dbhandler.UpdateDocument[types.Cluster](c, reqCluster.GUID, update); err != nil {
 		log.LogNTraceError("failed to update cluster", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	} else if oldAndUpdated == nil {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
 	} else {
 		c.JSON(http.StatusOK, oldAndUpdated)
 	}

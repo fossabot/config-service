@@ -34,6 +34,7 @@ type DocContent interface {
 	*CustomerConfig | *Cluster | *PostureExceptionPolicy | *VulnerabilityExceptionPolicy
 	InitNew()
 	GetName() string
+	SetName(name string)
 	GetReadOnlyFields() []string
 	GetGUID() string
 	SetGUID(guid string)
@@ -51,10 +52,10 @@ type CustomerConfig struct {
 func (c *CustomerConfig) GetGUID() string {
 	return c.GUID
 }
+
 func (c *CustomerConfig) SetGUID(guid string) {
 	c.GUID = guid
 }
-
 func (c *CustomerConfig) GetName() string {
 	if c.Name == "" &&
 		c.Scope.Attributes != nil &&
@@ -62,6 +63,9 @@ func (c *CustomerConfig) GetName() string {
 		return c.Scope.Attributes["cluster"]
 	}
 	return c.Name
+}
+func (c *CustomerConfig) SetName(name string) {
+	c.Name = name
 }
 func (c *CustomerConfig) GetReadOnlyFields() []string {
 	return customerConfigReadOnlyFields
@@ -86,6 +90,9 @@ func (c *Cluster) SetGUID(guid string) {
 func (c *Cluster) GetName() string {
 	return c.Name
 }
+func (c *Cluster) SetName(name string) {
+	c.Name = name
+}
 func (c *Cluster) GetReadOnlyFields() []string {
 	return clusterReadOnlyFields
 }
@@ -105,6 +112,10 @@ func (c *VulnerabilityExceptionPolicy) SetGUID(guid string) {
 func (c *VulnerabilityExceptionPolicy) GetName() string {
 	return c.Name
 }
+func (c *VulnerabilityExceptionPolicy) SetName(name string) {
+	c.Name = name
+}
+
 func (c *VulnerabilityExceptionPolicy) GetReadOnlyFields() []string {
 	return exceptionPolicyReadOnlyFields
 }
@@ -121,11 +132,14 @@ func (p *PostureExceptionPolicy) SetGUID(guid string) {
 func (p *PostureExceptionPolicy) GetName() string {
 	return p.Name
 }
+func (p *PostureExceptionPolicy) SetName(name string) {
+	p.Name = name
+}
 func (p *PostureExceptionPolicy) GetReadOnlyFields() []string {
 	return exceptionPolicyReadOnlyFields
 }
 func (p *PostureExceptionPolicy) InitNew() {
-	p.CreationTime = time.Now().UTC().Format("time.RFC3339")
+	p.CreationTime = time.Now().UTC().Format(time.RFC3339)
 }
 
 var commonReadOnlyFields = []string{consts.IdField, consts.NameField, consts.GUIDField}

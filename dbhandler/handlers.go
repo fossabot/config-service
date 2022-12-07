@@ -8,6 +8,7 @@ import (
 	"kubescape-config-service/utils/log"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -32,7 +33,7 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	} else if doc == nil {
-		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("no document with guid %s", guid)})
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
 		return
 	} else {
 		c.JSON(http.StatusOK, doc)
@@ -50,7 +51,7 @@ func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *scop
 	}
 }
 
-// HandleGetAll - get all documents of type T for collection in context
+// HandleGetAll - get all customer's documents of type T for collection in context
 func HandleGetAll[T types.DocContent](c *gin.Context) {
 	if docs, err := GetAllForCustomer[T](c, false); err != nil {
 		log.LogNTraceError("failed to read all documents for customer", err, c)
@@ -61,7 +62,7 @@ func HandleGetAll[T types.DocContent](c *gin.Context) {
 	}
 }
 
-// HandleGetAll - get all documents of type T for collection in context
+// HandleGetAll - get all global and customer's documents of type T for collection in context
 func HandleGetAllWithGlobals[T types.DocContent](c *gin.Context) {
 	if docs, err := GetAllForCustomer[T](c, true); err != nil {
 		log.LogNTraceError("failed to read all documents for customer", err, c)
@@ -98,13 +99,13 @@ func GetByNameParamHandler[T types.DocContent](c *gin.Context, nameParam string)
 		return false
 	}
 	if name := c.Query(nameParam); name != "" {
-		//get policy by name
+		//get document by name
 		if doc, err := GetDocByName[T](c, name); err != nil {
-			log.LogNTraceError("failed to read policy", err, c)
+			log.LogNTraceError("failed to read document", err, c)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return true
 		} else if doc == nil {
-			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("no document with name %s", name)})
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
 			return true
 		} else {
 			c.JSON(http.StatusOK, doc)
@@ -154,7 +155,8 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 		}
 		//calculate field name
 		var field, key = keys[0], keys[1]
-		if queryConfig, ok := conf.params2Query[field]; !ok {
+		queryConfig, ok := conf.params2Query[field]
+		if !ok {
 			continue
 		} else if queryConfig.isArray {
 			if queryConfig.pathInArray != "" {
@@ -165,7 +167,7 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 			key = queryConfig.fieldName + "." + key
 		}
 		//get the field filter builder
-		filterBuilder := getFilterBuilder(field)
+		filterBuilder := getFilterBuilder(queryConfig.fieldName)
 		//case of single value
 		if len(values) == 1 {
 			filterBuilder.WithValue(key, values[0])
@@ -181,6 +183,7 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 	allQueriesFilter := NewFilterBuilder()
 	for key, filterBuilder := range filterBuilders {
 		queryConfig := conf.params2Query[key]
+		filterBuilder.WrapDupKeysWithOr()
 		if queryConfig.isArray {
 			filterBuilder.WarpElementMatch().WarpWithField(queryConfig.fieldName)
 		}
@@ -256,6 +259,7 @@ func HandlePostValidation[T types.DocContent](c *gin.Context) {
 		for _, doc := range existingDocs {
 			existingNames = append(existingNames, doc.GetName())
 		}
+		sort.Strings(existingNames)
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("document(s) with name(s) %s already exists", strings.Join(existingNames, ","))})
 		return
 	}
@@ -349,6 +353,9 @@ func PutDocHandler[T types.DocContent](c *gin.Context, doc T) {
 	if res, err := UpdateDocument[T](c, doc.GetGUID(), update); err != nil {
 		log.LogNTraceError("failed to update document", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	} else if res == nil {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
+		return
 	} else {
 		c.JSON(http.StatusOK, res)
 	}
@@ -370,8 +377,11 @@ func HandleDeleteDoc[T types.DocContent](c *gin.Context) {
 func HandleDeleteDocByName[T types.DocContent](nameParam string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		names, ok := c.GetQueryArray(nameParam)
+		names = slices.Filter([]string{}, names, func(s string) bool {
+			return s != ""
+		})
 		if !ok || len(names) == 0 {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("%s is required", nameParam)})
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
 			return
 		}
 		if len(names) == 1 {
@@ -412,7 +422,7 @@ func DeleteDocByGUIDHandler[T types.DocContent](c *gin.Context, guid string) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	} else if toBeDeleted == nil {
-		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("no document with guid %s", guid)})
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
 		return
 	}
 	if res, err := mongo.GetWriteCollection(collection).DeleteOne(c.Request.Context(), bson.M{consts.IdField: guid}); err != nil {
@@ -439,7 +449,7 @@ func DeleteDocByNameHandler[T types.DocContent](c *gin.Context, name string) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	} else if toBeDeleted == nil {
-		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("no document with name %s", name)})
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
 		return
 	}
 	filter := NewFilterBuilder().WithNotDeleteForCustomer(c).WithName(name)
@@ -450,7 +460,7 @@ func DeleteDocByNameHandler[T types.DocContent](c *gin.Context, name string) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	} else if res.DeletedCount == 0 {
-		c.JSON(http.StatusNotFound, fmt.Sprintf("document with name %s does not exist", name))
+		c.JSON(http.StatusNotFound, gin.H{"error": "document not found"})
 		return
 	}
 	c.JSON(http.StatusOK, toBeDeleted)

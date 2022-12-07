@@ -92,6 +92,9 @@ func UpdateDocument[T any](c *gin.Context, id string, update bson.D) ([]T, error
 				WithID(id).
 				Get()).
 		Decode(&oldDoc); err != nil {
+		if err == mongoDB.ErrNoDocuments {
+			return nil, nil
+		}
 		log.LogNTraceError("failed to get document by id", err, c)
 		return nil, err
 	}
