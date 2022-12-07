@@ -21,7 +21,7 @@ func (f *ProjectionBuilder) Get() bson.D {
 }
 
 func (f *ProjectionBuilder) ExcludeID(key ...string) *ProjectionBuilder {
-	return f.Exclude(consts.ID_FIELD)
+	return f.Exclude(consts.IdField)
 }
 
 func (f *ProjectionBuilder) Include(key ...string) *ProjectionBuilder {

@@ -1,33 +1,38 @@
 package consts
 
 const (
-	CUSTOMER_GUID = "customerGUID"
-	COLLECTION    = "collection"
+	CustomerGUID = "customerGUID"
+	Collection   = "collection"
 
 	//PATHS
-	CLUSTER_PATH                        = "/cluster"
-	POSTURE_EXCEPTION_POLICY_PATH       = "/v1_posture_exception_policy"
-	VULNERABILITY_EXCEPTION_POLICY_PATH = "/v1_vulnerability_exception_policy"
+	ClusterPath                      = "/cluster"
+	PostureExceptionPolicyPath       = "/v1_posture_exception_policy"
+	VulnerabilityExceptionPolicyPath = "/v1_vulnerability_exception_policy"
+	CustomerConfigPath               = "/v1_customer_configuration"
 
 	//DB collections
-	CLUSTERS_COLLECTION                         = "clusters"
-	POSTURE_EXCEPTION_POLICIES_COLLECTION       = "v1_posture_exception_policies"
-	VULNERABILITY_EXCEPTION_POLICIES_COLLECTION = "v1_vulnerability_exception_policies"
+	ClustersCollection                     = "clusters"
+	PostureExceptionPolicyCollection       = "v1_posture_exception_policies"
+	VulnerabilityExceptionPolicyCollection = "v1_vulnerability_exception_policies"
+	CustomerConfigCollection               = "v1_customer_configurations"
 
 	//Common document fields
-	ID_FIELD             = "_id"
-	GUID_FIELD           = "guid"
-	NAME_FIELD           = "name"
-	DELETED_FIELD        = "is_deleted"
-	ATTRIBUTES_FIELD     = "attributes"
-	SHORT_NAME_ATTRIBUTE = "alias"
-	SHORT_NAME_FIELD     = ATTRIBUTES_FIELD + "." + SHORT_NAME_ATTRIBUTE
-	CUSTOMERS_FIELD      = "customers"
+	IdField           = "_id"
+	GUIDField         = "guid"
+	NameField         = "name"
+	DeletedField      = "is_deleted"
+	AttributesField   = "attributes"
+	ShotNameAttribute = "alias"
+	ShotNameField     = AttributesField + "." + ShotNameAttribute
+	CustomersField    = "customers"
 
 	//Query params
-	LIST_PARAM        = "list"
-	POLICY_NAME_PARAM = "policyName"
+	ListParam       = "list"
+	PolicyNameParam = "policyName"
 
 	//Context keys
-	DOC_CONTENT_KEY = "docContent"
+	DocContentKey = "docContent"
+
+	//Cached documents keys
+	DefaultCustomerConfigKey = "defaultCustomerConfig"
 )

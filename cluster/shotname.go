@@ -20,15 +20,15 @@ import (
 func getAllShortNames(c *gin.Context) []string {
 	if clusters, err := dbhandler.GetAllForCustomerWithProjection[types.Cluster](c, dbhandler.NewProjectionBuilder().
 		ExcludeID().
-		Include(consts.SHORT_NAME_FIELD).
-		Get()); err != nil {
+		Include(consts.ShotNameField).
+		Get(), false); err != nil {
 		log.LogNTraceError("failed to read clusters", err, c)
 		return nil
 	} else {
 		var shortNames []string
 		for _, doc := range clusters {
-			if doc.Attributes[consts.SHORT_NAME_ATTRIBUTE] != nil {
-				shortNames = append(shortNames, doc.Attributes[consts.SHORT_NAME_ATTRIBUTE].(string))
+			if doc.Attributes[consts.ShotNameAttribute] != nil {
+				shortNames = append(shortNames, doc.Attributes[consts.ShotNameAttribute].(string))
 			}
 		}
 		return shortNames
