@@ -1,0 +1,82 @@
+[
+    {
+        "guid": "1c00292c-713d-4be7-9bff-3f5e14fa4067",
+        "name": "exception_C-0006_ca-webhook_bba5f2df536533fb348631207c85ed39",
+        "policyType": "postureExceptionPolicy",
+        "creationTime": "2022-01-19T11:56:06.740591",
+        "actions": [
+            "alertOnly"
+        ],
+        "resources": [
+            {
+                "designatorType": "Attributes",
+                "attributes": {
+                    "cluster": "cluster3",
+                    "kind": "Deployment",
+                    "name": "ca-webhook",
+                    "namespace": "test-system"
+                }
+            }
+        ],
+        "posturePolicies": [
+            {
+                "frameworkName": "NSA",
+                "controlName": "Allowed hostPath"
+            }
+        ]
+    },
+    {
+        "guid": "e2773091-20a2-4781-becb-81b7f462b4c5",
+        "name": "exception_C-0012_armo-system_a4fe1c4a2a2cdf27ecb05d13a434ecfa",
+        "attributes": {
+            "namespaceOnly": "true"
+        },
+        "policyType": "postureExceptionPolicy",
+        "creationTime": "2022-01-18T12:42:34.576490",
+        "actions": [
+            "alertOnly"
+        ],
+        "resources": [
+            {
+                "designatorType": "Attributes",
+                "attributes": {
+                    "cluster": "cluster2",
+                    "namespace": "armo-system"
+                }
+            }
+        ],
+        "posturePolicies": [
+            {
+                "frameworkName": "MITRE",
+                "controlName": "Applications credentials in configuration files"
+            }
+        ]
+    },
+    {
+        "guid": "9e586c8e-70d8-4191-baa7-9dfc59c5af05",
+        "name": "exception_C-0015_armo-system_97e97cdb00b616ce63475cd8fdfdc142",
+        "attributes": {
+            "namespaceOnly": "true"
+        },
+        "policyType": "postureExceptionPolicy",
+        "creationTime": "2022-01-18T12:42:15.403876",
+        "actions": [
+            "alertOnly"
+        ],
+        "resources": [
+            {
+                "designatorType": "Attributes",
+                "attributes": {
+                    "cluster": "cluster1",
+                    "namespace": "armo-system"
+                }
+            }
+        ],
+        "posturePolicies": [
+            {
+                "frameworkName": "MITRE",
+                "controlName": "List Kubernetes secrets"
+            }
+        ]
+    }
+]
