@@ -11,7 +11,7 @@ import (
 // Document - document in db
 type Document[T DocContent] struct {
 	ID        string   `json:"_id" bson:"_id"`
-	Customers []string `json:"customers" bson:"customers,omitempty"`
+	Customers []string `json:"customers" bson:"customers"`
 	Content   T        `json:",inline" bson:"inline"`
 }
 
@@ -71,6 +71,7 @@ func (c *CustomerConfig) GetReadOnlyFields() []string {
 	return customerConfigReadOnlyFields
 }
 func (c *CustomerConfig) InitNew() {
+	c.CreationTime = time.Now().UTC().Format(time.RFC3339)
 	if c.Scope.Attributes != nil && c.Scope.Attributes["cluster"] != "" {
 		c.Name = c.Scope.Attributes["cluster"]
 	}

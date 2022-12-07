@@ -13,14 +13,14 @@ func AddRoutes(g *gin.Engine) {
 	customerConfig := g.Group(consts.CustomerConfigPath)
 	customerConfig.Use(dbhandler.DBContextMiddleware(consts.CustomerConfigCollection))
 
-	customerConfig.GET("/", getCustomerConfigHandler)
-	customerConfig.POST("/", dbhandler.HandlePostDocWithValidation[*types.CustomerConfig]()...)
-	customerConfig.PUT("/", putCustomerConfigValidation, dbhandler.HandlePutDocFromContext[*types.CustomerConfig])
+	customerConfig.GET("", getCustomerConfigHandler)
+	customerConfig.POST("", dbhandler.HandlePostDocWithValidation[*types.CustomerConfig]()...)
+	customerConfig.PUT("", putCustomerConfigValidation, dbhandler.HandlePutDocFromContext[*types.CustomerConfig])
 	customerConfig.PUT("/:"+consts.GUIDField, dbhandler.HandlePutDocWithValidation[*types.CustomerConfig]()...)
-	customerConfig.DELETE("/", deleteCustomerConfig)
+	customerConfig.DELETE("", deleteCustomerConfig)
 
 	dbhandler.AddCachedDocument[*types.CustomerConfig](consts.DefaultCustomerConfigKey,
 		consts.CustomerConfigCollection,
-		dbhandler.NewFilterBuilder().WithGlobalNotDelete().WithName(globalConfigName).Get(),
+		dbhandler.NewFilterBuilder().WithGlobalNotDelete().WithName(consts.GlobalConfigName).Get(),
 		time.Minute*5)
 }

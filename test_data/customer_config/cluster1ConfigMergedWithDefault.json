@@ -1,0 +1,34 @@
+{
+    "name": "test-cluster1",
+    "scope": {
+        "designatorType": "attributes",
+        "attributes": {
+            "cluster": "test-cluster1"
+        }
+    },
+    "settings": {
+        "postureControlInputs": {
+            "allowedContainerRepos": [
+                "gcr.io",
+                "ecr.com",
+                "dockerhub.com"
+            ]
+        },
+        "postureScanConfig": {
+            "scanFrequency": "120h"
+        },
+        "vulnerabilityScanConfig": {
+            "scanFrequency": "56h",
+            "criticalPriorityThreshold": 8
+        },
+        "slackConfigurations": {
+            "token": "",
+            "notifications": {
+                "postureScanV1": null,
+                "postureScoreAboveLastScanV1": null
+            }
+        }
+    },
+    "guid": "3eb2b3d3-aae1-4fda-9132-72e14ee4c22d",
+    "creationTime": "2022-12-07T21:39:47Z"
+}

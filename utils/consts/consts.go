@@ -35,4 +35,13 @@ const (
 
 	//Cached documents keys
 	DefaultCustomerConfigKey = "defaultCustomerConfig"
+
+	//customer configuration fields
+	GlobalConfigName   = "default"
+	CustomerConfigName = "CustomerConfig"
+	ClusterNameParam   = "clusterName"
+	ConfigNameParam    = "configName"
+	ScopeParam         = "scope"
+	CustomerScope      = "customer"
+	DefaultScope       = "default"
 )

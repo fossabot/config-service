@@ -148,7 +148,7 @@ func testBadRequest(suite *MainTestSuite, method, path, expectedResponse string,
 }
 
 // //////////////////////////////////////// GET //////////////////////////////////////////
-func testGetDoc[T types.DocContent](suite *MainTestSuite, path string, expectedDoc T, compareOpts ...cmp.Option) {
+func testGetDoc[T types.DocContent](suite *MainTestSuite, path string, expectedDoc T, compareOpts ...cmp.Option) T {
 	w := suite.doRequest(http.MethodGet, path, nil)
 	suite.Equal(http.StatusOK, w.Code)
 	doc, err := decode[T](w)
@@ -157,9 +157,10 @@ func testGetDoc[T types.DocContent](suite *MainTestSuite, path string, expectedD
 	}
 	diff := cmp.Diff(doc, expectedDoc, compareOpts...)
 	suite.Equal("", diff)
+	return doc
 }
 
-func testGetDocs[T types.DocContent](suite *MainTestSuite, path string, expectedDocs []T, compareOpts ...cmp.Option) {
+func testGetDocs[T types.DocContent](suite *MainTestSuite, path string, expectedDocs []T, compareOpts ...cmp.Option) (actualDocs []T) {
 	w := suite.doRequest(http.MethodGet, path, nil)
 	suite.Equal(http.StatusOK, w.Code)
 	docs, err := decodeArray[T](w)
@@ -172,9 +173,9 @@ func testGetDocs[T types.DocContent](suite *MainTestSuite, path string, expected
 	sort.Slice(expectedDocs, func(i, j int) bool {
 		return expectedDocs[i].GetName() < expectedDocs[j].GetName()
 	})
-	compareOpts = append(compareOpts)
 	diff := cmp.Diff(docs, expectedDocs, compareOpts...)
 	suite.Equal("", diff)
+	return docs
 }
 
 func testGetNameList(suite *MainTestSuite, path string, expectedNames []string) {
@@ -194,7 +195,7 @@ func testGetNameList(suite *MainTestSuite, path string, expectedNames []string) 
 // //////////////////////////////////////// POST //////////////////////////////////////////
 func testPostDoc[T types.DocContent](suite *MainTestSuite, path string, doc T, compareOpts ...cmp.Option) (newDoc T) {
 	w := suite.doRequest(http.MethodPost, path, doc)
-	suite.Equal(http.StatusOK, w.Code)
+	suite.Equal(http.StatusCreated, w.Code)
 	newDoc, err := decode[T](w)
 	if err != nil {
 		suite.FailNow(err.Error())

@@ -12,16 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	globalConfigName   = "default"
-	customerConfigName = "CustomerConfig"
-	clusterNameParam   = "clusterName"
-	configNameParam    = "configName"
-	scopeParam         = "scope"
-	customerScope      = "customer"
-	defaultScope       = "default"
-)
-
 func getCustomerConfigHandler(c *gin.Context) {
 	if dbhandler.GetNamesListHandler[*types.CustomerConfig](c, true) {
 		return
@@ -46,7 +36,7 @@ func getCustomerConfigByNameHandler(c *gin.Context) bool {
 	}
 
 	//case default config is requested - return it
-	if configName == globalConfigName {
+	if configName == consts.GlobalConfigName {
 		c.JSON(http.StatusOK, defaultConfig)
 		return true
 	}
@@ -67,7 +57,7 @@ func getCustomerConfigByNameHandler(c *gin.Context) bool {
 		}
 	}
 	//case customer config is requested - return it merged with default config
-	if configName == customerConfigName {
+	if configName == consts.CustomerConfigName {
 		if doc != nil {
 			if err := mergo.Merge(doc, *defaultConfig); err != nil {
 				log.LogNTraceError("failed to merge config", err, c)
@@ -84,7 +74,7 @@ func getCustomerConfigByNameHandler(c *gin.Context) bool {
 		}
 	}
 	//case cluster config is requested - return it merged with customer and default config
-	customerConfig, err := dbhandler.GetDocByName[types.CustomerConfig](c, customerConfigName)
+	customerConfig, err := dbhandler.GetDocByName[types.CustomerConfig](c, consts.CustomerConfigName)
 	if err != nil {
 		log.LogNTraceError("failed to get doc", err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -133,7 +123,7 @@ func putCustomerConfigValidation(c *gin.Context) {
 		if doc.Name != "" {
 			configName = doc.Name
 		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "configName is required"})
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
 			return
 		}
 	}
@@ -142,7 +132,7 @@ func putCustomerConfigValidation(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	} else if existingDoc == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"error": "document not found"}})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "document not found"})
 		return
 	} else {
 		doc.SetGUID(existingDoc.GetGUID())
@@ -153,29 +143,29 @@ func putCustomerConfigValidation(c *gin.Context) {
 
 func deleteCustomerConfig(c *gin.Context) {
 	if configName := getConfigName(c); configName != "" {
-		if configName == globalConfigName {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "default config cannot be deleted"})
+		if configName == consts.GlobalConfigName {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "default config cannot be deleted"})
 			return
 		}
 		dbhandler.DeleteDocByNameHandler[*types.CustomerConfig](c, configName)
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "configName is required"})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
 	}
 }
 
 func getConfigName(c *gin.Context) string {
-	if clusterName, ok := c.GetQuery(clusterNameParam); ok && clusterName != "" {
+	if clusterName, ok := c.GetQuery(consts.ClusterNameParam); ok && clusterName != "" {
 		return clusterName
 	}
-	if configName, ok := c.GetQuery(configNameParam); ok && configName != "" {
+	if configName, ok := c.GetQuery(consts.ConfigNameParam); ok && configName != "" {
 		return configName
 	}
-	if scope, ok := c.GetQuery(scopeParam); ok && scope != "" {
+	if scope, ok := c.GetQuery(consts.ScopeParam); ok && scope != "" {
 		switch scope {
-		case customerScope:
-			return customerConfigName
-		case defaultScope:
-			return globalConfigName
+		case consts.CustomerScope:
+			return consts.CustomerConfigName
+		case consts.DefaultScope:
+			return consts.GlobalConfigName
 		}
 	}
 	return ""

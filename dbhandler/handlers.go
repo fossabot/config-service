@@ -280,7 +280,8 @@ func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
 func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
 	collection, customerGUID, err := readContext(c)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.LogNTraceError("failed to read collection and customer guid from context", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	dbDocs := []interface{}{}
@@ -294,7 +295,7 @@ func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		} else {
-			c.JSON(http.StatusOK, docs[0])
+			c.JSON(http.StatusCreated, docs[0])
 		}
 	} else {
 		if _, err := mongo.GetWriteCollection(collection).InsertMany(c.Request.Context(), dbDocs); err != nil {
@@ -396,7 +397,8 @@ func HandleDeleteDocByName[T types.DocContent](nameParam string) gin.HandlerFunc
 func BulkDeleteDocByNameHandler[T types.DocContent](c *gin.Context, names []string) {
 	collection, err := readCollection(c)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.LogNTraceError("failed to read collection from context", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	filter := NewFilterBuilder().WithIn("name", names).WithNotDeleteForCustomer(c)
@@ -411,9 +413,10 @@ func BulkDeleteDocByNameHandler[T types.DocContent](c *gin.Context, names []stri
 }
 
 func DeleteDocByGUIDHandler[T types.DocContent](c *gin.Context, guid string) {
-	collection, _, err := readContext(c)
+	collection, err := readCollection(c)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.LogNTraceError("failed to read collection from context", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	toBeDeleted, err := GetDocByGUID[T](c, guid)
@@ -438,9 +441,10 @@ func DeleteDocByGUIDHandler[T types.DocContent](c *gin.Context, guid string) {
 }
 
 func DeleteDocByNameHandler[T types.DocContent](c *gin.Context, name string) {
-	collection, _, err := readContext(c)
+	collection, err := readCollection(c)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.LogNTraceError("failed to read collection from context", err, c)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	toBeDeleted, err := GetDocByName[T](c, name)
@@ -452,9 +456,8 @@ func DeleteDocByNameHandler[T types.DocContent](c *gin.Context, name string) {
 		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
 		return
 	}
-	filter := NewFilterBuilder().WithNotDeleteForCustomer(c).WithName(name)
 
-	if res, err := mongo.GetWriteCollection(collection).DeleteOne(c.Request.Context(), filter); err != nil {
+	if res, err := mongo.GetWriteCollection(collection).DeleteOne(c.Request.Context(), bson.M{consts.IdField: (*toBeDeleted).GetGUID()}); err != nil {
 		msg := fmt.Sprintf("failed to delete document with name: %s  Collection: %s", name, collection)
 		log.LogNTraceError(msg, err, c)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

@@ -1,0 +1,26 @@
+{
+    "customers": [
+        ""
+    ],
+    "name": "default",
+    "scope": {
+        "designatorType": "attributes",
+        "attributes": {}
+    },
+    "settings": {
+        "postureControlInputs": {
+            "allowedContainerRepos": [
+                "gcr.io",
+                "ecr.com",
+                "dockerhub.com"
+            ]
+        },
+        "postureScanConfig": {
+            "scanFrequency": "120h"
+        },
+        "vulnerabilityScanConfig": {
+            "scanFrequency": "120h",
+            "criticalPriorityThreshold": 8
+        }
+    }
+}

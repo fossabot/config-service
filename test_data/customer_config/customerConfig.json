@@ -1,0 +1,21 @@
+{
+    "name": "CustomerConfig",
+    "scope": {
+        "designatorType": "attributes",
+        "attributes": {}
+    },
+    "settings": {
+        "postureControlInputs": {
+            "allowedContainerRepos": [
+                "gcr.io",
+                "ecr.com"
+            ]
+        },
+        "postureScanConfig": {
+            "scanFrequency": "48h"
+        },
+        "vulnerabilityScanConfig": {
+            
+        }
+    }
+}
