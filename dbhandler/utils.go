@@ -36,8 +36,7 @@ func GetAllForCustomerWithProjection[T any](c *gin.Context, projection bson.D, i
 		fb.WithNotDeleteForCustomer(c)
 	}
 	filter := fb.Get()
-	findOpts := options.Find().SetNoCursorTimeout()
-	//SetNoCursorTimeout(true)
+	findOpts := options.Find().SetNoCursorTimeout(true)
 	if projection != nil {
 		findOpts.SetProjection(projection)
 	}
