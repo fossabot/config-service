@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var cachedDocuments = sync.Map{} //[string]interface{}
+var cachedDocuments = sync.Map{}
 
 func AddCachedDocument[T types.DocContent](cacheKey, collection string, queryFilter bson.D, updateInterval time.Duration) {
 	cachedDocuments.Store(cacheKey, newCachedDocument[T](collection, queryFilter, updateInterval))
