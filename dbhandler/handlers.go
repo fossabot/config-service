@@ -25,15 +25,14 @@ import (
 func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 	guid := c.Param(consts.GUIDField)
 	if guid == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "guid is required"})
+		ResponseMissingGUID(c)
 		return
 	}
 	if doc, err := GetDocByGUID[T](c, guid); err != nil {
-		log.LogNTraceError("failed to read document", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to read document", err)
 		return
 	} else if doc == nil {
-		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
+		ResponseDocumentNotFound(c)
 		return
 	} else {
 		c.JSON(http.StatusOK, doc)
@@ -54,8 +53,7 @@ func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *scop
 // HandleGetAll - get all customer's documents of type T for collection in context
 func HandleGetAll[T types.DocContent](c *gin.Context) {
 	if docs, err := GetAllForCustomer[T](c, false); err != nil {
-		log.LogNTraceError("failed to read all documents for customer", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to read all documents for customer", err)
 		return
 	} else {
 		c.JSON(http.StatusOK, docs)
@@ -65,8 +63,7 @@ func HandleGetAll[T types.DocContent](c *gin.Context) {
 // HandleGetAll - get all global and customer's documents of type T for collection in context
 func HandleGetAllWithGlobals[T types.DocContent](c *gin.Context) {
 	if docs, err := GetAllForCustomer[T](c, true); err != nil {
-		log.LogNTraceError("failed to read all documents for customer", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to read all documents for customer", err)
 		return
 	} else {
 		c.JSON(http.StatusOK, docs)
@@ -78,8 +75,7 @@ func GetNamesListHandler[T types.DocContent](c *gin.Context, includeGlobals bool
 	if _, list := c.GetQuery(consts.ListParam); list {
 		namesProjection := NewProjectionBuilder().Include(consts.NameField).ExcludeID().Get()
 		if docNames, err := GetAllForCustomerWithProjection[T](c, namesProjection, includeGlobals); err != nil {
-			log.LogNTraceError("failed to read documents with name projection", err, c)
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			ResponseInternalServerError(c, "failed to read documents", err)
 			return true
 		} else {
 			var names []string
@@ -101,11 +97,10 @@ func GetByNameParamHandler[T types.DocContent](c *gin.Context, nameParam string)
 	if name := c.Query(nameParam); name != "" {
 		//get document by name
 		if doc, err := GetDocByName[T](c, name); err != nil {
-			log.LogNTraceError("failed to read document", err, c)
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			ResponseInternalServerError(c, "failed to read document", err)
 			return true
 		} else if doc == nil {
-			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
+			ResponseDocumentNotFound(c)
 			return true
 		} else {
 			c.JSON(http.StatusOK, doc)
@@ -194,8 +189,7 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 	}
 	log.LogNTrace(fmt.Sprintf("query params: %v search query %v", qParams, allQueriesFilter.Get()), c)
 	if docs, err := FindForCustomer[T](c, allQueriesFilter, nil); err != nil {
-		log.LogNTraceError("failed to read documents", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to read documents", err)
 		return true
 	} else {
 		log.LogNTrace(fmt.Sprintf("scope query found %d documents", len(docs)), c)
@@ -217,8 +211,7 @@ func HandlePostValidation[T types.DocContent](c *gin.Context) {
 	if err := c.ShouldBindBodyWith(&doc, binding.JSON); err != nil {
 		//check if bulk request
 		if err := c.ShouldBindBodyWith(&docs, binding.JSON); err != nil {
-			log.LogNTraceError("failed to bind json", err, c)
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			ResponseFailedToBindJson(c, err)
 			return
 		}
 	} else {
@@ -228,18 +221,18 @@ func HandlePostValidation[T types.DocContent](c *gin.Context) {
 
 	//validate
 	if len(docs) == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "no documents to post"})
+		ResponseBadRequest(c, "no documents in request")
 		return
 	}
 	filter := NewFilterBuilder()
 	names := []string{}
 	for _, doc := range docs {
 		if doc.GetName() == "" {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+			ResponseMissingName(c)
 			return
 		}
 		if slices.Contains(names, doc.GetName()) {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("name %s is duplicated", doc.GetName())})
+			ResponseDuplicateNames(c, doc.GetName())
 			return
 		}
 		names = append(names, doc.GetName())
@@ -251,8 +244,7 @@ func HandlePostValidation[T types.DocContent](c *gin.Context) {
 		filter.WithValue("name", names[0])
 	}
 	if existingDocs, err := FindForCustomer[T](c, filter, NewProjectionBuilder().Include("name").Get()); err != nil {
-		log.LogNTraceError("failed to read documents", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to read documents", err)
 		return
 	} else if len(existingDocs) > 0 {
 		existingNames := []string{}
@@ -260,7 +252,7 @@ func HandlePostValidation[T types.DocContent](c *gin.Context) {
 			existingNames = append(existingNames, doc.GetName())
 		}
 		sort.Strings(existingNames)
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("document(s) with name(s) %s already exists", strings.Join(existingNames, ","))})
+		ResponseDuplicateNames(c, existingNames...)
 		return
 	}
 	c.Set(consts.DocContentKey, docs)
@@ -280,8 +272,7 @@ func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
 func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
 	collection, customerGUID, err := readContext(c)
 	if err != nil {
-		log.LogNTraceError("failed to read collection and customer guid from context", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to read collection and customer guid from context", err)
 		return
 	}
 	dbDocs := []interface{}{}
@@ -291,16 +282,14 @@ func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
 
 	if len(dbDocs) == 1 {
 		if _, err := mongo.GetWriteCollection(collection).InsertOne(c.Request.Context(), dbDocs[0]); err != nil {
-			log.LogNTraceError("failed to create document", err, c)
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			ResponseInternalServerError(c, "failed to create document", err)
 			return
 		} else {
 			c.JSON(http.StatusCreated, docs[0])
 		}
 	} else {
 		if _, err := mongo.GetWriteCollection(collection).InsertMany(c.Request.Context(), dbDocs); err != nil {
-			log.LogNTraceError("failed to create document", err, c)
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			ResponseInternalServerError(c, "failed to create document", err)
 			return
 		} else {
 			c.JSON(http.StatusOK, docs)
@@ -319,15 +308,14 @@ func HandlePutDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
 func HandlePutValidation[T types.DocContent](c *gin.Context) {
 	var doc T
 	if err := c.ShouldBindJSON(&doc); err != nil {
-		log.LogNTraceError("failed to bind json", err, c)
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ResponseFailedToBindJson(c, err)
 		return
 	}
 	if guid := c.Param(consts.GUIDField); guid != "" {
 		doc.SetGUID(guid)
 	}
 	if doc.GetGUID() == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "document guid is required"})
+		ResponseMissingGUID(c)
 		return
 	}
 	c.Set(consts.DocContentKey, doc)
@@ -347,15 +335,13 @@ func HandlePutDocFromContext[T types.DocContent](c *gin.Context) {
 func PutDocHandler[T types.DocContent](c *gin.Context, doc T) {
 	update, err := GetUpdateDocCommand(doc, doc.GetReadOnlyFields()...)
 	if err != nil {
-		log.LogNTraceError("failed to create update command", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to generate update command", err)
 		return
 	}
 	if res, err := UpdateDocument[T](c, doc.GetGUID(), update); err != nil {
-		log.LogNTraceError("failed to update document", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to update document", err)
 	} else if res == nil {
-		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
+		ResponseDocumentNotFound(c)
 		return
 	} else {
 		c.JSON(http.StatusOK, res)
@@ -368,7 +354,7 @@ func PutDocHandler[T types.DocContent](c *gin.Context, doc T) {
 func HandleDeleteDoc[T types.DocContent](c *gin.Context) {
 	guid := c.Param(consts.GUIDField)
 	if guid == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "guid is required"})
+		ResponseMissingGUID(c)
 		return
 	}
 	DeleteDocByGUIDHandler[T](c, guid)
@@ -382,7 +368,7 @@ func HandleDeleteDocByName[T types.DocContent](nameParam string) gin.HandlerFunc
 			return s != ""
 		})
 		if !ok || len(names) == 0 {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+			ResponseMissingName(c)
 			return
 		}
 		if len(names) == 1 {
@@ -397,16 +383,14 @@ func HandleDeleteDocByName[T types.DocContent](nameParam string) gin.HandlerFunc
 func BulkDeleteDocByNameHandler[T types.DocContent](c *gin.Context, names []string) {
 	collection, err := readCollection(c)
 	if err != nil {
-		log.LogNTraceError("failed to read collection from context", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to read collection from context", err)
 		return
 	}
 	filter := NewFilterBuilder().WithIn("name", names).WithNotDeleteForCustomer(c)
 	if res, err := mongo.GetWriteCollection(collection).DeleteMany(c.Request.Context(), filter.Get()); err != nil {
-		log.LogNTraceError("failed to delete document", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to delete document", err)
 	} else if res.DeletedCount == 0 {
-		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
+		ResponseDocumentNotFound(c)
 	} else {
 		c.JSON(http.StatusOK, res)
 	}
@@ -415,26 +399,22 @@ func BulkDeleteDocByNameHandler[T types.DocContent](c *gin.Context, names []stri
 func DeleteDocByGUIDHandler[T types.DocContent](c *gin.Context, guid string) {
 	collection, err := readCollection(c)
 	if err != nil {
-		log.LogNTraceError("failed to read collection from context", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to read collection from context", err)
 		return
 	}
 	toBeDeleted, err := GetDocByGUID[T](c, guid)
 	if err != nil {
-		log.LogNTraceError("failed to read document before delete", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to read document", err)
 		return
 	} else if toBeDeleted == nil {
-		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
+		ResponseDocumentNotFound(c)
 		return
 	}
 	if res, err := mongo.GetWriteCollection(collection).DeleteOne(c.Request.Context(), bson.M{consts.IdField: guid}); err != nil {
-		msg := fmt.Sprintf("failed to delete document GUID: %s  Collection: %s", guid, collection)
-		log.LogNTraceError(msg, err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to delete document", err)
 		return
 	} else if res.DeletedCount == 0 {
-		c.JSON(http.StatusNotFound, fmt.Sprintf("document with id %s does not exist", guid))
+		ResponseDocumentNotFound(c)
 		return
 	}
 	c.JSON(http.StatusOK, toBeDeleted)
@@ -443,27 +423,23 @@ func DeleteDocByGUIDHandler[T types.DocContent](c *gin.Context, guid string) {
 func DeleteDocByNameHandler[T types.DocContent](c *gin.Context, name string) {
 	collection, err := readCollection(c)
 	if err != nil {
-		log.LogNTraceError("failed to read collection from context", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to read collection from context", err)
 		return
 	}
 	toBeDeleted, err := GetDocByName[T](c, name)
 	if err != nil {
-		log.LogNTraceError("failed to read document before delete", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to read document", err)
 		return
 	} else if toBeDeleted == nil {
-		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
+		ResponseDocumentNotFound(c)
 		return
 	}
 
 	if res, err := mongo.GetWriteCollection(collection).DeleteOne(c.Request.Context(), bson.M{consts.IdField: (*toBeDeleted).GetGUID()}); err != nil {
-		msg := fmt.Sprintf("failed to delete document with name: %s  Collection: %s", name, collection)
-		log.LogNTraceError(msg, err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, "failed to delete document", err)
 		return
 	} else if res.DeletedCount == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "document not found"})
+		ResponseDocumentNotFound(c)
 		return
 	}
 	c.JSON(http.StatusOK, toBeDeleted)

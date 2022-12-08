@@ -33,17 +33,16 @@ func putCluster(c *gin.Context) {
 	reqCluster := docs[0]
 	//only attributes can be updated - so check if there are any attributes
 	if len(reqCluster.Attributes) == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cluster attributes are required"})
+		dbhandler.ResponseBadRequest(c, "cluster attributes are required")		
 		return
 	}
 	// if request attributes do not include alias add it from the old cluster
 	if _, ok := reqCluster.Attributes[consts.ShotNameAttribute]; !ok {
 		if oldCluster, err := dbhandler.GetDocByGUID[types.Cluster](c, reqCluster.GUID); err != nil {
-			log.LogNTraceError("failed to read cluster", err, c)
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			dbhandler.ResponseInternalServerError(c, "failed to read cluster", err)
 			return
 		} else if oldCluster == nil {
-			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
+			dbhandler.ResponseDocumentNotFound(c)
 			return
 		} else {
 			reqCluster.Attributes[consts.ShotNameAttribute] = oldCluster.Attributes[consts.ShotNameAttribute]
@@ -53,10 +52,11 @@ func putCluster(c *gin.Context) {
 	update := dbhandler.GetUpdateFieldValueCommand(reqCluster.Attributes, consts.AttributesField)
 	log.LogNTrace(fmt.Sprintf("post cluster %s - updating cluster", reqCluster.GUID), c)
 	if oldAndUpdated, err := dbhandler.UpdateDocument[types.Cluster](c, reqCluster.GUID, update); err != nil {
-		log.LogNTraceError("failed to update cluster", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		dbhandler.ResponseInternalServerError(c, "failed to read cluster", err)
+		return
 	} else if oldAndUpdated == nil {
-		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
+		dbhandler.ResponseDocumentNotFound(c)
+		return
 	} else {
 		c.JSON(http.StatusOK, oldAndUpdated)
 	}

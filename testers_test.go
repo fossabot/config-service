@@ -137,8 +137,16 @@ const (
 	errorDocumentNotFound = `{"error":"document not found"}`
 )
 
-func errorNameExist(names ...string) string {
-	return `{"error":"document(s) with name(s) ` + strings.Join(names, ",") + ` already exists"}`
+func errorNameExist(name ...string) string {
+	var msg string
+	if len(name) == 0 {
+		msg = "name already exists"
+	} else if len(name) == 1 {
+		msg = fmt.Sprintf("name %s already exists", name[0])
+	} else {
+		msg = fmt.Sprintf("names %s already exist", strings.Join(name, ","))
+	}
+	return `{"error":"` + msg + `"}`
 }
 
 func testBadRequest(suite *MainTestSuite, method, path, expectedResponse string, body interface{}, expectedCode int) {

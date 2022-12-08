@@ -6,7 +6,6 @@ import (
 	"kubescape-config-service/types"
 	"kubescape-config-service/utils/consts"
 	"kubescape-config-service/utils/log"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-multierror"
@@ -201,8 +200,7 @@ func MustGetDocContentFromContext[T types.DocContent](c *gin.Context) ([]T, erro
 		}
 	} else {
 		err := fmt.Errorf("failed to get doc content from context")
-		log.LogNTraceError(err.Error(), err, c)
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ResponseInternalServerError(c, err.Error(), err)
 		return nil, err
 	}
 	return docs, nil

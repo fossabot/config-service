@@ -4,7 +4,6 @@ import (
 	"kubescape-config-service/dbhandler"
 	"kubescape-config-service/types"
 	"kubescape-config-service/utils/consts"
-	"kubescape-config-service/utils/log"
 	"net/http"
 
 	"github.com/imdario/mergo"
@@ -30,8 +29,7 @@ func getCustomerConfigByNameHandler(c *gin.Context) bool {
 	//get the default config
 	defaultConfig, err := dbhandler.GetCachedDocument[*types.CustomerConfig](consts.DefaultCustomerConfigKey)
 	if err != nil {
-		log.LogNTraceError("failed to get default config", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		dbhandler.ResponseInternalServerError(c, "failed to get default config", err)
 		return true
 	}
 
@@ -43,13 +41,12 @@ func getCustomerConfigByNameHandler(c *gin.Context) bool {
 	//try and get config by name from db
 	doc, err := dbhandler.GetDocByName[types.CustomerConfig](c, configName)
 	if err != nil {
-		log.LogNTraceError("failed to get doc", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		dbhandler.ResponseInternalServerError(c, "failed to get document by name", err)
 		return true
 	} else if unmerged, _ := c.GetQuery("unmerged"); unmerged != "" {
 		//case unmerged is requested - return the unmerged config if exists
 		if doc == nil {
-			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "document not found"})
+			dbhandler.ResponseDocumentNotFound(c)
 			return true
 		} else {
 			c.JSON(http.StatusOK, doc)
@@ -60,8 +57,7 @@ func getCustomerConfigByNameHandler(c *gin.Context) bool {
 	if configName == consts.CustomerConfigName {
 		if doc != nil {
 			if err := mergo.Merge(doc, *defaultConfig); err != nil {
-				log.LogNTraceError("failed to merge config", err, c)
-				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				dbhandler.ResponseInternalServerError(c, "failed to merge configuration", err)
 				return true
 			} else {
 				c.JSON(http.StatusOK, doc)
@@ -76,21 +72,18 @@ func getCustomerConfigByNameHandler(c *gin.Context) bool {
 	//case cluster config is requested - return it merged with customer and default config
 	customerConfig, err := dbhandler.GetDocByName[types.CustomerConfig](c, consts.CustomerConfigName)
 	if err != nil {
-		log.LogNTraceError("failed to get doc", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		dbhandler.ResponseInternalServerError(c, "failed to get document by name", err)
 		return true
 	}
 	customerConfig, err = mergeConfigurations(customerConfig, defaultConfig)
 	if err != nil {
-		log.LogNTraceError("failed to merge config", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		dbhandler.ResponseInternalServerError(c, "failed to merge configuration", err)
 		return true
 	}
 
 	doc, err = mergeConfigurations(doc, customerConfig)
 	if err != nil {
-		log.LogNTraceError("failed to merge config", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		dbhandler.ResponseInternalServerError(c, "failed to merge configuration", err)
 		return true
 	}
 	c.JSON(http.StatusOK, doc)
@@ -114,8 +107,7 @@ func mergeConfigurations(dest, src *types.CustomerConfig) (*types.CustomerConfig
 func putCustomerConfigValidation(c *gin.Context) {
 	var doc *types.CustomerConfig
 	if err := c.ShouldBindJSON(&doc); err != nil {
-		log.LogNTraceError("failed to bind json", err, c)
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		dbhandler.ResponseFailedToBindJson(c, err)
 		return
 	}
 	configName := getConfigName(c)
@@ -123,16 +115,15 @@ func putCustomerConfigValidation(c *gin.Context) {
 		if doc.Name != "" {
 			configName = doc.Name
 		} else {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+			dbhandler.ResponseMissingName(c)
 			return
 		}
 	}
 	if existingDoc, err := dbhandler.GetDocByName[types.CustomerConfig](c, configName); err != nil {
-		log.LogNTraceError("failed to get doc", err, c)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		dbhandler.ResponseInternalServerError(c, "failed to get doc by name", err)
 		return
 	} else if existingDoc == nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "document not found"})
+		dbhandler.ResponseDocumentNotFound(c)
 		return
 	} else {
 		doc.SetGUID(existingDoc.GetGUID())
@@ -144,12 +135,13 @@ func putCustomerConfigValidation(c *gin.Context) {
 func deleteCustomerConfig(c *gin.Context) {
 	if configName := getConfigName(c); configName != "" {
 		if configName == consts.GlobalConfigName {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "default config cannot be deleted"})
+			dbhandler.ResponseBadRequest(c, "default config cannot be deleted")
 			return
 		}
 		dbhandler.DeleteDocByNameHandler[*types.CustomerConfig](c, configName)
 	} else {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		dbhandler.ResponseMissingName(c)
+		return
 	}
 }
 

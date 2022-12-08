@@ -352,7 +352,7 @@ func (suite *MainTestSuite) TestCustomerConfiguration() {
 
 	//put config with wrong name - expect error 400
 	path = fmt.Sprintf("%s?%s=%s", consts.CustomerConfigPath, consts.ConfigNameParam, "notExist")
-	testBadRequest(suite, http.MethodPut, path, errorDocumentNotFound, cluster2Config, http.StatusBadRequest)
+	testBadRequest(suite, http.MethodPut, path, errorDocumentNotFound, cluster2Config, http.StatusNotFound)
 	//test put with wrong config name param - expect error 400
 	path = fmt.Sprintf("%s?%s=%s", consts.CustomerConfigPath, "wrongParamName", "someName")
 	c2Name := cluster2Config.Name
