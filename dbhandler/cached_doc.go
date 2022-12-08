@@ -12,15 +12,18 @@ import (
 	"go.uber.org/zap"
 )
 
-var cachedDocuments = make(map[string]interface{})
+var cachedDocuments = sync.Map{} //[string]interface{}
 
 func AddCachedDocument[T types.DocContent](cacheKey, collection string, queryFilter bson.D, updateInterval time.Duration) {
-	cachedDocuments[cacheKey] = newCachedDocument[T](collection, queryFilter, updateInterval)
+	cachedDocuments.Store(cacheKey, newCachedDocument[T](collection, queryFilter, updateInterval))
 }
 
 func GetCachedDocument[T types.DocContent](cacheKey string) (T, error) {
-	if cachedDoc, ok := cachedDocuments[cacheKey]; ok {
-		return cachedDoc.(*cachedDocument[T]).get()
+	if i, ok := cachedDocuments.Load(cacheKey); ok {
+		if cachedDoc, ok := i.(*cachedDocument[T]); ok {
+			return cachedDoc.get()
+		}
+		return nil, fmt.Errorf("documented cached with key: %s does not match parametric type", cacheKey)
 	}
 	return nil, fmt.Errorf("cached document %s not found", cacheKey)
 }

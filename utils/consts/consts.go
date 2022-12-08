@@ -17,14 +17,14 @@ const (
 	CustomerConfigCollection               = "v1_customer_configurations"
 
 	//Common document fields
-	IdField           = "_id"
-	GUIDField         = "guid"
-	NameField         = "name"
-	DeletedField      = "is_deleted"
-	AttributesField   = "attributes"
-	ShotNameAttribute = "alias"
-	ShotNameField     = AttributesField + "." + ShotNameAttribute
-	CustomersField    = "customers"
+	IdField            = "_id"
+	GUIDField          = "guid"
+	NameField          = "name"
+	DeletedField       = "is_deleted"
+	AttributesField    = "attributes"
+	ShortNameAttribute = "alias"
+	ShrotNameField     = AttributesField + "." + ShortNameAttribute
+	CustomersField     = "customers"
 
 	//Query params
 	ListParam       = "list"
