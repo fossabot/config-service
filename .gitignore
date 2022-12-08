@@ -1,2 +1,4 @@
 .vscode/settings.json
 __debug_bin
+coverage.html
+coverage.out

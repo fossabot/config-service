@@ -1,0 +1,21 @@
+{
+    "name": "test-cluster1",
+    "scope": {
+        "designatorType": "attributes",
+        "attributes": {
+            "cluster": "test-cluster1"
+        }
+    },
+    "settings": {
+        "postureControlInputs": {
+            "allowedContainerRepos": [
+                "gcr.io",
+                "ecr.com",
+                "dockerhub.com"
+            ]
+        },
+        "vulnerabilityScanConfig": {
+            "scanFrequency": "56h"
+        }
+    }
+}

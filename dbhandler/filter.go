@@ -2,6 +2,7 @@ package dbhandler
 
 import (
 	"kubescape-config-service/utils/consts"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -33,28 +34,40 @@ func (f *FilterBuilder) WithNotDeleteForCustomer(c *gin.Context) *FilterBuilder 
 	return f.WithCustomer(c).WithNotDeleted()
 }
 
+func (f *FilterBuilder) WithGlobalNotDelete() *FilterBuilder {
+	return f.WithValue(consts.CustomersField, "").WithNotDeleted()
+}
+
+func (f *FilterBuilder) WithNotDeleteForCustomerAndGlobal(c *gin.Context) *FilterBuilder {
+	return f.WithCustomerAndGlobal(c).WithNotDeleted()
+}
+
 func (f *FilterBuilder) WithGUID(guid string) *FilterBuilder {
-	return f.WithValue(consts.GUID_FIELD, guid)
+	return f.WithValue(consts.GUIDField, guid)
 }
 
 func (f *FilterBuilder) WithID(id string) *FilterBuilder {
-	return f.WithValue(consts.ID_FIELD, id)
+	return f.WithValue(consts.IdField, id)
 }
 
 func (f *FilterBuilder) WithName(name string) *FilterBuilder {
-	return f.WithValue(consts.NAME_FIELD, name)
+	return f.WithValue(consts.NameField, name)
 }
 
 func (f *FilterBuilder) WithCustomer(c *gin.Context) *FilterBuilder {
-	return f.WithValue(consts.CUSTOMERS_FIELD, c.GetString(consts.CUSTOMER_GUID))
+	return f.WithValue(consts.CustomersField, c.GetString(consts.CustomerGUID))
+}
+
+func (f *FilterBuilder) WithCustomerAndGlobal(c *gin.Context) *FilterBuilder {
+	return f.WithIn(consts.CustomersField, []string{c.GetString(consts.CustomerGUID), ""})
 }
 
 func (f *FilterBuilder) WithNotDeleted() *FilterBuilder {
-	return f.WithNotEqual(consts.DELETED_FIELD, true)
+	return f.WithNotEqual(consts.DeletedField, true)
 }
 
 func (f *FilterBuilder) WithDeleted() *FilterBuilder {
-	return f.WithValue(consts.DELETED_FIELD, true)
+	return f.WithValue(consts.DeletedField, true)
 }
 
 func (f *FilterBuilder) WithValue(key string, value interface{}) *FilterBuilder {
@@ -93,16 +106,46 @@ func (f *FilterBuilder) WarpElementMatch() *FilterBuilder {
 }
 
 func (f *FilterBuilder) WarpOr() *FilterBuilder {
-	m := bson.M{}
+	a := bson.A{}
 	for i := range f.filter {
-		m[f.filter[i].Key] = f.filter[i].Value
-
+		a = append(a, bson.D{{Key: f.filter[i].Key, Value: f.filter[i].Value}})
 	}
-	f.filter = bson.D{{Key: "$or", Value: bson.A{m}}}
+	f.filter = bson.D{{Key: "$or", Value: a}}
 	return f
 }
 
 func (f *FilterBuilder) WarpWithField(field string) *FilterBuilder {
 	f.filter = bson.D{{Key: field, Value: f.filter}}
+	return f
+}
+
+func (f *FilterBuilder) WrapDupKeysWithOr() *FilterBuilder {
+	dupFound := false
+	keys := make(map[string]bson.D)
+	for i := range f.filter {
+		if strings.HasPrefix(f.filter[i].Key, "$") {
+			continue
+		}
+		keys[f.filter[i].Key] = append(keys[f.filter[i].Key], f.filter[i])
+		if len(keys[f.filter[i].Key]) > 1 {
+			dupFound = true
+		}
+	}
+	if !dupFound {
+		return f
+	}
+	newF := bson.D{}
+	for k := range keys {
+		if len(keys[k]) > 1 {
+			a := bson.A{}
+			for i := range keys[k] {
+				a = append(a, bson.D{{Key: keys[k][i].Key, Value: keys[k][i].Value}})
+			}
+			newF = append(newF, bson.E{Key: "$or", Value: a})
+		} else {
+			newF = append(newF, keys[k][0])
+		}
+	}
+	f.filter = newF
 	return f
 }

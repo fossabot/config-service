@@ -1,8 +1,8 @@
 package login
 
 import (
+	"kubescape-config-service/dbhandler"
 	"kubescape-config-service/utils/consts"
-	"kubescape-config-service/utils/log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -12,7 +12,7 @@ func AddRoutes(g *gin.Engine) {
 	login := g.Group("/login")
 
 	//login routes
-	login.POST("/", func(c *gin.Context) {
+	login.POST("", func(c *gin.Context) {
 		loginDetails := struct {
 			CustomerGUID string `json:"customerGUID" binding:"required"`
 		}{
@@ -20,11 +20,10 @@ func AddRoutes(g *gin.Engine) {
 		}
 
 		if err := c.ShouldBindJSON(&loginDetails); err != nil {
-			log.LogNTraceError("failed to bind json", err, c)
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			dbhandler.ResponseFailedToBindJson(c, err)
 			return
 		}
-		c.SetCookie(consts.CUSTOMER_GUID, loginDetails.CustomerGUID, 2*60*60*24, "/", "", false, true)
+		c.SetCookie(consts.CustomerGUID, loginDetails.CustomerGUID, 2*60*60*24, "/", "", false, true)
 		c.JSON(http.StatusOK, nil)
 	})
 }

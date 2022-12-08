@@ -1,0 +1,31 @@
+{
+    "name": "CustomerConfig",
+    "scope": {
+        "designatorType": "attributes",
+        "attributes": {}
+    },
+    "settings": {
+        "postureControlInputs": {
+            "allowedContainerRepos": [
+                "gcr.io",
+                "ecr.com"
+            ]
+        },
+        "postureScanConfig": {
+            "scanFrequency": "48h"
+        },
+        "vulnerabilityScanConfig": {
+            "scanFrequency": "120h",
+            "criticalPriorityThreshold": 8
+        },
+        "slackConfigurations": {
+            "token": "",
+            "notifications": {
+                "postureScanV1": null,
+                "postureScoreAboveLastScanV1": null
+            }
+        }
+    },
+    "guid": "d45e39f6-137c-4b0c-96ef-01ec43f9fbe5",
+    "creationTime": "2022-12-07T20:26:35Z"
+}

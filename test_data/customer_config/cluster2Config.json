@@ -1,0 +1,18 @@
+{
+    "name": "test-cluster2",
+    "scope": {
+        "designatorType": "attributes",
+        "attributes": {
+            "cluster": "test-cluster2"
+        }
+    },
+    "settings": {
+        "postureControlInputs": {
+            "allowedContainerRepos": [               
+            ]
+        },
+        "postureScanConfig": {
+            "scanFrequency": "23h"
+        }
+    }
+}

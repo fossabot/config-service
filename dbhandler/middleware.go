@@ -10,7 +10,7 @@ import (
 // DBContextMiddleware is a middleware that adds db parameters to the context
 func DBContextMiddleware(collectionName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Set(consts.COLLECTION, collectionName)
+		c.Set(consts.Collection, collectionName)
 		c.Next()
 	}
 }
