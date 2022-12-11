@@ -1,13 +1,13 @@
 package main
 
 import (
-	"config-service/cluster"
-	"config-service/customer_config"
-	"config-service/login"
-	"config-service/posture_exception"
-	"config-service/prob"
+	"config-service/routes/cluster"
+	"config-service/routes/customer_config"
+	"config-service/routes/login"
+	"config-service/routes/posture_exception"
+	"config-service/routes/prob"
+	"config-service/routes/vulnerability_exception"
 	"config-service/utils"
-	"config-service/vulnerability_exception"
 	"context"
 	"log"
 	"net/http"
