@@ -1,9 +1,9 @@
 package mongo
 
 import (
+	"config-service/utils"
 	"context"
 	"fmt"
-	"kubescape-config-service/utils"
 	"sync"
 
 	"github.com/hashicorp/go-multierror"

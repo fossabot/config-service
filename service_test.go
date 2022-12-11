@@ -1,10 +1,10 @@
 package main
 
 import (
+	"config-service/types"
+	"config-service/utils/consts"
 	"encoding/json"
 	"fmt"
-	"kubescape-config-service/types"
-	"kubescape-config-service/utils/consts"
 	"net/http"
 	"sort"
 

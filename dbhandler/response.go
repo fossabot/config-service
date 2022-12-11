@@ -1,8 +1,8 @@
 package dbhandler
 
 import (
+	"config-service/utils/log"
 	"fmt"
-	"kubescape-config-service/utils/log"
 	"net/http"
 	"strings"
 

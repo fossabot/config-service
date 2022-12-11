@@ -1,7 +1,7 @@
 package dbhandler
 
 import (
-	"kubescape-config-service/utils/consts"
+	"config-service/utils/consts"
 
 	"go.mongodb.org/mongo-driver/bson"
 )

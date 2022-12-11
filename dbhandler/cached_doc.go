@@ -1,10 +1,10 @@
 package dbhandler
 
 import (
+	"config-service/mongo"
+	"config-service/types"
 	"context"
 	"fmt"
-	"kubescape-config-service/mongo"
-	"kubescape-config-service/types"
 	"sync"
 	"time"
 

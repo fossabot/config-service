@@ -1,14 +1,14 @@
 package main
 
 import (
+	"config-service/cluster"
+	"config-service/customer_config"
+	"config-service/login"
+	"config-service/posture_exception"
+	"config-service/prob"
+	"config-service/utils"
+	"config-service/vulnerability_exception"
 	"context"
-	"kubescape-config-service/cluster"
-	"kubescape-config-service/customer_config"
-	"kubescape-config-service/login"
-	"kubescape-config-service/posture_exception"
-	"kubescape-config-service/prob"
-	"kubescape-config-service/utils"
-	"kubescape-config-service/vulnerability_exception"
 	"log"
 	"net/http"
 	"os"
@@ -39,7 +39,7 @@ func setupRouter() *gin.Engine {
 
 	//general middlewares
 	//open telemetry middleware
-	router.Use(otelgin.Middleware("kubescape-config-service"))
+	router.Use(otelgin.Middleware("config-service"))
 	//response trace headers middleware
 	router.Use(traceAttributesNHeader)
 	//set a logger per request context with common fields

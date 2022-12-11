@@ -1,11 +1,11 @@
 package cluster
 
 import (
+	"config-service/dbhandler"
+	"config-service/types"
+	"config-service/utils/consts"
+	"config-service/utils/log"
 	"fmt"
-	"kubescape-config-service/dbhandler"
-	"kubescape-config-service/types"
-	"kubescape-config-service/utils/consts"
-	"kubescape-config-service/utils/log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

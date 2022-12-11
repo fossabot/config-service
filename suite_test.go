@@ -2,12 +2,12 @@ package main
 
 import (
 	"bytes"
+	"config-service/mongo"
+	"config-service/utils/consts"
 	"context"
 	_ "embed"
 	"fmt"
 	"io/ioutil"
-	"kubescape-config-service/mongo"
-	"kubescape-config-service/utils/consts"
 
 	"net/http"
 	"net/http/httptest"

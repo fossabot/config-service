@@ -1,7 +1,7 @@
 package types
 
 import (
-	"kubescape-config-service/utils/consts"
+	"config-service/utils/consts"
 	"time"
 
 	"github.com/armosec/armoapi-go/armotypes"

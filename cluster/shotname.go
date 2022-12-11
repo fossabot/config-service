@@ -1,11 +1,11 @@
 package cluster
 
 import (
-	"kubescape-config-service/dbhandler"
-	"kubescape-config-service/types"
-	"kubescape-config-service/utils"
-	"kubescape-config-service/utils/consts"
-	"kubescape-config-service/utils/log"
+	"config-service/dbhandler"
+	"config-service/types"
+	"config-service/utils"
+	"config-service/utils/consts"
+	"config-service/utils/log"
 	"regexp"
 	"strconv"
 	"strings"

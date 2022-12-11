@@ -1,8 +1,8 @@
 package dbhandler
 
 import (
-	"kubescape-config-service/types"
-	"kubescape-config-service/utils/consts"
+	"config-service/types"
+	"config-service/utils/consts"
 
 	"github.com/gin-gonic/gin"
 )

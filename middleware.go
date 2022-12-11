@@ -1,7 +1,7 @@
 package main
 
 import (
-	"kubescape-config-service/utils/consts"
+	"config-service/utils/consts"
 	"net/http"
 	"time"
 
