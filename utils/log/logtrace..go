@@ -15,6 +15,16 @@ func LogNTrace(msg string, c *gin.Context, fields ...zapcore.Field) {
 	AddEvent(msg, c)
 }
 
+func LogNTraceEnterExit(msg string, c *gin.Context, fields ...zapcore.Field) func() {
+	Log(msg, c, fields...)
+	AddEvent(msg, c)
+	return func() {
+		msg := msg + " completed"
+		Log(msg, c, fields...)
+		AddEvent(msg, c)
+	}
+}
+
 func LogNTraceError(msg string, err error, c *gin.Context, fields ...zapcore.Field) {
 	LogError(msg, err, c, fields...)
 	AddEvent(msg, c)

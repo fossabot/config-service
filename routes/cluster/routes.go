@@ -4,6 +4,7 @@ import (
 	"config-service/dbhandler"
 	"config-service/types"
 	"config-service/utils/consts"
+	"config-service/utils/log"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,6 +23,7 @@ func AddRoutes(g *gin.Engine) {
 }
 
 func validatePostClusterShortNames(c *gin.Context, clusters []*types.Cluster) ([]*types.Cluster, bool) {
+	defer log.LogNTraceEnterExit("validatePostClusterShortNames", c)()
 	for i := range clusters {
 		if clusters[i].Attributes == nil {
 			clusters[i].Attributes = map[string]interface{}{}
@@ -32,6 +34,7 @@ func validatePostClusterShortNames(c *gin.Context, clusters []*types.Cluster) ([
 }
 
 func validatePutClusterShortNames(c *gin.Context, clusters []*types.Cluster) ([]*types.Cluster, bool) {
+	defer log.LogNTraceEnterExit("validatePutClusterShortNames", c)()
 	for i := range clusters {
 		if len(clusters[i].Attributes) == 0 {
 			dbhandler.ResponseBadRequest(c, "cluster attributes are required")
