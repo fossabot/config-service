@@ -16,7 +16,7 @@ func ValidateGUIDExistence[T types.DocContent](c *gin.Context, docs []T) ([]T, b
 		ResponseBadRequest(c, "GUID in path is not allowed in bulk request")
 	}
 	for i := range docs {
-		if ; guid != "" {
+		if guid != "" {
 			docs[i].SetGUID(guid)
 		}
 		if docs[i].GetGUID() == "" {
@@ -40,11 +40,11 @@ func ValidateUniqueValues[T types.DocContent](uniqueKeyValues ...UniqueKeyValueI
 			for _, doc := range docs {
 				value := valueGetter(doc)
 				if mandatory && value == "" {
-					ResponseMissingKey(c, key) //TODO: change to more generic error
+					ResponseMissingKey(c, key)
 					return nil, false
 				}
 				if slices.Contains(values, value) {
-					ResponseDuplicateKey(c, key, value) //TODO: change to more generic error
+					ResponseDuplicateKey(c, key, value)
 					return nil, false
 				}
 				values = append(values, value)
