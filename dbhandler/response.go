@@ -4,17 +4,21 @@ import (
 	"config-service/utils/log"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 
+	plural "github.com/gertd/go-pluralize"
 	"github.com/gin-gonic/gin"
 )
 
 const (
 	//error messages
-	MissingName      = "name is required"
-	MissingGUID      = "document guid is required"
+	MissingKey = "%s is required"
+	//MissingGUID      = "document guid is required"
 	DocumentNotFound = "document not found"
 )
+
+var pluralize = plural.NewClient()
 
 func ResponseInternalServerError(c *gin.Context, msg string, err error) {
 	log.LogNTraceError(msg, err, c)
@@ -30,24 +34,52 @@ func ResponseDocumentNotFound(c *gin.Context) {
 	c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": DocumentNotFound})
 }
 
-func ResponseMissingGUID(c *gin.Context) {
-	ResponseBadRequest(c, MissingGUID)
+func ResponseDuplicateNames(c *gin.Context, names ...string) {
+	ResponseDuplicateKey(c, "name", names...)
 }
 
-func ResponseDuplicateNames(c *gin.Context, name ...string) {
+func ResponseDuplicateKey(c *gin.Context, key string, values ...string) {
+	dupNames := map[string][]string{key: values}
+	ResponseDuplicateKeysNValues(c, dupNames)
+}
+
+func ResponseDuplicateKeysNValues(c *gin.Context, key2Values map[string][]string) {
 	var msg string
-	if len(name) == 0 {
-		msg = "name already exists"
-	} else if len(name) == 1 {
-		msg = fmt.Sprintf("name %s already exists", name[0])
-	} else {
-		msg = fmt.Sprintf("names %s already exist", strings.Join(name, ","))
+	keys := make([]string, 0, len(key2Values))
+	for k := range key2Values {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for key, values := range key2Values {
+		sort.Strings(values)
+		if len(msg) > 0 {
+			msg += ", "
+		}
+		if len(values) == 0 {
+			msg = key + " already exists"
+		} else if len(values) == 1 {
+			msg = fmt.Sprintf("%s %s already exists", key, values[0])
+		} else {
+			msg = fmt.Sprintf("%s %s already exist", pluralize.Plural(key), strings.Join(values, ","))
+		}
 	}
 	ResponseBadRequest(c, msg)
 }
 
+func ResponseMissingGUID(c *gin.Context) {
+	ResponseMissingKey(c, "guid")
+}
+
 func ResponseMissingName(c *gin.Context) {
-	ResponseBadRequest(c, MissingName)
+	ResponseMissingKey(c, "name")
+}
+
+func ResponseMissingKey(c *gin.Context, key string) {
+	ResponseBadRequest(c, fmt.Sprintf(MissingKey, key))
+}
+
+func ResponseBulkNotSupported(c *gin.Context) {
+	ResponseBadRequest(c, "bulk operations are not supported")
 }
 
 func ResponseBadRequest(c *gin.Context, msg string) {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"time"
 
 	_ "embed"
 
@@ -52,6 +53,9 @@ func (suite *MainTestSuite) TestCluster() {
 
 	//put doc without alias - expect the alias not to be deleted
 	cluster := testPostDoc(suite, consts.ClusterPath, clusters[0], newClusterCompareFilter)
+	creationTime, err := time.Parse(time.RFC3339, cluster.SubscriptionDate)
+	suite.NoError(err, "failed to parse creation time")
+	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
 	alias := cluster.Attributes["alias"].(string)
 	suite.NotEmpty(alias)
 	delete(cluster.Attributes, "alias")
@@ -147,6 +151,11 @@ func (suite *MainTestSuite) TestPostureException() {
 		},
 	}
 	testGetDeleteByNameAndQuery(suite, consts.PostureExceptionPolicyPath, consts.PolicyNameParam, posturePolicies, getQueries)
+
+	policy1 := testPostDoc(suite, consts.PostureExceptionPolicyPath, posturePolicies[0], newPolicyCompareFilter)
+	creationTime, err := time.Parse(time.RFC3339, policy1.CreationTime)
+	suite.NoError(err, "failed to parse creation time")
+	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
 }
 
 //go:embed test_data/vulnerabilityPolicies.json
@@ -202,6 +211,11 @@ func (suite *MainTestSuite) TestVulnerabilityPolicies() {
 		},
 	}
 	testGetDeleteByNameAndQuery(suite, consts.VulnerabilityExceptionPolicyPath, consts.PolicyNameParam, vulnerabilities, getQueries)
+
+	policy1 := testPostDoc(suite, consts.VulnerabilityExceptionPolicyPath, vulnerabilities[0], newPolicyCompareFilter)
+	creationTime, err := time.Parse(time.RFC3339, policy1.CreationTime)
+	suite.NoError(err, "failed to parse creation time")
+	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
 }
 
 //go:embed test_data/customer_config/customerConfig.json
@@ -275,9 +289,17 @@ func (suite *MainTestSuite) TestCustomerConfiguration() {
 	//post new customer config
 	customerConfig = testPostDoc(suite, consts.CustomerConfigPath, customerConfig, compareFilter)
 	//post cluster configs
+	cluster1Config.CreationTime = ""
+	cluster2Config.CreationTime = ""
 	clusterConfigs := testBulkPostDocs(suite, consts.CustomerConfigPath, []*types.CustomerConfig{cluster1Config, cluster2Config}, compareFilter)
 	cluster1Config = clusterConfigs[0]
 	cluster2Config = clusterConfigs[1]
+	creationTime, err := time.Parse(time.RFC3339, cluster1Config.CreationTime)
+	suite.NoError(err, "failed to parse creation time")
+	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
+	creationTime, err = time.Parse(time.RFC3339, cluster2Config.CreationTime)
+	suite.NoError(err, "failed to parse creation time")
+	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
 
 	//test get names list
 	configNames := []string{defaultCustomerConfig.Name, customerConfig.Name, cluster1Config.Name, cluster2Config.Name}

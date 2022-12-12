@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"sort"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -200,63 +199,46 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 
 // ////////////////////////////////////////POST///////////////////////////////////////////////
 // HandlePostDocWithValidation - chains validation and post document handlers
-func HandlePostDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
-	return []gin.HandlerFunc{HandlePostValidation[T], HandlePostDocFromContext[T]}
+func HandlePostDocWithValidation[T types.DocContent](validators ...Validator[T]) []gin.HandlerFunc {
+	return []gin.HandlerFunc{HandlePostValidation(validators...), HandlePostDocFromContext[T]}
+}
+
+// HandlePostDocWithUniqueNameValidation - shortcut for HandlePostDocWithValidation(ValidateUniqueValues(NameKeyGetter[T]))
+func HandlePostDocWithUniqueNameValidation[T types.DocContent]() []gin.HandlerFunc {
+	return []gin.HandlerFunc{HandlePostValidation(ValidateUniqueValues(NameKeyGetter[T])), HandlePostDocFromContext[T]}
 }
 
 // HandlePutValidation validate post request and if valid sets one or many DocContents in context for next handler, otherwise abort request
-func HandlePostValidation[T types.DocContent](c *gin.Context) {
-	var doc T
-	var docs []T
-	if err := c.ShouldBindBodyWith(&doc, binding.JSON); err != nil {
-		//check if bulk request
-		if err := c.ShouldBindBodyWith(&docs, binding.JSON); err != nil {
-			ResponseFailedToBindJson(c, err)
-			return
+func HandlePostValidation[T types.DocContent](validators ...Validator[T]) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		var doc T
+		var docs []T
+		if err := c.ShouldBindBodyWith(&doc, binding.JSON); err != nil || doc == nil {
+			//check if bulk request
+			if err := c.ShouldBindBodyWith(&docs, binding.JSON); err != nil || docs == nil {
+				ResponseFailedToBindJson(c, err)
+				return
+			}
+		} else {
+			//single request, append to slice
+			docs = append(docs, doc)
 		}
-	} else {
-		//single request, append to slice
-		docs = append(docs, doc)
-	}
 
-	//validate
-	if len(docs) == 0 {
-		ResponseBadRequest(c, "no documents in request")
-		return
-	}
-	filter := NewFilterBuilder()
-	names := []string{}
-	for _, doc := range docs {
-		if doc.GetName() == "" {
-			ResponseMissingName(c)
+		//validate
+		if len(docs) == 0 {
+			ResponseBadRequest(c, "no documents in request")
 			return
 		}
-		if slices.Contains(names, doc.GetName()) {
-			ResponseDuplicateNames(c, doc.GetName())
-			return
-		}
-		names = append(names, doc.GetName())
-	}
 
-	if len(docs) > 1 {
-		filter.WithIn("name", names)
-	} else {
-		filter.WithValue("name", names[0])
-	}
-	if existingDocs, err := FindForCustomer[T](c, filter, NewProjectionBuilder().Include("name").Get()); err != nil {
-		ResponseInternalServerError(c, "failed to read documents", err)
-		return
-	} else if len(existingDocs) > 0 {
-		existingNames := []string{}
-		for _, doc := range existingDocs {
-			existingNames = append(existingNames, doc.GetName())
+		for _, validator := range validators {
+			var ok bool
+			if docs, ok = validator(c, docs); !ok {
+				return
+			}
 		}
-		sort.Strings(existingNames)
-		ResponseDuplicateNames(c, existingNames...)
-		return
+		c.Set(consts.DocContentKey, docs)
+		c.Next()
 	}
-	c.Set(consts.DocContentKey, docs)
-	c.Next()
 }
 
 // HandlePostDocFromContext - handles creation of document(s) of type T
@@ -300,26 +282,34 @@ func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
 // ////////////////////////////////////////PUT///////////////////////////////////////////////
 
 // HandlePutDocWithValidation - chains validation and put document handlers
-func HandlePutDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
-	return []gin.HandlerFunc{HandlePutValidation[T], HandlePutDocFromContext[T]}
+func HandlePutDocWithValidation[T types.DocContent](validators ...Validator[T]) []gin.HandlerFunc {
+	return []gin.HandlerFunc{HandlePutValidation(validators...), HandlePutDocFromContext[T]}
+}
+
+// HandlePutDocWithGUIDValidation - shortcut for HandlePutDocWithValidation(ValidateGUIDExistence[T])
+func HandlePutDocWithGUIDValidation[T types.DocContent]() []gin.HandlerFunc {
+	return []gin.HandlerFunc{HandlePutValidation(ValidateGUIDExistence[T]), HandlePutDocFromContext[T]}
 }
 
 // HandlePutValidation validate put request and if valid set DocContent in context for next handler, otherwise abort request
-func HandlePutValidation[T types.DocContent](c *gin.Context) {
-	var doc T
-	if err := c.ShouldBindJSON(&doc); err != nil {
-		ResponseFailedToBindJson(c, err)
-		return
+func HandlePutValidation[T types.DocContent](validators ...Validator[T]) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		var doc T
+		if err := c.ShouldBindJSON(&doc); err != nil {
+			ResponseFailedToBindJson(c, err)
+			return
+		}
+		//validate
+		for _, validator := range validators {
+			if docs, ok := validator(c, []T{doc}); !ok {
+				return
+			} else {
+				doc = docs[0]
+			}
+		}
+		c.Set(consts.DocContentKey, doc)
+		c.Next()
 	}
-	if guid := c.Param(consts.GUIDField); guid != "" {
-		doc.SetGUID(guid)
-	}
-	if doc.GetGUID() == "" {
-		ResponseMissingGUID(c)
-		return
-	}
-	c.Set(consts.DocContentKey, doc)
-	c.Next()
 }
 
 // HandlePutDocFromContext - handles updates a document of type T

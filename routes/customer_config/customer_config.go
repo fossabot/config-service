@@ -104,32 +104,30 @@ func mergeConfigurations(dest, src *types.CustomerConfig) (*types.CustomerConfig
 	return &destCopy, nil
 }
 
-func putCustomerConfigValidation(c *gin.Context) {
-	var doc *types.CustomerConfig
-	if err := c.ShouldBindJSON(&doc); err != nil {
-		dbhandler.ResponseFailedToBindJson(c, err)
-		return
+func validatePutCustomerConfig(c *gin.Context, docs []*types.CustomerConfig) ([]*types.CustomerConfig, bool) {
+	if len(docs) > 1 {
+		dbhandler.ResponseBulkNotSupported(c)
+		return nil, false
 	}
 	configName := getConfigName(c)
 	if configName == "" {
-		if doc.Name != "" {
-			configName = doc.Name
+		if docs[0].Name != "" {
+			configName = docs[0].Name
 		} else {
 			dbhandler.ResponseMissingName(c)
-			return
+			return nil, false
 		}
 	}
 	if existingDoc, err := dbhandler.GetDocByName[types.CustomerConfig](c, configName); err != nil {
 		dbhandler.ResponseInternalServerError(c, "failed to get doc by name", err)
-		return
+		return nil, false
 	} else if existingDoc == nil {
 		dbhandler.ResponseDocumentNotFound(c)
-		return
+		return nil, false
 	} else {
-		doc.SetGUID(existingDoc.GetGUID())
+		docs[0].SetGUID(existingDoc.GetGUID())
 	}
-	c.Set(consts.DocContentKey, doc)
-	c.Next()
+	return docs, true
 }
 
 func deleteCustomerConfig(c *gin.Context) {
