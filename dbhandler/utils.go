@@ -24,7 +24,7 @@ func GetAllForCustomer[T any](c *gin.Context, includeGlobals bool) ([]T, error) 
 
 // GetAllForCustomerWithProjection returns all docs for customer with projection
 func GetAllForCustomerWithProjection[T any](c *gin.Context, projection bson.D, includeGlobals bool) ([]T, error) {
-	collection, _, err := readContext(c)
+	collection, _, err := ReadContext(c)
 	result := []T{}
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func GetAllForCustomerWithProjection[T any](c *gin.Context, projection bson.D, i
 }
 
 func FindForCustomer[T any](c *gin.Context, filterBuilder *FilterBuilder, projection bson.D) ([]T, error) {
-	collection, _, err := readContext(c)
+	collection, _, err := ReadContext(c)
 	result := []T{}
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func FindForCustomer[T any](c *gin.Context, filterBuilder *FilterBuilder, projec
 // UpdateDocument updates document by GUID and update command
 func UpdateDocument[T any](c *gin.Context, id string, update bson.D) ([]T, error) {
 
-	collection, _, err := readContext(c)
+	collection, _, err := ReadContext(c)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func UpdateDocument[T any](c *gin.Context, id string, update bson.D) ([]T, error
 
 // DocExist returns true if at least one document with given filter exists
 func DocExist(c *gin.Context, f bson.D) (bool, error) {
-	collection, _, err := readContext(c)
+	collection, _, err := ReadContext(c)
 	if err != nil {
 		return false, err
 	}
@@ -131,7 +131,7 @@ func DocWithNameExist(c *gin.Context, name string) (bool, error) {
 
 // GetDocByGUID returns document by GUID
 func GetDocByGUID[T any](c *gin.Context, guid string) (*T, error) {
-	collection, _, err := readContext(c)
+	collection, _, err := ReadContext(c)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func GetDocByGUID[T any](c *gin.Context, guid string) (*T, error) {
 
 // GetDocByName returns document by name
 func GetDocByName[T any](c *gin.Context, name string) (*T, error) {
-	collection, _, err := readContext(c)
+	collection, _, err := ReadContext(c)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func GetDocByName[T any](c *gin.Context, name string) (*T, error) {
 
 // CountDocs counts documents that match the filter
 func CountDocs(c *gin.Context, f bson.D) (int64, error) {
-	collection, _, err := readContext(c)
+	collection, _, err := ReadContext(c)
 	if err != nil {
 		return 0, err
 	}
@@ -206,8 +206,8 @@ func MustGetDocContentFromContext[T types.DocContent](c *gin.Context) ([]T, erro
 	return docs, nil
 }
 
-// readContext reads collection and customerGUID from context
-func readContext(c *gin.Context) (collection, customerGUID string, err error) {
+// ReadContext reads collection and customerGUID from context
+func ReadContext(c *gin.Context) (collection, customerGUID string, err error) {
 	collection, errCollection := readCollection(c)
 	if errCollection != nil {
 		err = multierror.Append(err, errCollection)

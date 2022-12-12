@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"go.mongodb.org/mongo-driver/bson"
+	mongoDB "go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/utils/strings/slices"
 )
 
@@ -252,7 +253,7 @@ func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
 
 // PostDoc - helper to put document(s) of type T, custom handler should use this function to do the final POST handling
 func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
-	collection, customerGUID, err := readContext(c)
+	collection, customerGUID, err := ReadContext(c)
 	if err != nil {
 		ResponseInternalServerError(c, "failed to read collection and customer guid from context", err)
 		return
@@ -264,6 +265,10 @@ func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
 
 	if len(dbDocs) == 1 {
 		if _, err := mongo.GetWriteCollection(collection).InsertOne(c.Request.Context(), dbDocs[0]); err != nil {
+			if mongoDB.IsDuplicateKeyError(err) {
+				ResponseDuplicateKey(c, consts.GUIDField)
+				return
+			}
 			ResponseInternalServerError(c, "failed to create document", err)
 			return
 		} else {
