@@ -1,11 +1,11 @@
 package dbhandler
 
 import (
+	"config-service/mongo"
+	"config-service/types"
+	"config-service/utils/consts"
+	"config-service/utils/log"
 	"fmt"
-	"kubescape-config-service/mongo"
-	"kubescape-config-service/types"
-	"kubescape-config-service/utils/consts"
-	"kubescape-config-service/utils/log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-multierror"

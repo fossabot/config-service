@@ -1,9 +1,9 @@
 package customer_config
 
 import (
-	"kubescape-config-service/dbhandler"
-	"kubescape-config-service/types"
-	"kubescape-config-service/utils/consts"
+	"config-service/dbhandler"
+	"config-service/types"
+	"config-service/utils/consts"
 	"net/http"
 
 	"github.com/imdario/mergo"

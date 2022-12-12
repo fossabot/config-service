@@ -4,9 +4,9 @@
 package main
 
 import (
+	"config-service/mongo"
+	"config-service/utils"
 	"context"
-	"kubescape-config-service/mongo"
-	"kubescape-config-service/utils"
 	"log"
 	"os"
 
@@ -88,7 +88,7 @@ func newZapConf(lvl zap.AtomicLevel, config utils.LoggerConfig) zap.Config {
 
 // initTracer used to initialize tracer
 func initTracer(config utils.TelemetryConfig) *sdktrace.TracerProvider {
-	serviceName := "kubescape-config-service"
+	serviceName := "config-service"
 	hostName, _ := os.Hostname()
 	var err error
 	var exporter sdktrace.SpanExporter

@@ -1,9 +1,9 @@
 package dbhandler
 
 import (
+	"config-service/types"
 	"encoding/json"
 	"fmt"
-	"kubescape-config-service/types"
 
 	"go.mongodb.org/mongo-driver/bson"
 )

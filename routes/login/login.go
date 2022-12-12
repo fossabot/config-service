@@ -1,8 +1,8 @@
 package login
 
 import (
-	"kubescape-config-service/dbhandler"
-	"kubescape-config-service/utils/consts"
+	"config-service/dbhandler"
+	"config-service/utils/consts"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

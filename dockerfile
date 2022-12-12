@@ -6,4 +6,4 @@ COPY ./dist /.
 COPY ./build_tag.txt /
 EXPOSE 80
 
-CMD ["./kubescape-config-service"]
+CMD ["./config-service"]

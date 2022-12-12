@@ -1,9 +1,9 @@
 package main
 
 import (
+	"config-service/types"
 	"encoding/json"
 	"fmt"
-	"kubescape-config-service/types"
 
 	"net/http"
 	"net/http/httptest"

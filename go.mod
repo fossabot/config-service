@@ -1,4 +1,4 @@
-module kubescape-config-service
+module config-service
 
 go 1.18
 

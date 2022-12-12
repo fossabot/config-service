@@ -1,1 +1,1 @@
-# kubescape-config-service
+# config-service
