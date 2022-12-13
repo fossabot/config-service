@@ -14,9 +14,9 @@ func AddRoutes(g *gin.Engine) {
 	customerConfig.Use(dbhandler.DBContextMiddleware(consts.CustomerConfigCollection))
 
 	customerConfig.GET("", getCustomerConfigHandler)
-	customerConfig.POST("", dbhandler.HandlePostDocWithValidation[*types.CustomerConfig]()...)
-	customerConfig.PUT("", putCustomerConfigValidation, dbhandler.HandlePutDocFromContext[*types.CustomerConfig])
-	customerConfig.PUT("/:"+consts.GUIDField, dbhandler.HandlePutDocWithValidation[*types.CustomerConfig]()...)
+	customerConfig.POST("", dbhandler.HandlePostDocWithUniqueNameValidation[*types.CustomerConfig]()...)
+	customerConfig.PUT("", dbhandler.HandlePutDocWithValidation(validatePutCustomerConfig)...)
+	customerConfig.PUT("/:"+consts.GUIDField, dbhandler.HandlePutDocWithGUIDValidation[*types.CustomerConfig]()...)
 	customerConfig.DELETE("", deleteCustomerConfig)
 
 	dbhandler.AddCachedDocument[*types.CustomerConfig](consts.DefaultCustomerConfigKey,

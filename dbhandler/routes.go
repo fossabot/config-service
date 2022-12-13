@@ -13,9 +13,9 @@ func AddPolicyRoutes[T types.DocContent](g *gin.Engine, path, dbCollection strin
 	routerGroup.Use(DBContextMiddleware(dbCollection))
 	routerGroup.GET("", HandleGetByQueryOrAll[T](consts.PolicyNameParam, paramConf, true))
 	routerGroup.GET("/:"+consts.GUIDField, HandleGetDocWithGUIDInPath[T])
-	routerGroup.POST("", HandlePostDocWithValidation[T]()...)
-	routerGroup.PUT("", HandlePutDocWithValidation[T]()...)
-	routerGroup.PUT("/:"+consts.GUIDField, HandlePutDocWithValidation[T]()...)
+	routerGroup.POST("", HandlePostDocWithUniqueNameValidation[T]()...)
+	routerGroup.PUT("", HandlePutDocWithGUIDValidation[T]()...)
+	routerGroup.PUT("/:"+consts.GUIDField, HandlePutDocWithGUIDValidation[T]()...)
 	routerGroup.DELETE("", HandleDeleteDocByName[T](consts.PolicyNameParam))
 	routerGroup.DELETE("/:"+consts.GUIDField, HandleDeleteDoc[T])
 }

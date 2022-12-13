@@ -15,6 +15,7 @@ const (
 	PostureExceptionPolicyCollection       = "v1_posture_exception_policies"
 	VulnerabilityExceptionPolicyCollection = "v1_vulnerability_exception_policies"
 	CustomerConfigCollection               = "v1_customer_configurations"
+	CustomersCollection                    = "customers"
 
 	//Common document fields
 	IdField            = "_id"

@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"sort"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"go.mongodb.org/mongo-driver/bson"
+	mongoDB "go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/utils/strings/slices"
 )
 
@@ -23,6 +23,7 @@ import (
 
 // HandleGetDocWithGUIDInPath - get document of type T by id in path
 func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
+	defer log.LogNTraceEnterExit("HandleGetDocWithGUIDInPath", c)()
 	guid := c.Param(consts.GUIDField)
 	if guid == "" {
 		ResponseMissingGUID(c)
@@ -42,6 +43,7 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 // HandleGetListByNameOrAll - chains HandleGetNamesList->HandleGetByName-> HandleGetAll
 func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *scopeParamsConfig, listGlobals bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		defer log.LogNTraceEnterExit("HandleGetByQueryOrAll", c)()
 		if !GetNamesListHandler[T](c, listGlobals) &&
 			!GetByNameParamHandler[T](c, nameParam) &&
 			!GetByScopeParamsHandler[T](c, paramConf) {
@@ -52,6 +54,7 @@ func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *scop
 
 // HandleGetAll - get all customer's documents of type T for collection in context
 func HandleGetAll[T types.DocContent](c *gin.Context) {
+	defer log.LogNTraceEnterExit("HandleGetAll", c)()
 	if docs, err := GetAllForCustomer[T](c, false); err != nil {
 		ResponseInternalServerError(c, "failed to read all documents for customer", err)
 		return
@@ -62,6 +65,7 @@ func HandleGetAll[T types.DocContent](c *gin.Context) {
 
 // HandleGetAll - get all global and customer's documents of type T for collection in context
 func HandleGetAllWithGlobals[T types.DocContent](c *gin.Context) {
+	defer log.LogNTraceEnterExit("HandleGetAllWithGlobals", c)()
 	if docs, err := GetAllForCustomer[T](c, true); err != nil {
 		ResponseInternalServerError(c, "failed to read all documents for customer", err)
 		return
@@ -73,6 +77,7 @@ func HandleGetAllWithGlobals[T types.DocContent](c *gin.Context) {
 // GetNamesList check for "list" query param and return list of names, returns false if not served by this handler
 func GetNamesListHandler[T types.DocContent](c *gin.Context, includeGlobals bool) bool {
 	if _, list := c.GetQuery(consts.ListParam); list {
+		defer log.LogNTraceEnterExit("GetNamesListHandler", c)()
 		namesProjection := NewProjectionBuilder().Include(consts.NameField).ExcludeID().Get()
 		if docNames, err := GetAllForCustomerWithProjection[T](c, namesProjection, includeGlobals); err != nil {
 			ResponseInternalServerError(c, "failed to read documents", err)
@@ -95,6 +100,7 @@ func GetByNameParamHandler[T types.DocContent](c *gin.Context, nameParam string)
 		return false
 	}
 	if name := c.Query(nameParam); name != "" {
+		defer log.LogNTraceEnterExit("GetByNameParamHandler", c)()
 		//get document by name
 		if doc, err := GetDocByName[T](c, name); err != nil {
 			ResponseInternalServerError(c, "failed to read document", err)
@@ -115,6 +121,7 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 	if conf == nil {
 		return false // not served by this handler
 	}
+	defer log.LogNTraceEnterExit("GetByScopeParamsHandler", c)()
 
 	//keep filter builder per field name
 	filterBuilders := map[string]*FilterBuilder{}
@@ -200,63 +207,47 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 
 // ////////////////////////////////////////POST///////////////////////////////////////////////
 // HandlePostDocWithValidation - chains validation and post document handlers
-func HandlePostDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
-	return []gin.HandlerFunc{HandlePostValidation[T], HandlePostDocFromContext[T]}
+func HandlePostDocWithValidation[T types.DocContent](validators ...Validator[T]) []gin.HandlerFunc {
+	return []gin.HandlerFunc{HandlePostValidation(validators...), HandlePostDocFromContext[T]}
+}
+
+// HandlePostDocWithUniqueNameValidation - shortcut for HandlePostDocWithValidation(ValidateUniqueValues(NameKeyGetter[T]))
+func HandlePostDocWithUniqueNameValidation[T types.DocContent]() []gin.HandlerFunc {
+	return []gin.HandlerFunc{HandlePostValidation(ValidateUniqueValues(NameKeyGetter[T])), HandlePostDocFromContext[T]}
 }
 
 // HandlePutValidation validate post request and if valid sets one or many DocContents in context for next handler, otherwise abort request
-func HandlePostValidation[T types.DocContent](c *gin.Context) {
-	var doc T
-	var docs []T
-	if err := c.ShouldBindBodyWith(&doc, binding.JSON); err != nil {
-		//check if bulk request
-		if err := c.ShouldBindBodyWith(&docs, binding.JSON); err != nil {
-			ResponseFailedToBindJson(c, err)
-			return
+func HandlePostValidation[T types.DocContent](validators ...Validator[T]) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		defer log.LogNTraceEnterExit("HandlePostValidation", c)()
+		var doc T
+		var docs []T
+		if err := c.ShouldBindBodyWith(&doc, binding.JSON); err != nil || doc == nil {
+			//check if bulk request
+			if err := c.ShouldBindBodyWith(&docs, binding.JSON); err != nil || docs == nil {
+				ResponseFailedToBindJson(c, err)
+				return
+			}
+		} else {
+			//single request, append to slice
+			docs = append(docs, doc)
 		}
-	} else {
-		//single request, append to slice
-		docs = append(docs, doc)
-	}
 
-	//validate
-	if len(docs) == 0 {
-		ResponseBadRequest(c, "no documents in request")
-		return
-	}
-	filter := NewFilterBuilder()
-	names := []string{}
-	for _, doc := range docs {
-		if doc.GetName() == "" {
-			ResponseMissingName(c)
+		//validate
+		if len(docs) == 0 {
+			ResponseBadRequest(c, "no documents in request")
 			return
 		}
-		if slices.Contains(names, doc.GetName()) {
-			ResponseDuplicateNames(c, doc.GetName())
-			return
-		}
-		names = append(names, doc.GetName())
-	}
 
-	if len(docs) > 1 {
-		filter.WithIn("name", names)
-	} else {
-		filter.WithValue("name", names[0])
-	}
-	if existingDocs, err := FindForCustomer[T](c, filter, NewProjectionBuilder().Include("name").Get()); err != nil {
-		ResponseInternalServerError(c, "failed to read documents", err)
-		return
-	} else if len(existingDocs) > 0 {
-		existingNames := []string{}
-		for _, doc := range existingDocs {
-			existingNames = append(existingNames, doc.GetName())
+		for _, validator := range validators {
+			var ok bool
+			if docs, ok = validator(c, docs); !ok {
+				return
+			}
 		}
-		sort.Strings(existingNames)
-		ResponseDuplicateNames(c, existingNames...)
-		return
+		c.Set(consts.DocContentKey, docs)
+		c.Next()
 	}
-	c.Set(consts.DocContentKey, docs)
-	c.Next()
 }
 
 // HandlePostDocFromContext - handles creation of document(s) of type T
@@ -270,7 +261,8 @@ func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
 
 // PostDoc - helper to put document(s) of type T, custom handler should use this function to do the final POST handling
 func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
-	collection, customerGUID, err := readContext(c)
+	defer log.LogNTraceEnterExit("PostDocHandler", c)()
+	collection, customerGUID, err := ReadContext(c)
 	if err != nil {
 		ResponseInternalServerError(c, "failed to read collection and customer guid from context", err)
 		return
@@ -282,6 +274,10 @@ func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
 
 	if len(dbDocs) == 1 {
 		if _, err := mongo.GetWriteCollection(collection).InsertOne(c.Request.Context(), dbDocs[0]); err != nil {
+			if mongoDB.IsDuplicateKeyError(err) {
+				ResponseDuplicateKey(c, consts.GUIDField)
+				return
+			}
 			ResponseInternalServerError(c, "failed to create document", err)
 			return
 		} else {
@@ -300,26 +296,35 @@ func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
 // ////////////////////////////////////////PUT///////////////////////////////////////////////
 
 // HandlePutDocWithValidation - chains validation and put document handlers
-func HandlePutDocWithValidation[T types.DocContent]() []gin.HandlerFunc {
-	return []gin.HandlerFunc{HandlePutValidation[T], HandlePutDocFromContext[T]}
+func HandlePutDocWithValidation[T types.DocContent](validators ...Validator[T]) []gin.HandlerFunc {
+	return []gin.HandlerFunc{HandlePutValidation(validators...), HandlePutDocFromContext[T]}
+}
+
+// HandlePutDocWithGUIDValidation - shortcut for HandlePutDocWithValidation(ValidateGUIDExistence[T])
+func HandlePutDocWithGUIDValidation[T types.DocContent]() []gin.HandlerFunc {
+	return []gin.HandlerFunc{HandlePutValidation(ValidateGUIDExistence[T]), HandlePutDocFromContext[T]}
 }
 
 // HandlePutValidation validate put request and if valid set DocContent in context for next handler, otherwise abort request
-func HandlePutValidation[T types.DocContent](c *gin.Context) {
-	var doc T
-	if err := c.ShouldBindJSON(&doc); err != nil {
-		ResponseFailedToBindJson(c, err)
-		return
+func HandlePutValidation[T types.DocContent](validators ...Validator[T]) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		defer log.LogNTraceEnterExit("HandlePutValidation", c)()
+		var doc T
+		if err := c.ShouldBindJSON(&doc); err != nil {
+			ResponseFailedToBindJson(c, err)
+			return
+		}
+		//validate
+		for _, validator := range validators {
+			if docs, ok := validator(c, []T{doc}); !ok {
+				return
+			} else {
+				doc = docs[0]
+			}
+		}
+		c.Set(consts.DocContentKey, doc)
+		c.Next()
 	}
-	if guid := c.Param(consts.GUIDField); guid != "" {
-		doc.SetGUID(guid)
-	}
-	if doc.GetGUID() == "" {
-		ResponseMissingGUID(c)
-		return
-	}
-	c.Set(consts.DocContentKey, doc)
-	c.Next()
 }
 
 // HandlePutDocFromContext - handles updates a document of type T
@@ -333,6 +338,7 @@ func HandlePutDocFromContext[T types.DocContent](c *gin.Context) {
 
 // PutDoc - helper to put document of type T, custom handler should use this function to do the final PUT handling
 func PutDocHandler[T types.DocContent](c *gin.Context, doc T) {
+	defer log.LogNTraceEnterExit("PutDocHandler", c)()
 	update, err := GetUpdateDocCommand(doc, doc.GetReadOnlyFields()...)
 	if err != nil {
 		ResponseInternalServerError(c, "failed to generate update command", err)
@@ -363,6 +369,7 @@ func HandleDeleteDoc[T types.DocContent](c *gin.Context) {
 // HandleDeleteDocByName  - delete document(s) by name in path
 func HandleDeleteDocByName[T types.DocContent](nameParam string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		defer log.LogNTraceEnterExit("HandleDeleteDocByName", c)()
 		names, ok := c.GetQueryArray(nameParam)
 		names = slices.Filter([]string{}, names, func(s string) bool {
 			return s != ""
@@ -381,6 +388,7 @@ func HandleDeleteDocByName[T types.DocContent](nameParam string) gin.HandlerFunc
 }
 
 func BulkDeleteDocByNameHandler[T types.DocContent](c *gin.Context, names []string) {
+	defer log.LogNTraceEnterExit("BulkDeleteDocByNameHandler", c)()
 	collection, err := readCollection(c)
 	if err != nil {
 		ResponseInternalServerError(c, "failed to read collection from context", err)
@@ -397,6 +405,7 @@ func BulkDeleteDocByNameHandler[T types.DocContent](c *gin.Context, names []stri
 }
 
 func DeleteDocByGUIDHandler[T types.DocContent](c *gin.Context, guid string) {
+	defer log.LogNTraceEnterExit("DeleteDocByGUIDHandler", c)()
 	collection, err := readCollection(c)
 	if err != nil {
 		ResponseInternalServerError(c, "failed to read collection from context", err)
@@ -421,6 +430,7 @@ func DeleteDocByGUIDHandler[T types.DocContent](c *gin.Context, guid string) {
 }
 
 func DeleteDocByNameHandler[T types.DocContent](c *gin.Context, name string) {
+	defer log.LogNTraceEnterExit("DeleteDocByNameHandler", c)()
 	collection, err := readCollection(c)
 	if err != nil {
 		ResponseInternalServerError(c, "failed to read collection from context", err)

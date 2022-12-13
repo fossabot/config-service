@@ -9,8 +9,8 @@ dmitri.shuralyov.com/state v0.0.0-20180228185332-28bcc343414c/go.mod h1:0PRwlb0D
 git.apache.org/thrift.git v0.0.0-20180902110319-2566ecd5d999/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239/go.mod h1:2FmKhYUyUczH0OGQWaF5ceTx0UBShxjsH6f8oGKYe2c=
-github.com/armosec/armoapi-go v0.0.121 h1:I7ztIAiL7RP4pYV6nB14iLR6o2QjgfiDNPHMR0qwTNo=
-github.com/armosec/armoapi-go v0.0.121/go.mod h1:2zoNzb3Fy9ZByeczJZ47ftDRLRzTykVdTISS3GTc/JU=
+github.com/armosec/armoapi-go v0.0.126 h1:dewzpCHFzrp5caXOtBSa2+JFNMloG3b1ZMLUr5MyuyE=
+github.com/armosec/armoapi-go v0.0.126/go.mod h1:2zoNzb3Fy9ZByeczJZ47ftDRLRzTykVdTISS3GTc/JU=
 github.com/armosec/utils-k8s-go v0.0.12 h1:u7kHSUp4PpvPP3hEaRXMbM0Vw23IyLhAzzE+2TW6Jkk=
 github.com/armosec/utils-k8s-go v0.0.12/go.mod h1:rPHiOaHefWa9ujspwvYYAp0uEbqGGyAMiNrFa/Gpp/8=
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=
@@ -31,6 +31,8 @@ github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI
 github.com/francoispqt/gojay v1.2.13 h1:d2m3sFjloqoIUQU3TsHBgj6qg/BVGlTBeHDUmyJnXKk=
 github.com/francoispqt/gojay v1.2.13/go.mod h1:ehT5mTG4ua4581f1++1WLG0vPdaA9HaiDsoyrBGkyDY=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
+github.com/gertd/go-pluralize v0.2.1 h1:M3uASbVjMnTsPb0PNqg+E/24Vwigyo/tvyMTtAlLgiA=
+github.com/gertd/go-pluralize v0.2.1/go.mod h1:rbYaKDbsXxmRfr8uygAEKhOWsjyrrqrkHVpZvoOp8zk=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/gin-contrib/sse v0.1.0 h1:Y/yl/+YNO8GZSjAhjMsSuLt29uWRFHdHYUb5lYOV9qE=

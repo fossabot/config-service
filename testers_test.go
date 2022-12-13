@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	uuid "github.com/satori/go.uuid"
+
 	"net/http"
 	"net/http/httptest"
 	"sort"
@@ -24,7 +26,10 @@ func commonTest[T types.DocContent](suite *MainTestSuite, path string, testDocs 
 	documents := testDocs[1:]
 	//POST
 	//create doc
+	doc1.SetGUID("some bad value")
 	doc1 = testPostDoc(suite, path, doc1, compareNewOpts...)
+	_, err := uuid.FromString(doc1.GetGUID())
+	suite.NoError(err, "GUID should be a valid uuid")
 	//post doc with same name should fail
 	sameNameDoc := clone(doc1)
 	testBadRequest(suite, http.MethodPost, path, errorNameExist(sameNameDoc.GetName()), sameNameDoc, http.StatusBadRequest)
@@ -43,6 +48,20 @@ func commonTest[T types.DocContent](suite *MainTestSuite, path string, testDocs 
 	oldDoc1 := clone(doc1)
 	doc1 = modifyFunc(doc1)
 	testPutDoc(suite, path, oldDoc1, doc1)
+
+	//test changed name - should be ignored
+	changedNamedDoc := clone(doc1)
+	changedNamedDoc.SetName("new_name")
+	w := suite.doRequest(http.MethodPut, path, changedNamedDoc)
+	suite.Equal(http.StatusOK, w.Code)
+	response, err := decodeArray[T](w)
+	expectedResponse := []T{doc1, doc1}
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	diff := cmp.Diff(response, expectedResponse)
+	suite.Equal("", diff)
+
 	//test put with guid in path
 	oldDoc1 = clone(doc1)
 	doc1 = modifyFunc(doc1)
@@ -133,7 +152,8 @@ func testGetDeleteByNameAndQuery[T types.DocContent](suite *MainTestSuite, baseP
 const (
 	//error messages
 	errorMissingName      = `{"error":"name is required"}`
-	errorMissingGUID      = `{"error":"document guid is required"}`
+	errorMissingGUID      = `{"error":"guid is required"}`
+	errorGUIDExists        = `{"error":"guid already exists"}`
 	errorDocumentNotFound = `{"error":"document not found"}`
 )
 

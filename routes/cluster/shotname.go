@@ -65,6 +65,10 @@ func longName2short(name string, maxSize int, versionsPerOption int, filter []st
 		return !regexp.MustCompile(`^\d+$`).MatchString(s)
 	})
 
+	if len(words) == 0 {
+		return ""
+	}
+
 	lastWord := words[len(words)-1]
 	if shortName := shortName(lastWord, maxSize, versionsPerOption, filter); shortName != "" {
 		return shortName
