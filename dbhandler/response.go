@@ -13,8 +13,7 @@ import (
 
 const (
 	//error messages
-	MissingKey = "%s is required"
-	//MissingGUID      = "document guid is required"
+	MissingKey       = "%s is required"
 	DocumentNotFound = "document not found"
 )
 
