@@ -12,8 +12,9 @@ type Validator[T types.DocContent] func(c *gin.Context, docs []T) (verifiedDocs 
 
 func ValidateGUIDExistence[T types.DocContent](c *gin.Context, docs []T) ([]T, bool) {
 	guid := c.Param(consts.GUIDField)
-	if guid != "" && len(docs) > 1 {
+	if guid != "" && len(docs) != 1 {
 		ResponseBadRequest(c, "GUID in path is not allowed in bulk request")
+		return nil, false
 	}
 	for i := range docs {
 		if guid != "" {

@@ -15,6 +15,10 @@ func LogNTrace(msg string, c *gin.Context, fields ...zapcore.Field) {
 	AddEvent(msg, c)
 }
 
+// LogNTraceEnterExit logs the entry and exit of a function
+// - usage: defer LogNTraceEnterExit("function name", c)()
+// output: function name  // entry
+// output: function name completed // exit
 func LogNTraceEnterExit(msg string, c *gin.Context, fields ...zapcore.Field) func() {
 	LogNTrace(msg, c, fields...)
 	return func() {
