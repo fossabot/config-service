@@ -11,6 +11,7 @@ import (
 
 	_ "embed"
 
+	"github.com/armosec/armoapi-go/armotypes"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -82,11 +83,7 @@ func (suite *MainTestSuite) TestCluster() {
 var posturePoliciesJson []byte
 
 var newPolicyCompareFilter = cmp.FilterPath(func(p cmp.Path) bool {
-	switch p.String() {
-	case "PortalBase.GUID", "CreationTime":
-		return true
-	}
-	return false
+	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime"
 }, cmp.Ignore())
 
 func (suite *MainTestSuite) TestPostureException() {
@@ -275,11 +272,7 @@ func (suite *MainTestSuite) TestCustomerConfiguration() {
 	}
 	//create compare options
 	compareFilter := cmp.FilterPath(func(p cmp.Path) bool {
-		switch p.String() {
-		case "GUID", "CreationTime":
-			return true
-		}
-		return false
+		return p.String() == "CreationTime" || p.String() == "GUID"
 	}, cmp.Ignore())
 
 	//TESTS
@@ -391,5 +384,51 @@ func (suite *MainTestSuite) TestCustomerConfiguration() {
 	customerConfig.Settings.PostureScanConfig.ScanFrequency = "11h"
 	path = fmt.Sprintf("%s?%s=%s", consts.CustomerConfigPath, consts.ScopeParam, consts.CustomerScope)
 	testPutDoc(suite, path, oldCustomerConfig, customerConfig)
+
+}
+
+func (suite *MainTestSuite) TestCustomer() {
+	customer := &types.Customer{
+		PortalBase: armotypes.PortalBase{
+			Name: "customer1",
+			GUID: "new-customer-guid",
+			Attributes: map[string]interface{}{
+				"customer1-attr1": "customer1-attr1-value",
+				"customer1-attr2": "customer1-attr2-value",
+			},
+		},
+		Description:        "customer1 description",
+		Email:              "customer1@customers.org",
+		LicenseType:        "kubescape",
+		InitialLicenseType: "kubescape",
+	}
+
+	//create compare options
+	compareFilter := cmp.FilterPath(func(p cmp.Path) bool {
+		return p.String() == "SubscriptionDate"
+	}, cmp.Ignore())
+
+	//post new customer
+	newCustomer := testPostDoc(suite, "/customer_tenant", customer, compareFilter)
+	//check creation time
+	creationTime, err := time.Parse(time.RFC3339, newCustomer.SubscriptionDate)
+	suite.NoError(err, "failed to parse SubscriptionDate time")
+	suite.True(time.Since(creationTime) < time.Second, "SubscriptionDate time is not recent")
+	//check that the guid stays the same
+	suite.Equal(customer.GUID, newCustomer.GUID, "customer GUID should be preserved")
+	//test get customer with current customer logged in - expect error 404
+	testBadRequest(suite, http.MethodGet, "/customer", errorDocumentNotFound, nil, http.StatusNotFound)
+
+	//login new customer
+	testCustomerGUID := suite.authCustomerGUID
+	suite.login("new-customer-guid")
+	testGetDoc(suite, "/customer", newCustomer, nil)
+	//test post with existing guid - expect error 400
+	testBadRequest(suite, http.MethodPost, "/customer_tenant", errorGUIDExists, customer, http.StatusBadRequest)
+	//test post customer without GUID
+	customer.GUID = ""
+	testBadRequest(suite, http.MethodPost, "/customer_tenant", errorMissingGUID, customer, http.StatusBadRequest)
+	//restore login
+	suite.login(testCustomerGUID)
 
 }

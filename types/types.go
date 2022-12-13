@@ -31,7 +31,7 @@ func NewDocument[T DocContent](content T, customerGUID string) Document[T] {
 
 // Doc Content interface for data types embedded in DB documents
 type DocContent interface {
-	*CustomerConfig | *Cluster | *PostureExceptionPolicy | *VulnerabilityExceptionPolicy
+	*CustomerConfig | *Cluster | *PostureExceptionPolicy | *VulnerabilityExceptionPolicy | *Customer
 	InitNew()
 	GetName() string
 	SetName(name string)
@@ -81,6 +81,26 @@ func (c *CustomerConfig) InitNew() {
 type PostureExceptionPolicy armotypes.PostureExceptionPolicy
 type Cluster armotypes.PortalCluster
 type VulnerabilityExceptionPolicy armotypes.VulnerabilityExceptionPolicy
+type Customer armotypes.PortalCustomer
+
+func (c *Customer) GetGUID() string {
+	return c.GUID
+}
+func (c *Customer) SetGUID(guid string) {
+	c.GUID = guid
+}
+func (c *Customer) GetName() string {
+	return c.Name
+}
+func (c *Customer) SetName(name string) {
+	c.Name = name
+}
+func (c *Customer) GetReadOnlyFields() []string {
+	return commonReadOnlyFields
+}
+func (c *Customer) InitNew() {
+	c.SubscriptionDate = time.Now().UTC().Format(time.RFC3339)
+}
 
 func (c *Cluster) GetGUID() string {
 	return c.GUID

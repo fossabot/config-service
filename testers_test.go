@@ -153,6 +153,7 @@ const (
 	//error messages
 	errorMissingName      = `{"error":"name is required"}`
 	errorMissingGUID      = `{"error":"guid is required"}`
+	errorGUIDExists        = `{"error":"guid already exists"}`
 	errorDocumentNotFound = `{"error":"document not found"}`
 )
 

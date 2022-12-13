@@ -2,6 +2,7 @@ package main
 
 import (
 	"config-service/routes/cluster"
+	"config-service/routes/customer"
 	"config-service/routes/customer_config"
 	"config-service/routes/login"
 	"config-service/routes/posture_exception"
@@ -62,6 +63,7 @@ func setupRouter() *gin.Engine {
 	posture_exception.AddRoutes(router)
 	vulnerability_exception.AddRoutes(router)
 	customer_config.AddRoutes(router)
+	customer.AddRoutes(router)
 
 	return router
 }

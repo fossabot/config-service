@@ -23,7 +23,7 @@ import (
 
 /*
 Coverage report cmd
-go test -timeout 30s  -coverpkg=./dbhandler,./mongo,./types,./utils,./prob,./login,./cluster,./posture_exception,./vulnerability_exception,./customer_config -coverprofile coverage.out
+go test -timeout 30s  -coverpkg=./dbhandler,./mongo,./types,./utils,./routes/prob,./routes/login,./routes/cluster,./routes/posture_exception,./routes/vulnerability_exception,./routes/customer,./routes/customer_config -coverprofile coverage.out
 go tool cover -html=coverage.out -o coverage.html
 */
 
@@ -41,9 +41,10 @@ func TestConfigServiceWithMongoImage(t *testing.T) {
 
 type MainTestSuite struct {
 	suite.Suite
-	router       *gin.Engine
-	shutdownFunc func()
-	authCookie   string
+	router           *gin.Engine
+	shutdownFunc     func()
+	authCookie       string
+	authCustomerGUID string
 }
 
 func (suite *MainTestSuite) SetupSuite() {
@@ -78,18 +79,21 @@ func (suite *MainTestSuite) SetupSuite() {
 	if _, err := mongo.GetWriteCollection(consts.CustomerConfigCollection).InsertOne(context.Background(), defaultCustomerConfig); err != nil {
 		suite.FailNow("failed to insert defaultCustomerConfigJson", err.Error())
 	}
+	suite.login("test-customer-guid")
+}
 
-	//get auth cookie for test requests
+func (suite *MainTestSuite) login(customerGUID string) {
 	loginDetails := struct {
 		CustomerGUID string `json:"customerGUID"`
 	}{
-		CustomerGUID: "test-customer-guid",
+		CustomerGUID: customerGUID,
 	}
 	w := suite.doRequest(http.MethodPost, "/login", loginDetails)
 	if w.Code != http.StatusOK {
 		suite.FailNow("failed to login")
 	}
 	suite.authCookie = w.Header().Get("Set-Cookie")
+	suite.authCustomerGUID = customerGUID
 }
 
 func (suite *MainTestSuite) TearDownSuite() {
