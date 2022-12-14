@@ -1,4 +1,4 @@
-package dbhandler
+package handlers
 
 type scopeParamsConfig struct {
 	params2Query   map[string]queryConfig

@@ -1,9 +1,8 @@
 package cluster
 
 import (
-	"config-service/dbhandler"
+	"config-service/db"
 	"config-service/types"
-	"config-service/utils"
 	"config-service/utils/consts"
 	"config-service/utils/log"
 	"regexp"
@@ -13,12 +12,13 @@ import (
 	rndStr "github.com/dchest/uniuri"
 	"github.com/gin-gonic/gin"
 	"github.com/gobeam/stringy"
+	"golang.org/x/exp/constraints"
 	"k8s.io/utils/strings/slices"
 )
 
 // getAllShortNames returns the short names of all clusters for the customer in context
 func getAllShortNames(c *gin.Context) []string {
-	if clusters, err := dbhandler.GetAllForCustomerWithProjection[types.Cluster](c, dbhandler.NewProjectionBuilder().
+	if clusters, err := db.GetAllForCustomerWithProjection[types.Cluster](c, db.NewProjectionBuilder().
 		ExcludeID().
 		Include(consts.ShrotNameField).
 		Get(), false); err != nil {
@@ -42,7 +42,7 @@ func getUniqueShortName(name string, c *gin.Context) string {
 	if shortName := longName2short(name, maxSize, 9, filter); shortName != "" {
 		return shortName
 	}
-	for startSize := utils.Min(maxSize, 3); startSize <= maxSize; startSize++ {
+	for startSize := Min(maxSize, 3); startSize <= maxSize; startSize++ {
 		count, retry := 0, 100
 		for random := rndStr.NewLen(startSize); count < retry; random = rndStr.NewLen(startSize) {
 			count++
@@ -84,7 +84,7 @@ func longName2short(name string, maxSize int, versionsPerOption int, filter []st
 
 // slicedLongName2Short
 func slicedLongName2Short(words []string, maxSize int, versionsPerOption int, filter []string) string {
-	maxWords := utils.Min(len(words), maxSize)
+	maxWords := Min(len(words), maxSize)
 	var initials string
 	startAt := len(words) - maxWords
 	for i := startAt; i < len(words); i++ {
@@ -108,8 +108,8 @@ func slicedLongName2Short(words []string, maxSize int, versionsPerOption int, fi
 }
 
 func shortName(wrd string, maxSize int, versionsPerOption int, filter []string) string {
-	size := utils.Min(len(wrd), maxSize)
-	versionsPerOption = utils.Min(versionsPerOption, 10)
+	size := Min(len(wrd), maxSize)
+	versionsPerOption = Min(versionsPerOption, 10)
 	word := stringy.New(wrd)
 	for i := 1; i < size; i++ {
 		shortName := word.Tease(i, "")
@@ -134,4 +134,11 @@ func shortName(wrd string, maxSize int, versionsPerOption int, filter []string) 
 		}
 	}
 	return ""
+}
+
+func Min[T constraints.Ordered](a, b T) T {
+	if a < b {
+		return a
+	}
+	return b
 }

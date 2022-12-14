@@ -1,4 +1,4 @@
-package dbhandler
+package db
 
 import (
 	"config-service/utils/consts"

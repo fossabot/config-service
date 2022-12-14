@@ -1,7 +1,7 @@
-package dbhandler
+package db
 
 import (
-	"config-service/mongo"
+	"config-service/db/mongo"
 	"config-service/types"
 	"context"
 	"fmt"

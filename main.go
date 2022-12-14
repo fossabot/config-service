@@ -35,6 +35,7 @@ func main() {
 func setupRouter() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
+	router.ContextWithFallback = true
 	//readiness and liveness probes
 	prob.AddRoutes(router)
 

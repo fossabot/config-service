@@ -1,10 +1,10 @@
-package dbhandler
+package db
 
 import (
 	"config-service/utils/consts"
+	"context"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -30,7 +30,7 @@ func (f *FilterBuilder) Get() bson.D {
 	return f.filter
 }
 
-func (f *FilterBuilder) WithNotDeleteForCustomer(c *gin.Context) *FilterBuilder {
+func (f *FilterBuilder) WithNotDeleteForCustomer(c context.Context) *FilterBuilder {
 	return f.WithCustomer(c).WithNotDeleted()
 }
 
@@ -38,7 +38,7 @@ func (f *FilterBuilder) WithGlobalNotDelete() *FilterBuilder {
 	return f.WithValue(consts.CustomersField, "").WithNotDeleted()
 }
 
-func (f *FilterBuilder) WithNotDeleteForCustomerAndGlobal(c *gin.Context) *FilterBuilder {
+func (f *FilterBuilder) WithNotDeleteForCustomerAndGlobal(c context.Context) *FilterBuilder {
 	return f.WithCustomerAndGlobal(c).WithNotDeleted()
 }
 
@@ -54,12 +54,14 @@ func (f *FilterBuilder) WithName(name string) *FilterBuilder {
 	return f.WithValue(consts.NameField, name)
 }
 
-func (f *FilterBuilder) WithCustomer(c *gin.Context) *FilterBuilder {
-	return f.WithValue(consts.CustomersField, c.GetString(consts.CustomerGUID))
+func (f *FilterBuilder) WithCustomer(c context.Context) *FilterBuilder {
+	customerGUID, _ := c.Value(consts.CustomerGUID).(string)
+	return f.WithValue(consts.CustomersField, customerGUID)
 }
 
-func (f *FilterBuilder) WithCustomerAndGlobal(c *gin.Context) *FilterBuilder {
-	return f.WithIn(consts.CustomersField, []string{c.GetString(consts.CustomerGUID), ""})
+func (f *FilterBuilder) WithCustomerAndGlobal(c context.Context) *FilterBuilder {
+	customerGUID, _ := c.Value(consts.CustomerGUID).(string)
+	return f.WithIn(consts.CustomersField, []string{customerGUID, ""})
 }
 
 func (f *FilterBuilder) WithNotDeleted() *FilterBuilder {

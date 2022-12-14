@@ -1,8 +1,8 @@
 package customer
 
 import (
-	"config-service/dbhandler"
-	"config-service/mongo"
+	"config-service/db"
+	"config-service/handlers"
 	"config-service/types"
 	"config-service/utils/consts"
 	"config-service/utils/log"
@@ -10,13 +10,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	mongoDB "go.mongodb.org/mongo-driver/mongo"
 )
 
 func AddRoutes(g *gin.Engine) {
 	customer := g.Group("/")
 
-	customer.Use(dbhandler.DBContextMiddleware(consts.CustomersCollection))
+	customer.Use(handlers.DBContextMiddleware(consts.CustomersCollection))
 
 	customer.GET("customer", getCustomer)
 	customer.POST("customer_tenant", postCustomerTenant)
@@ -24,16 +23,16 @@ func AddRoutes(g *gin.Engine) {
 
 func getCustomer(c *gin.Context) {
 	defer log.LogNTraceEnterExit("getCustomer", c)()
-	_, customerGUID, err := dbhandler.ReadContext(c)
+	_, customerGUID, err := db.ReadContext(c)
 	if err != nil {
-		dbhandler.ResponseInternalServerError(c, "failed to read customer guid from context", err)
+		handlers.ResponseInternalServerError(c, "failed to read customer guid from context", err)
 		return
 	}
-	if doc, err := dbhandler.GetDocByGUID[*types.Customer](c, customerGUID); err != nil {
-		dbhandler.ResponseInternalServerError(c, "failed to read document", err)
+	if doc, err := db.GetDocByGUID[*types.Customer](c, customerGUID); err != nil {
+		handlers.ResponseInternalServerError(c, "failed to read document", err)
 		return
 	} else if doc == nil {
-		dbhandler.ResponseDocumentNotFound(c)
+		handlers.ResponseDocumentNotFound(c)
 		return
 	} else {
 		c.JSON(http.StatusOK, doc)
@@ -44,11 +43,11 @@ func postCustomerTenant(c *gin.Context) {
 	defer log.LogNTraceEnterExit("postCustomerTenant", c)()
 	var customer *types.Customer
 	if err := c.ShouldBindBodyWith(&customer, binding.JSON); err != nil || customer == nil {
-		dbhandler.ResponseFailedToBindJson(c, err)
+		handlers.ResponseFailedToBindJson(c, err)
 		return
 	}
 	if customer.GUID == "" {
-		dbhandler.ResponseMissingGUID(c)
+		handlers.ResponseMissingGUID(c)
 		return
 	}
 	customer.InitNew()
@@ -57,12 +56,12 @@ func postCustomerTenant(c *gin.Context) {
 		Content:   customer,
 		Customers: []string{customer.GUID},
 	}
-	if _, err := mongo.GetWriteCollection(consts.CustomersCollection).InsertOne(c.Request.Context(), dbDoc); err != nil {
-		if mongoDB.IsDuplicateKeyError(err) {
-			dbhandler.ResponseDuplicateKey(c, consts.GUIDField)
+	if _, err := db.InsertDBDocument(c, dbDoc); err != nil {
+		if db.IsDuplicateKeyError(err) {
+			handlers.ResponseDuplicateKey(c, consts.GUIDField)
 			return
 		}
-		dbhandler.ResponseInternalServerError(c, "failed to create document", err)
+		handlers.ResponseInternalServerError(c, "failed to create document", err)
 		return
 	} else {
 		c.JSON(http.StatusCreated, customer)

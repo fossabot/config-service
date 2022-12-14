@@ -153,7 +153,7 @@ const (
 	//error messages
 	errorMissingName      = `{"error":"name is required"}`
 	errorMissingGUID      = `{"error":"guid is required"}`
-	errorGUIDExists        = `{"error":"guid already exists"}`
+	errorGUIDExists       = `{"error":"guid already exists"}`
 	errorDocumentNotFound = `{"error":"document not found"}`
 )
 
@@ -235,7 +235,7 @@ func testPostDoc[T types.DocContent](suite *MainTestSuite, path string, doc T, c
 
 func testBulkPostDocs[T types.DocContent](suite *MainTestSuite, path string, docs []T, compareOpts ...cmp.Option) (newDocs []T) {
 	w := suite.doRequest(http.MethodPost, path, docs)
-	suite.Equal(http.StatusOK, w.Code)
+	suite.Equal(http.StatusCreated, w.Code)
 	newDocs, err := decodeArray[T](w)
 	if err != nil {
 		suite.FailNow(err.Error())
@@ -327,7 +327,7 @@ func testBulkDeleteByName(suite *MainTestSuite, path string, nameParam string, n
 	}
 	w := suite.doRequest(http.MethodDelete, path, nil)
 	suite.Equal(http.StatusOK, w.Code)
-	diff := cmp.Diff(fmt.Sprintf(`{"DeletedCount":%d}`, len(names)), w.Body.String())
+	diff := cmp.Diff(fmt.Sprintf(`{"deletedCount":%d}`, len(names)), w.Body.String())
 	suite.Equal("", diff)
 }
 
