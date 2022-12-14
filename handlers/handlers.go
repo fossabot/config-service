@@ -278,6 +278,19 @@ func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
 	}
 }
 
+func PostDBDocumentHandler[T types.DocContent](c *gin.Context, dbDoc types.Document[T]) {
+	if _, err := db.InsertDBDocument(c, dbDoc); err != nil {
+		if db.IsDuplicateKeyError(err) {
+			ResponseDuplicateKey(c, consts.GUIDField)
+			return
+		}
+		ResponseInternalServerError(c, "failed to create document", err)
+		return
+	} else {
+		c.JSON(http.StatusCreated, dbDoc.Content)
+	}
+}
+
 // ////////////////////////////////////////PUT///////////////////////////////////////////////
 
 // HandlePutDocWithValidation - chains validation and put document handlers

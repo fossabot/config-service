@@ -56,14 +56,5 @@ func postCustomerTenant(c *gin.Context) {
 		Content:   customer,
 		Customers: []string{customer.GUID},
 	}
-	if _, err := db.InsertDBDocument(c, dbDoc); err != nil {
-		if db.IsDuplicateKeyError(err) {
-			handlers.ResponseDuplicateKey(c, consts.GUIDField)
-			return
-		}
-		handlers.ResponseInternalServerError(c, "failed to create document", err)
-		return
-	} else {
-		c.JSON(http.StatusCreated, customer)
-	}
+	handlers.PostDBDocumentHandler(c, dbDoc)
 }

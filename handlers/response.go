@@ -1,7 +1,11 @@
 package handlers
 
 import (
+	"config-service/db"
+	"config-service/utils/consts"
 	"config-service/utils/log"
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -20,12 +24,27 @@ const (
 var pluralize = plural.NewClient()
 
 func ResponseInternalServerError(c *gin.Context, msg string, err error) {
+	//try to identify error and return appropriate status code
+	if db.IsDuplicateKeyError(err) {
+		ResponseDuplicateKey(c, consts.GUIDField)
+		return
+	}
+	if errors.Is(err, context.Canceled) {
+		ResponseCanceled(c)
+		return
+	}
+	//fallback to 500
 	log.LogNTraceError(msg, err, c)
 	errText := msg
 	if err != nil {
 		errText = fmt.Sprintf("%s error: %s", msg, err.Error())
 	}
 	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": errText})
+}
+
+func ResponseCanceled(c *gin.Context) {
+	log.LogNTrace("request canceled", c)
+	c.AbortWithStatusJSON(http.StatusNoContent, gin.H{"error": "request canceled"})
 }
 
 func ResponseDocumentNotFound(c *gin.Context) {
