@@ -11,16 +11,16 @@ import (
 )
 
 func AddRoutes(g *gin.Engine) {
-	cluster := g.Group(consts.ClusterPath)
 
-	cluster.Use(handlers.DBContextMiddleware(consts.ClustersCollection))
-
-	cluster.GET("", handlers.HandleGetAll[*types.Cluster])
-	cluster.GET("/:"+consts.GUIDField, handlers.HandleGetDocWithGUIDInPath[*types.Cluster])
-	cluster.POST("", handlers.HandlePostDocWithValidation(handlers.ValidateUniqueValues(handlers.NameKeyGetter[*types.Cluster]), validatePostClusterShortNames)...)
-	cluster.PUT("", handlers.HandlePutDocWithValidation(handlers.ValidateGUIDExistence[*types.Cluster], validatePutClusterShortNames)...)
-	cluster.PUT("/:"+consts.GUIDField, handlers.HandlePutDocWithValidation(handlers.ValidateGUIDExistence[*types.Cluster], validatePutClusterShortNames)...)
-	cluster.DELETE("/:"+consts.GUIDField, handlers.HandleDeleteDoc[*types.Cluster])
+	handlers.AddRoutes(g,
+		handlers.WithPath[*types.Cluster](consts.ClusterPath),
+		handlers.WithDBCollection[*types.Cluster](consts.ClustersCollection),
+		handlers.WithValidatePostUniqueName[*types.Cluster](true),
+		handlers.WithValidatePutGUID[*types.Cluster](true),
+		handlers.WithDeleteByName[*types.Cluster](false),
+		handlers.WithPostValidators(validatePostClusterShortNames),
+		handlers.WithPutValidators(validatePutClusterShortNames),
+	)
 }
 
 func validatePostClusterShortNames(c *gin.Context, clusters []*types.Cluster) ([]*types.Cluster, bool) {

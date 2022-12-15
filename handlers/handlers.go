@@ -39,7 +39,7 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 }
 
 // HandleGetListByNameOrAll - chains HandleGetNamesList->HandleGetByName-> HandleGetAll
-func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *scopeParamsConfig, listGlobals bool) gin.HandlerFunc {
+func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *queryParamsConfig, listGlobals bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer log.LogNTraceEnterExit("HandleGetByQueryOrAll", c)()
 		if !GetNamesListHandler[T](c, listGlobals) &&
@@ -115,7 +115,7 @@ func GetByNameParamHandler[T types.DocContent](c *gin.Context, nameParam string)
 }
 
 // GetByScopeParams parse scope params and return elements with this scope, returns false if not served by this handler
-func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopeParamsConfig) bool {
+func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *queryParamsConfig) bool {
 	if conf == nil {
 		return false // not served by this handler
 	}
