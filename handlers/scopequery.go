@@ -1,6 +1,6 @@
-package dbhandler
+package handlers
 
-type scopeParamsConfig struct {
+type queryParamsConfig struct {
 	params2Query   map[string]queryConfig
 	defaultContext string
 }
@@ -11,8 +11,8 @@ type queryConfig struct {
 	isArray     bool
 }
 
-func defaultConfig() *scopeParamsConfig {
-	return &scopeParamsConfig{
+func defaultConfig() *queryParamsConfig {
+	return &queryParamsConfig{
 		defaultContext: "attributes",
 		params2Query: map[string]queryConfig{
 			"attributes": {
@@ -24,7 +24,7 @@ func defaultConfig() *scopeParamsConfig {
 	}
 }
 
-func GetPostureExceptionQueryConfig() *scopeParamsConfig {
+func GetPostureExceptionQueryConfig() *queryParamsConfig {
 	config := defaultConfig()
 	config.params2Query["scope"] = queryConfig{
 		fieldName:   "resources",
@@ -44,7 +44,7 @@ func GetPostureExceptionQueryConfig() *scopeParamsConfig {
 	return config
 }
 
-func GetVulnerabilityExceptionConfig() *scopeParamsConfig {
+func GetVulnerabilityExceptionConfig() *queryParamsConfig {
 	config := defaultConfig()
 	config.defaultContext = "designators"
 	config.params2Query["scope"] = queryConfig{

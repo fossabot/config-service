@@ -4,7 +4,7 @@
 package main
 
 import (
-	"config-service/mongo"
+	"config-service/db/mongo"
 	"config-service/utils"
 	"context"
 	"log"

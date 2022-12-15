@@ -4,6 +4,7 @@ import (
 	"config-service/routes/cluster"
 	"config-service/routes/customer"
 	"config-service/routes/customer_config"
+	"config-service/routes/framework"
 	"config-service/routes/login"
 	"config-service/routes/posture_exception"
 	"config-service/routes/prob"
@@ -35,6 +36,7 @@ func main() {
 func setupRouter() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
+	router.ContextWithFallback = true
 	//readiness and liveness probes
 	prob.AddRoutes(router)
 
@@ -64,6 +66,7 @@ func setupRouter() *gin.Engine {
 	vulnerability_exception.AddRoutes(router)
 	customer_config.AddRoutes(router)
 	customer.AddRoutes(router)
+	framework.AddRoutes(router)
 
 	return router
 }

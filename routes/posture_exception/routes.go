@@ -1,7 +1,7 @@
 package posture_exception
 
 import (
-	"config-service/dbhandler"
+	"config-service/handlers"
 	"config-service/types"
 	"config-service/utils/consts"
 
@@ -9,7 +9,7 @@ import (
 )
 
 func AddRoutes(g *gin.Engine) {
-	dbhandler.AddPolicyRoutes[*types.PostureExceptionPolicy](g,
+	handlers.AddPolicyRoutes[*types.PostureExceptionPolicy](g,
 		consts.PostureExceptionPolicyPath,
-		consts.PostureExceptionPolicyCollection, dbhandler.GetPostureExceptionQueryConfig())
+		consts.PostureExceptionPolicyCollection, handlers.GetPostureExceptionQueryConfig())
 }

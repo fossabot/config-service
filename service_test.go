@@ -12,6 +12,7 @@ import (
 	_ "embed"
 
 	"github.com/armosec/armoapi-go/armotypes"
+	rndStr "github.com/dchest/uniuri"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -82,7 +83,7 @@ func (suite *MainTestSuite) TestCluster() {
 //go:embed test_data/posturePolicies.json
 var posturePoliciesJson []byte
 
-var newPolicyCompareFilter = cmp.FilterPath(func(p cmp.Path) bool {
+var commonCmpFilter = cmp.FilterPath(func(p cmp.Path) bool {
 	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime"
 }, cmp.Ignore())
 
@@ -107,7 +108,7 @@ func (suite *MainTestSuite) TestPostureException() {
 		return policy
 	}
 
-	commonTest(suite, consts.PostureExceptionPolicyPath, posturePolicies, modifyFunc, newPolicyCompareFilter)
+	commonTest(suite, consts.PostureExceptionPolicyPath, posturePolicies, modifyFunc, commonCmpFilter)
 
 	getQueries := []queryTest[*types.PostureExceptionPolicy]{
 		{
@@ -149,7 +150,7 @@ func (suite *MainTestSuite) TestPostureException() {
 	}
 	testGetDeleteByNameAndQuery(suite, consts.PostureExceptionPolicyPath, consts.PolicyNameParam, posturePolicies, getQueries)
 
-	policy1 := testPostDoc(suite, consts.PostureExceptionPolicyPath, posturePolicies[0], newPolicyCompareFilter)
+	policy1 := testPostDoc(suite, consts.PostureExceptionPolicyPath, posturePolicies[0], commonCmpFilter)
 	creationTime, err := time.Parse(time.RFC3339, policy1.CreationTime)
 	suite.NoError(err, "failed to parse creation time")
 	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
@@ -179,7 +180,7 @@ func (suite *MainTestSuite) TestVulnerabilityPolicies() {
 		return policy
 	}
 
-	commonTest(suite, consts.VulnerabilityExceptionPolicyPath, vulnerabilities, modifyFunc, newPolicyCompareFilter)
+	commonTest(suite, consts.VulnerabilityExceptionPolicyPath, vulnerabilities, modifyFunc, commonCmpFilter)
 
 	getQueries := []queryTest[*types.VulnerabilityExceptionPolicy]{
 		{
@@ -209,7 +210,7 @@ func (suite *MainTestSuite) TestVulnerabilityPolicies() {
 	}
 	testGetDeleteByNameAndQuery(suite, consts.VulnerabilityExceptionPolicyPath, consts.PolicyNameParam, vulnerabilities, getQueries)
 
-	policy1 := testPostDoc(suite, consts.VulnerabilityExceptionPolicyPath, vulnerabilities[0], newPolicyCompareFilter)
+	policy1 := testPostDoc(suite, consts.VulnerabilityExceptionPolicyPath, vulnerabilities[0], commonCmpFilter)
 	creationTime, err := time.Parse(time.RFC3339, policy1.CreationTime)
 	suite.NoError(err, "failed to parse creation time")
 	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
@@ -430,5 +431,34 @@ func (suite *MainTestSuite) TestCustomer() {
 	testBadRequest(suite, http.MethodPost, "/customer_tenant", errorMissingGUID, customer, http.StatusBadRequest)
 	//restore login
 	suite.login(testCustomerGUID)
+}
 
+//go:embed test_data/frameworks.json
+var frameworksJson []byte
+
+func (suite *MainTestSuite) TestFrameworks() {
+	var frameworks []*types.Framework
+	if err := json.Unmarshal(frameworksJson, &frameworks); err != nil {
+		panic(err)
+	}
+	sort.Slice(frameworks, func(i, j int) bool {
+		return frameworks[i].GetName() < frameworks[j].GetName()
+	})
+
+	modifyFunc := func(fw *types.Framework) *types.Framework {
+		if fw.ControlsIDs == nil {
+			fw.ControlsIDs = &[]string{}
+		}
+		*fw.ControlsIDs = append(*fw.ControlsIDs, "new-control"+rndStr.NewLen(5))
+		return fw
+	}
+
+	commonTest(suite, consts.FrameworkPath, frameworks, modifyFunc, commonCmpFilter)
+
+	testGetDeleteByNameAndQuery(suite, consts.FrameworkPath, consts.FrameworkNameParam, frameworks, nil)
+
+	fw1 := testPostDoc(suite, consts.FrameworkPath, frameworks[0], commonCmpFilter)
+	creationTime, err := time.Parse(time.RFC3339, fw1.CreationTime)
+	suite.NoError(err, "failed to parse creation time")
+	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
 }

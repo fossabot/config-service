@@ -1,6 +1,7 @@
 package log
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/gin-gonic/gin"
@@ -10,7 +11,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func LogNTrace(msg string, c *gin.Context, fields ...zapcore.Field) {
+func LogNTrace(msg string, c context.Context, fields ...zapcore.Field) {
 	Log(msg, c, fields...)
 	AddEvent(msg, c)
 }
@@ -19,57 +20,61 @@ func LogNTrace(msg string, c *gin.Context, fields ...zapcore.Field) {
 // - usage: defer LogNTraceEnterExit("function name", c)()
 // output: function name  // entry
 // output: function name completed // exit
-func LogNTraceEnterExit(msg string, c *gin.Context, fields ...zapcore.Field) func() {
+func LogNTraceEnterExit(msg string, c context.Context, fields ...zapcore.Field) func() {
 	LogNTrace(msg, c, fields...)
 	return func() {
 		LogNTrace(msg+" completed", c, fields...)
 	}
 }
 
-func LogNTraceError(msg string, err error, c *gin.Context, fields ...zapcore.Field) {
+func LogNTraceError(msg string, err error, c context.Context, fields ...zapcore.Field) {
 	LogError(msg, err, c, fields...)
 	AddEvent(msg, c)
 	TraceErrorSetStatus(msg, err, c)
 	if err != nil {
-		c.Error(err)
+		if g, ok := c.(*gin.Context); ok {
+			g.Error(err)
+		}
 	}
 }
 
-func Log(msg string, c *gin.Context, fields ...zapcore.Field) {
+func Log(msg string, c context.Context, fields ...zapcore.Field) {
 	doLog(msg, nil, c, fields...)
 }
 
-func LogError(msg string, err error, c *gin.Context, fields ...zapcore.Field) {
+func LogError(msg string, err error, c context.Context, fields ...zapcore.Field) {
 	doLog(msg, err, c, fields...)
 }
 
-func AddEvent(msg string, c *gin.Context) {
-	if trace.SpanFromContext(c.Request.Context()).SpanContext().IsValid() {
-		trace.SpanFromContext(c.Request.Context()).AddEvent(msg)
+func AddEvent(msg string, c context.Context) {
+	if span := GetTraceSpan(c); span != nil {
+		span.AddEvent(msg)
 	}
 }
 
-func TraceErrorSetStatus(msg string, err error, c *gin.Context) {
-	if trace.SpanFromContext(c.Request.Context()).SpanContext().IsValid() {
-		trace.SpanFromContext(c.Request.Context()).SetStatus(codes.Error, fmt.Sprintf("%s Error: %v", msg, err))
+func TraceErrorSetStatus(msg string, err error, c context.Context) {
+	if span := GetTraceSpan(c); span != nil {
+		span.SetStatus(codes.Error, fmt.Sprintf("%s Error: %v", msg, err))
 	}
 }
 
-func GetLogger(c *gin.Context) *zap.Logger {
-	if z, ok := c.Get("zapLogger"); ok {
+func GetLogger(c context.Context) *zap.Logger {
+	if z := c.Value("zapLogger"); z != nil {
 		return z.(*zap.Logger)
 	}
 	return zap.L()
 }
 
-func GetTraceSpan(c *gin.Context) trace.Span {
-	if trace.SpanFromContext(c.Request.Context()).SpanContext().IsValid() {
-		return trace.SpanFromContext(c.Request.Context())
+func GetTraceSpan(c context.Context) trace.Span {
+	if g, ok := c.(*gin.Context); ok {
+		if trace.SpanFromContext(g.Request.Context()).SpanContext().IsValid() {
+			return trace.SpanFromContext(g.Request.Context())
+		}
 	}
 	return nil
 }
 
-func doLog(msg string, err error, c *gin.Context, fields ...zapcore.Field) {
+func doLog(msg string, err error, c context.Context, fields ...zapcore.Field) {
 	logger := GetLogger(c)
 	if err != nil {
 		logger.Error(msg, append(fields, zap.Error(err))...)

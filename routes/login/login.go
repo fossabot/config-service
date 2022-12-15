@@ -1,7 +1,7 @@
 package login
 
 import (
-	"config-service/dbhandler"
+	"config-service/handlers"
 	"config-service/utils/consts"
 	"net/http"
 
@@ -20,7 +20,7 @@ func AddRoutes(g *gin.Engine) {
 		}
 
 		if err := c.ShouldBindJSON(&loginDetails); err != nil {
-			dbhandler.ResponseFailedToBindJson(c, err)
+			handlers.ResponseFailedToBindJson(c, err)
 			return
 		}
 		c.SetCookie(consts.CustomerGUID, loginDetails.CustomerGUID, 2*60*60*24, "/", "", false, true)

@@ -1,7 +1,8 @@
 package customer_config
 
 import (
-	"config-service/dbhandler"
+	"config-service/db"
+	"config-service/handlers"
 	"config-service/types"
 	"config-service/utils/consts"
 	"time"
@@ -10,17 +11,21 @@ import (
 )
 
 func AddRoutes(g *gin.Engine) {
-	customerConfig := g.Group(consts.CustomerConfigPath)
-	customerConfig.Use(dbhandler.DBContextMiddleware(consts.CustomerConfigCollection))
+	customerConfigRouter := handlers.AddRoutes(g,
+		handlers.WithPath[*types.CustomerConfig](consts.CustomerConfigPath),
+		handlers.WithDBCollection[*types.CustomerConfig](consts.CustomerConfigCollection),
+		handlers.WithServeGet[*types.CustomerConfig](false),        // customer config needs custom get handler
+		handlers.WithServeDelete[*types.CustomerConfig](false),     // customer config needs custom delete handler
+		handlers.WithValidatePutGUID[*types.CustomerConfig](false), // customer config needs custom put validator
+		handlers.WithPutValidators(validatePutCustomerConfig),      //customer config custom put validator
 
-	customerConfig.GET("", getCustomerConfigHandler)
-	customerConfig.POST("", dbhandler.HandlePostDocWithUniqueNameValidation[*types.CustomerConfig]()...)
-	customerConfig.PUT("", dbhandler.HandlePutDocWithValidation(validatePutCustomerConfig)...)
-	customerConfig.PUT("/:"+consts.GUIDField, dbhandler.HandlePutDocWithGUIDValidation[*types.CustomerConfig]()...)
-	customerConfig.DELETE("", deleteCustomerConfig)
+	)
+	customerConfigRouter.GET("", getCustomerConfigHandler)
+	customerConfigRouter.DELETE("", deleteCustomerConfig)
 
-	dbhandler.AddCachedDocument[*types.CustomerConfig](consts.DefaultCustomerConfigKey,
+	// add lazy cache to default customer config
+	db.AddCachedDocument[*types.CustomerConfig](consts.DefaultCustomerConfigKey,
 		consts.CustomerConfigCollection,
-		dbhandler.NewFilterBuilder().WithGlobalNotDelete().WithName(consts.GlobalConfigName).Get(),
+		db.NewFilterBuilder().WithGlobalNotDelete().WithName(consts.GlobalConfigName).Get(),
 		time.Minute*5)
 }

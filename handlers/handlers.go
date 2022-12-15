@@ -1,7 +1,7 @@
-package dbhandler
+package handlers
 
 import (
-	"config-service/mongo"
+	"config-service/db"
 	"config-service/types"
 	"config-service/utils/consts"
 	"config-service/utils/log"
@@ -12,8 +12,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	"go.mongodb.org/mongo-driver/bson"
-	mongoDB "go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/utils/strings/slices"
 )
 
@@ -29,7 +27,7 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 		ResponseMissingGUID(c)
 		return
 	}
-	if doc, err := GetDocByGUID[T](c, guid); err != nil {
+	if doc, err := db.GetDocByGUID[T](c, guid); err != nil {
 		ResponseInternalServerError(c, "failed to read document", err)
 		return
 	} else if doc == nil {
@@ -41,7 +39,7 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 }
 
 // HandleGetListByNameOrAll - chains HandleGetNamesList->HandleGetByName-> HandleGetAll
-func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *scopeParamsConfig, listGlobals bool) gin.HandlerFunc {
+func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *queryParamsConfig, listGlobals bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer log.LogNTraceEnterExit("HandleGetByQueryOrAll", c)()
 		if !GetNamesListHandler[T](c, listGlobals) &&
@@ -55,7 +53,7 @@ func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *scop
 // HandleGetAll - get all customer's documents of type T for collection in context
 func HandleGetAll[T types.DocContent](c *gin.Context) {
 	defer log.LogNTraceEnterExit("HandleGetAll", c)()
-	if docs, err := GetAllForCustomer[T](c, false); err != nil {
+	if docs, err := db.GetAllForCustomer[T](c, false); err != nil {
 		ResponseInternalServerError(c, "failed to read all documents for customer", err)
 		return
 	} else {
@@ -66,7 +64,7 @@ func HandleGetAll[T types.DocContent](c *gin.Context) {
 // HandleGetAll - get all global and customer's documents of type T for collection in context
 func HandleGetAllWithGlobals[T types.DocContent](c *gin.Context) {
 	defer log.LogNTraceEnterExit("HandleGetAllWithGlobals", c)()
-	if docs, err := GetAllForCustomer[T](c, true); err != nil {
+	if docs, err := db.GetAllForCustomer[T](c, true); err != nil {
 		ResponseInternalServerError(c, "failed to read all documents for customer", err)
 		return
 	} else {
@@ -78,8 +76,8 @@ func HandleGetAllWithGlobals[T types.DocContent](c *gin.Context) {
 func GetNamesListHandler[T types.DocContent](c *gin.Context, includeGlobals bool) bool {
 	if _, list := c.GetQuery(consts.ListParam); list {
 		defer log.LogNTraceEnterExit("GetNamesListHandler", c)()
-		namesProjection := NewProjectionBuilder().Include(consts.NameField).ExcludeID().Get()
-		if docNames, err := GetAllForCustomerWithProjection[T](c, namesProjection, includeGlobals); err != nil {
+		namesProjection := db.NewProjectionBuilder().Include(consts.NameField).ExcludeID().Get()
+		if docNames, err := db.GetAllForCustomerWithProjection[T](c, namesProjection, includeGlobals); err != nil {
 			ResponseInternalServerError(c, "failed to read documents", err)
 			return true
 		} else {
@@ -102,7 +100,7 @@ func GetByNameParamHandler[T types.DocContent](c *gin.Context, nameParam string)
 	if name := c.Query(nameParam); name != "" {
 		defer log.LogNTraceEnterExit("GetByNameParamHandler", c)()
 		//get document by name
-		if doc, err := GetDocByName[T](c, name); err != nil {
+		if doc, err := db.GetDocByName[T](c, name); err != nil {
 			ResponseInternalServerError(c, "failed to read document", err)
 			return true
 		} else if doc == nil {
@@ -117,19 +115,19 @@ func GetByNameParamHandler[T types.DocContent](c *gin.Context, nameParam string)
 }
 
 // GetByScopeParams parse scope params and return elements with this scope, returns false if not served by this handler
-func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopeParamsConfig) bool {
+func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *queryParamsConfig) bool {
 	if conf == nil {
 		return false // not served by this handler
 	}
 	defer log.LogNTraceEnterExit("GetByScopeParamsHandler", c)()
 
 	//keep filter builder per field name
-	filterBuilders := map[string]*FilterBuilder{}
-	getFilterBuilder := func(paramName string) *FilterBuilder {
+	filterBuilders := map[string]*db.FilterBuilder{}
+	getFilterBuilder := func(paramName string) *db.FilterBuilder {
 		if filterBuilder, ok := filterBuilders[paramName]; ok {
 			return filterBuilder
 		}
-		filterBuilder := NewFilterBuilder()
+		filterBuilder := db.NewFilterBuilder()
 		filterBuilders[paramName] = filterBuilder
 		return filterBuilder
 	}
@@ -174,7 +172,7 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 		if len(values) == 1 {
 			filterBuilder.WithValue(key, values[0])
 		} else { //case of multiple values
-			fb := NewFilterBuilder()
+			fb := db.NewFilterBuilder()
 			for _, v := range values {
 				fb.WithValue(key, v)
 			}
@@ -182,7 +180,7 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 		}
 	}
 	//aggregate all filters
-	allQueriesFilter := NewFilterBuilder()
+	allQueriesFilter := db.NewFilterBuilder()
 	for key, filterBuilder := range filterBuilders {
 		queryConfig := conf.params2Query[key]
 		filterBuilder.WrapDupKeysWithOr()
@@ -195,7 +193,7 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *scopePara
 		return false //not served by this handler
 	}
 	log.LogNTrace(fmt.Sprintf("query params: %v search query %v", qParams, allQueriesFilter.Get()), c)
-	if docs, err := FindForCustomer[T](c, allQueriesFilter, nil); err != nil {
+	if docs, err := db.FindForCustomer[T](c, allQueriesFilter, nil); err != nil {
 		ResponseInternalServerError(c, "failed to read documents", err)
 		return true
 	} else {
@@ -262,34 +260,34 @@ func HandlePostDocFromContext[T types.DocContent](c *gin.Context) {
 // PostDoc - helper to put document(s) of type T, custom handler should use this function to do the final POST handling
 func PostDocHandler[T types.DocContent](c *gin.Context, docs []T) {
 	defer log.LogNTraceEnterExit("PostDocHandler", c)()
-	collection, customerGUID, err := ReadContext(c)
-	if err != nil {
-		ResponseInternalServerError(c, "failed to read collection and customer guid from context", err)
-		return
-	}
-	dbDocs := []interface{}{}
-	for i := range docs {
-		dbDocs = append(dbDocs, types.NewDocument(docs[i], customerGUID))
-	}
-
-	if len(dbDocs) == 1 {
-		if _, err := mongo.GetWriteCollection(collection).InsertOne(c.Request.Context(), dbDocs[0]); err != nil {
-			if mongoDB.IsDuplicateKeyError(err) {
-				ResponseDuplicateKey(c, consts.GUIDField)
-				return
-			}
-			ResponseInternalServerError(c, "failed to create document", err)
+	var err error
+	if docs, err = db.InsertDocuments(c, docs); err != nil {
+		if db.IsDuplicateKeyError(err) {
+			ResponseDuplicateKey(c, consts.GUIDField)
 			return
 		} else {
-			c.JSON(http.StatusCreated, docs[0])
+			ResponseInternalServerError(c, "failed to create document", err)
+			return
 		}
 	} else {
-		if _, err := mongo.GetWriteCollection(collection).InsertMany(c.Request.Context(), dbDocs); err != nil {
-			ResponseInternalServerError(c, "failed to create document", err)
-			return
+		if len(docs) == 1 {
+			c.JSON(http.StatusCreated, docs[0])
 		} else {
-			c.JSON(http.StatusOK, docs)
+			c.JSON(http.StatusCreated, docs)
 		}
+	}
+}
+
+func PostDBDocumentHandler[T types.DocContent](c *gin.Context, dbDoc types.Document[T]) {
+	if _, err := db.InsertDBDocument(c, dbDoc); err != nil {
+		if db.IsDuplicateKeyError(err) {
+			ResponseDuplicateKey(c, consts.GUIDField)
+			return
+		}
+		ResponseInternalServerError(c, "failed to create document", err)
+		return
+	} else {
+		c.JSON(http.StatusCreated, dbDoc.Content)
 	}
 }
 
@@ -339,12 +337,12 @@ func HandlePutDocFromContext[T types.DocContent](c *gin.Context) {
 // PutDoc - helper to put document of type T, custom handler should use this function to do the final PUT handling
 func PutDocHandler[T types.DocContent](c *gin.Context, doc T) {
 	defer log.LogNTraceEnterExit("PutDocHandler", c)()
-	update, err := GetUpdateDocCommand(doc, doc.GetReadOnlyFields()...)
+	update, err := db.GetUpdateDocCommand(doc, doc.GetReadOnlyFields()...)
 	if err != nil {
 		ResponseInternalServerError(c, "failed to generate update command", err)
 		return
 	}
-	if res, err := UpdateDocument[T](c, doc.GetGUID(), update); err != nil {
+	if res, err := db.UpdateDocument[T](c, doc.GetGUID(), update); err != nil {
 		ResponseInternalServerError(c, "failed to update document", err)
 	} else if res == nil {
 		ResponseDocumentNotFound(c)
@@ -389,68 +387,49 @@ func HandleDeleteDocByName[T types.DocContent](nameParam string) gin.HandlerFunc
 
 func BulkDeleteDocByNameHandler[T types.DocContent](c *gin.Context, names []string) {
 	defer log.LogNTraceEnterExit("BulkDeleteDocByNameHandler", c)()
-	collection, err := readCollection(c)
-	if err != nil {
-		ResponseInternalServerError(c, "failed to read collection from context", err)
-		return
-	}
-	filter := NewFilterBuilder().WithIn("name", names).WithNotDeleteForCustomer(c)
-	if res, err := mongo.GetWriteCollection(collection).DeleteMany(c.Request.Context(), filter.Get()); err != nil {
-		ResponseInternalServerError(c, "failed to delete document", err)
-	} else if res.DeletedCount == 0 {
+	if deletedCount, err := db.BulkDeleteByName[T](c, names); err != nil {
+	} else if deletedCount == 0 {
 		ResponseDocumentNotFound(c)
 	} else {
-		c.JSON(http.StatusOK, res)
+		c.JSON(http.StatusOK, gin.H{"deletedCount": deletedCount})
 	}
 }
 
 func DeleteDocByGUIDHandler[T types.DocContent](c *gin.Context, guid string) {
 	defer log.LogNTraceEnterExit("DeleteDocByGUIDHandler", c)()
-	collection, err := readCollection(c)
-	if err != nil {
+	if deletedDoc, err := db.DeleteByGUID[T](c, guid); err != nil {
 		ResponseInternalServerError(c, "failed to read collection from context", err)
-		return
-	}
-	toBeDeleted, err := GetDocByGUID[T](c, guid)
-	if err != nil {
-		ResponseInternalServerError(c, "failed to read document", err)
-		return
-	} else if toBeDeleted == nil {
+	} else if deletedDoc == nil {
 		ResponseDocumentNotFound(c)
-		return
+	} else {
+		c.JSON(http.StatusOK, deletedDoc)
 	}
-	if res, err := mongo.GetWriteCollection(collection).DeleteOne(c.Request.Context(), bson.M{consts.IdField: guid}); err != nil {
-		ResponseInternalServerError(c, "failed to delete document", err)
-		return
-	} else if res.DeletedCount == 0 {
-		ResponseDocumentNotFound(c)
-		return
-	}
-	c.JSON(http.StatusOK, toBeDeleted)
 }
 
 func DeleteDocByNameHandler[T types.DocContent](c *gin.Context, name string) {
 	defer log.LogNTraceEnterExit("DeleteDocByNameHandler", c)()
-	collection, err := readCollection(c)
-	if err != nil {
+	if deletedDoc, err := db.DeleteByName[T](c, name); err != nil {
 		ResponseInternalServerError(c, "failed to read collection from context", err)
-		return
-	}
-	toBeDeleted, err := GetDocByName[T](c, name)
-	if err != nil {
-		ResponseInternalServerError(c, "failed to read document", err)
-		return
-	} else if toBeDeleted == nil {
+	} else if deletedDoc == nil {
 		ResponseDocumentNotFound(c)
-		return
+	} else {
+		c.JSON(http.StatusOK, deletedDoc)
 	}
+}
 
-	if res, err := mongo.GetWriteCollection(collection).DeleteOne(c.Request.Context(), bson.M{consts.IdField: (*toBeDeleted).GetGUID()}); err != nil {
-		ResponseInternalServerError(c, "failed to delete document", err)
-		return
-	} else if res.DeletedCount == 0 {
-		ResponseDocumentNotFound(c)
-		return
+// MustGetDocContentFromContext returns document(s) content from context and aborts if not found
+func MustGetDocContentFromContext[T types.DocContent](c *gin.Context) ([]T, error) {
+	var docs []T
+	if iData, ok := c.Get(consts.DocContentKey); ok {
+		if doc, ok := iData.(T); ok {
+			docs = append(docs, doc)
+		} else if docs, ok = iData.([]T); !ok {
+			return nil, fmt.Errorf("invalid doc content type")
+		}
+	} else {
+		err := fmt.Errorf("failed to get doc content from context")
+		ResponseInternalServerError(c, err.Error(), err)
+		return nil, err
 	}
-	c.JSON(http.StatusOK, toBeDeleted)
+	return docs, nil
 }

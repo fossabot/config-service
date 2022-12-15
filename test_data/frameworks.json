@@ -1,0 +1,136 @@
+[
+    {
+        "name": "systest-fw-minikube",
+        "description": "framework for system test for cluster minikube",
+        "controls": [
+            {
+                "guid": "",
+                "name": "",
+                "controlID": "C-0016",
+                "creationTime": "",
+                "description": "",
+                "remediation": "",
+                "rules": null
+            },
+            {
+                "guid": "",
+                "name": "",
+                "controlID": "C-0013",
+                "creationTime": "",
+                "description": "",
+                "remediation": "",
+                "rules": null
+            },
+            {
+                "guid": "",
+                "name": "",
+                "controlID": "C-0053",
+                "creationTime": "",
+                "description": "",
+                "remediation": "",
+                "rules": null
+            },
+            {
+                "guid": "",
+                "name": "",
+                "controlID": "C-0049",
+                "creationTime": "",
+                "description": "",
+                "remediation": "",
+                "rules": null
+            },
+            {
+                "guid": "",
+                "name": "",
+                "controlID": "C-0057",
+                "creationTime": "",
+                "description": "",
+                "remediation": "",
+                "rules": null
+            },
+            {
+                "guid": "",
+                "name": "",
+                "controlID": "C-0005",
+                "creationTime": "",
+                "description": "",
+                "remediation": "",
+                "rules": null
+            }
+        ],
+        "controlsIDs": [
+            "C-0016",
+            "C-0013",
+            "C-0053",
+            "C-0049",
+            "C-0057",
+            "C-0005"
+        ]
+    },
+    {
+        "name": "testing",
+        "description": "testing stuff",
+        "controls": [
+            {
+                "guid": "",
+                "name": "",
+                "controlID": "C-0001",
+                "creationTime": "",
+                "description": "",
+                "remediation": "",
+                "rules": null
+            },
+            {
+                "guid": "",
+                "name": "",
+                "controlID": "CIS-1.2.28",
+                "creationTime": "",
+                "description": "",
+                "remediation": "",
+                "rules": null
+            }
+        ],
+        "controlsIDs": [
+            "C-0001",
+            "CIS-1.2.28"
+        ]
+    },
+    {
+        "name": "custom-fw-test",
+        "description": "",
+        "controls": [
+            {
+                "guid": "",
+                "name": "",
+                "controlID": "C-0001",
+                "creationTime": "",
+                "description": "",
+                "remediation": "",
+                "rules": null
+            },
+            {
+                "guid": "",
+                "name": "",
+                "controlID": "C-0002",
+                "creationTime": "",
+                "description": "",
+                "remediation": "",
+                "rules": null
+            },
+            {
+                "guid": "",
+                "name": "",
+                "controlID": "C-0004",
+                "creationTime": "",
+                "description": "",
+                "remediation": "",
+                "rules": null
+            }
+        ],
+        "controlsIDs": [
+            "C-0001",
+            "C-0002",
+            "C-0004"
+        ]
+    }
+]

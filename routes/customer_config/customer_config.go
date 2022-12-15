@@ -1,7 +1,8 @@
 package customer_config
 
 import (
-	"config-service/dbhandler"
+	"config-service/db"
+	"config-service/handlers"
 	"config-service/types"
 	"config-service/utils/consts"
 	"config-service/utils/log"
@@ -13,13 +14,13 @@ import (
 )
 
 func getCustomerConfigHandler(c *gin.Context) {
-	if dbhandler.GetNamesListHandler[*types.CustomerConfig](c, true) {
+	if handlers.GetNamesListHandler[*types.CustomerConfig](c, true) {
 		return
 	}
 	if getCustomerConfigByNameHandler(c) {
 		return
 	}
-	dbhandler.HandleGetAllWithGlobals[*types.CustomerConfig](c)
+	handlers.HandleGetAllWithGlobals[*types.CustomerConfig](c)
 }
 
 func getCustomerConfigByNameHandler(c *gin.Context) bool {
@@ -29,9 +30,9 @@ func getCustomerConfigByNameHandler(c *gin.Context) bool {
 		return false
 	}
 	//get the default config
-	defaultConfig, err := dbhandler.GetCachedDocument[*types.CustomerConfig](consts.DefaultCustomerConfigKey)
+	defaultConfig, err := db.GetCachedDocument[*types.CustomerConfig](consts.DefaultCustomerConfigKey)
 	if err != nil {
-		dbhandler.ResponseInternalServerError(c, "failed to get default config", err)
+		handlers.ResponseInternalServerError(c, "failed to get default config", err)
 		return true
 	}
 
@@ -41,14 +42,14 @@ func getCustomerConfigByNameHandler(c *gin.Context) bool {
 		return true
 	}
 	//try and get config by name from db
-	doc, err := dbhandler.GetDocByName[types.CustomerConfig](c, configName)
+	doc, err := db.GetDocByName[types.CustomerConfig](c, configName)
 	if err != nil {
-		dbhandler.ResponseInternalServerError(c, "failed to get document by name", err)
+		handlers.ResponseInternalServerError(c, "failed to get document by name", err)
 		return true
 	} else if unmerged, _ := c.GetQuery("unmerged"); unmerged != "" {
 		//case unmerged is requested - return the unmerged config if exists
 		if doc == nil {
-			dbhandler.ResponseDocumentNotFound(c)
+			handlers.ResponseDocumentNotFound(c)
 			return true
 		} else {
 			c.JSON(http.StatusOK, doc)
@@ -59,7 +60,7 @@ func getCustomerConfigByNameHandler(c *gin.Context) bool {
 	if configName == consts.CustomerConfigName {
 		if doc != nil {
 			if err := mergo.Merge(doc, *defaultConfig); err != nil {
-				dbhandler.ResponseInternalServerError(c, "failed to merge configuration", err)
+				handlers.ResponseInternalServerError(c, "failed to merge configuration", err)
 				return true
 			} else {
 				c.JSON(http.StatusOK, doc)
@@ -72,20 +73,20 @@ func getCustomerConfigByNameHandler(c *gin.Context) bool {
 		}
 	}
 	//case cluster config is requested - return it merged with customer and default config
-	customerConfig, err := dbhandler.GetDocByName[types.CustomerConfig](c, consts.CustomerConfigName)
+	customerConfig, err := db.GetDocByName[types.CustomerConfig](c, consts.CustomerConfigName)
 	if err != nil {
-		dbhandler.ResponseInternalServerError(c, "failed to get document by name", err)
+		handlers.ResponseInternalServerError(c, "failed to get document by name", err)
 		return true
 	}
 	customerConfig, err = mergeConfigurations(customerConfig, defaultConfig)
 	if err != nil {
-		dbhandler.ResponseInternalServerError(c, "failed to merge configuration", err)
+		handlers.ResponseInternalServerError(c, "failed to merge configuration", err)
 		return true
 	}
 
 	doc, err = mergeConfigurations(doc, customerConfig)
 	if err != nil {
-		dbhandler.ResponseInternalServerError(c, "failed to merge configuration", err)
+		handlers.ResponseInternalServerError(c, "failed to merge configuration", err)
 		return true
 	}
 	c.JSON(http.StatusOK, doc)
@@ -109,7 +110,7 @@ func mergeConfigurations(dest, src *types.CustomerConfig) (*types.CustomerConfig
 func validatePutCustomerConfig(c *gin.Context, docs []*types.CustomerConfig) ([]*types.CustomerConfig, bool) {
 	defer log.LogNTraceEnterExit("validatePutCustomerConfig", c)()
 	if len(docs) > 1 {
-		dbhandler.ResponseBulkNotSupported(c)
+		handlers.ResponseBulkNotSupported(c)
 		return nil, false
 	}
 	configName := getConfigName(c)
@@ -117,15 +118,15 @@ func validatePutCustomerConfig(c *gin.Context, docs []*types.CustomerConfig) ([]
 		if docs[0].Name != "" {
 			configName = docs[0].Name
 		} else {
-			dbhandler.ResponseMissingName(c)
+			handlers.ResponseMissingName(c)
 			return nil, false
 		}
 	}
-	if existingDoc, err := dbhandler.GetDocByName[types.CustomerConfig](c, configName); err != nil {
-		dbhandler.ResponseInternalServerError(c, "failed to get doc by name", err)
+	if existingDoc, err := db.GetDocByName[types.CustomerConfig](c, configName); err != nil {
+		handlers.ResponseInternalServerError(c, "failed to get doc by name", err)
 		return nil, false
 	} else if existingDoc == nil {
-		dbhandler.ResponseDocumentNotFound(c)
+		handlers.ResponseDocumentNotFound(c)
 		return nil, false
 	} else {
 		docs[0].SetGUID(existingDoc.GetGUID())
@@ -137,12 +138,12 @@ func deleteCustomerConfig(c *gin.Context) {
 	defer log.LogNTraceEnterExit("deleteCustomerConfig", c)()
 	if configName := getConfigName(c); configName != "" {
 		if configName == consts.GlobalConfigName {
-			dbhandler.ResponseBadRequest(c, "default config cannot be deleted")
+			handlers.ResponseBadRequest(c, "default config cannot be deleted")
 			return
 		}
-		dbhandler.DeleteDocByNameHandler[*types.CustomerConfig](c, configName)
+		handlers.DeleteDocByNameHandler[*types.CustomerConfig](c, configName)
 	} else {
-		dbhandler.ResponseMissingName(c)
+		handlers.ResponseMissingName(c)
 		return
 	}
 }
