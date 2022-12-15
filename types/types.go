@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/armosec/armoapi-go/armotypes"
+	opapolicy "github.com/kubescape/opa-utils/reporthandling"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -31,7 +32,8 @@ func NewDocument[T DocContent](content T, customerGUID string) Document[T] {
 
 // Doc Content interface for data types embedded in DB documents
 type DocContent interface {
-	*CustomerConfig | *Cluster | *PostureExceptionPolicy | *VulnerabilityExceptionPolicy | *Customer
+	*CustomerConfig | *Cluster | *PostureExceptionPolicy | *VulnerabilityExceptionPolicy | *Customer |
+		*PolicyRule | *Control | *Framework
 	InitNew()
 	GetName() string
 	SetName(name string)
@@ -78,9 +80,70 @@ func (c *CustomerConfig) InitNew() {
 }
 
 // DocContent implementations
-type PostureExceptionPolicy armotypes.PostureExceptionPolicy
-type Cluster armotypes.PortalCluster
-type VulnerabilityExceptionPolicy armotypes.VulnerabilityExceptionPolicy
+
+type PolicyRule opapolicy.PolicyRule
+
+func (p *PolicyRule) GetGUID() string {
+	return p.GUID
+}
+func (p *PolicyRule) SetGUID(guid string) {
+	p.GUID = guid
+}
+func (p *PolicyRule) GetName() string {
+	return p.Name
+}
+func (p *PolicyRule) SetName(name string) {
+	p.Name = name
+}
+func (*PolicyRule) GetReadOnlyFields() []string {
+	return commonReadOnlyFields
+}
+func (p *PolicyRule) InitNew() {
+	p.CreationTime = time.Now().UTC().Format(time.RFC3339)
+}
+
+type Framework opapolicy.Framework
+
+func (f *Framework) GetGUID() string {
+	return f.GUID
+}
+func (f *Framework) SetGUID(guid string) {
+	f.GUID = guid
+}
+func (f *Framework) GetName() string {
+	return f.Name
+}
+func (f *Framework) SetName(name string) {
+	f.Name = name
+}
+func (*Framework) GetReadOnlyFields() []string {
+	return commonReadOnlyFields
+}
+func (f *Framework) InitNew() {
+	f.CreationTime = time.Now().UTC().Format(time.RFC3339)
+}
+
+type Control opapolicy.Control
+
+func (c *Control) GetGUID() string {
+	return c.GUID
+}
+func (c *Control) SetGUID(guid string) {
+	c.GUID = guid
+}
+func (c *Control) GetName() string {
+	return c.Name
+}
+func (c *Control) SetName(name string) {
+	c.Name = name
+}
+func (c *Control) GetReadOnlyFields() []string {
+	return commonReadOnlyFields
+}
+func (c *Control) InitNew() {
+	c.CreationTime = time.Now().UTC().Format(time.RFC3339)
+}
+
 type Customer armotypes.PortalCustomer
 
 func (c *Customer) GetGUID() string {
@@ -101,6 +164,8 @@ func (c *Customer) GetReadOnlyFields() []string {
 func (c *Customer) InitNew() {
 	c.SubscriptionDate = time.Now().UTC().Format(time.RFC3339)
 }
+
+type Cluster armotypes.PortalCluster
 
 func (c *Cluster) GetGUID() string {
 	return c.GUID
@@ -124,6 +189,8 @@ func (c *Cluster) InitNew() {
 	}
 }
 
+type VulnerabilityExceptionPolicy armotypes.VulnerabilityExceptionPolicy
+
 func (c *VulnerabilityExceptionPolicy) GetGUID() string {
 	return c.GUID
 }
@@ -143,6 +210,8 @@ func (c *VulnerabilityExceptionPolicy) GetReadOnlyFields() []string {
 func (c *VulnerabilityExceptionPolicy) InitNew() {
 	c.CreationTime = time.Now().UTC().Format(time.RFC3339)
 }
+
+type PostureExceptionPolicy armotypes.PostureExceptionPolicy
 
 func (p *PostureExceptionPolicy) GetGUID() string {
 	return p.GUID

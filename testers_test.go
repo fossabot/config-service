@@ -107,7 +107,7 @@ type queryTest[T types.DocContent] struct {
 }
 
 func testGetDeleteByNameAndQuery[T types.DocContent](suite *MainTestSuite, basePath, nameParam string, testDocs []T, getQueries []queryTest[T]) {
-	newDocs := testBulkPostDocs(suite, basePath, testDocs, newPolicyCompareFilter)
+	newDocs := testBulkPostDocs(suite, basePath, testDocs, commonCmpFilter)
 	suite.Equal(len(testDocs), len(newDocs))
 	docNames := []string{}
 	for i := range newDocs {

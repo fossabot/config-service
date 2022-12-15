@@ -11,8 +11,7 @@ import (
 )
 
 func AddRoutes(g *gin.Engine) {
-	customerConfigRouter := handlers.AddRoutes[*types.CustomerConfig](
-		g,
+	customerConfigRouter := handlers.AddRoutes(g,
 		handlers.WithPath[*types.CustomerConfig](consts.CustomerConfigPath),
 		handlers.WithDBCollection[*types.CustomerConfig](consts.CustomerConfigCollection),
 		handlers.WithServeGet[*types.CustomerConfig](false),        // customer config needs custom get handler

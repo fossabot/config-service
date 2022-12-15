@@ -20,7 +20,7 @@ import (
 func getAllShortNames(c *gin.Context) []string {
 	if clusters, err := db.GetAllForCustomerWithProjection[types.Cluster](c, db.NewProjectionBuilder().
 		ExcludeID().
-		Include(consts.ShrotNameField).
+		Include(consts.ShortNameField).
 		Get(), false); err != nil {
 		log.LogNTraceError("failed to read clusters", err, c)
 		return nil
