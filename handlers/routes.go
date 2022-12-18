@@ -8,21 +8,38 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// router options
 type routerOptions[T types.DocContent] struct {
 	dbCollection              string
 	path                      string
 	nameQueryParam            string
 	queryConfig               *queryParamsConfig
-	serveGet                  bool //default true, when false, GET will not be served
-	servePost                 bool //default true, when false, POST will not be served
-	servePut                  bool //default true, when false, PUT will not be served
-	serveDelete               bool //default true, when false, DELETE will not be served
-	serveGetIncludeGlobalDocs bool //default false, when true, in GET all the response will include global documents (with customers[""])
-	serveDeleteByName         bool //default false, when true, DELETE will check for name param and will delete the document by name
-	validatePostUniqueName    bool //default true, when true, POST will validate that the name is unique
-	validatePutGUID           bool //default true, when true, PUT will validate GUID existence in body or path
+	serveGet                  bool           //default true, when false, GET will not be served
+	servePost                 bool           //default true, when false, POST will not be served
+	servePut                  bool           //default true, when false, PUT will not be served
+	serveDelete               bool           //default true, when false, DELETE will not be served
+	validatePostUniqueName    bool           //default true, when true, POST will validate that the name is unique
+	validatePutGUID           bool           //default true, when true, PUT will validate GUID existence in body or path
+	serveGetIncludeGlobalDocs bool           //default false, when true, in GET all the response will include global documents (with customers[""])
+	serveDeleteByName         bool           //default false, when true, DELETE will check for name param and will delete the document by name
+	uniqueShortName           func(T) string //default nil, when set, POST will create a unique short name attribute from the value returned from the function, Put will validate that the short name is not deleted
 	putValidators             []Validator[T]
 	postValidators            []Validator[T]
+}
+
+func newRouterOptions[T types.DocContent]() *routerOptions[T] {
+	return &routerOptions[T]{
+		serveGet:                  true,
+		servePost:                 true,
+		servePut:                  true,
+		serveDelete:               true,
+		validatePostUniqueName:    true,
+		validatePutGUID:           true,
+		serveGetIncludeGlobalDocs: false,
+		serveDeleteByName:         false,
+		uniqueShortName:           nil,
+	}
+
 }
 
 func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *gin.RouterGroup {
@@ -43,6 +60,9 @@ func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *g
 		if opts.validatePostUniqueName {
 			postValidators = append(postValidators, ValidateUniqueValues(NameKeyGetter[T]))
 		}
+		if opts.uniqueShortName != nil {
+			postValidators = append(postValidators, ValidatePostAttributeShortName(opts.uniqueShortName))
+		}
 		postValidators = append(postValidators, opts.postValidators...)
 		routerGroup.POST("", HandlePostDocWithValidation(postValidators...)...)
 	}
@@ -50,6 +70,9 @@ func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *g
 		putValidators := []Validator[T]{}
 		if opts.validatePutGUID {
 			putValidators = append(putValidators, ValidateGUIDExistence[T])
+		}
+		if opts.uniqueShortName != nil {
+			putValidators = append(putValidators, ValidatePutAttributerShortName[T])
 		}
 		putValidators = append(putValidators, opts.putValidators...)
 		routerGroup.PUT("", HandlePutDocWithValidation(putValidators...)...)
@@ -66,31 +89,16 @@ func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *g
 
 // Common router config for policies
 func AddPolicyRoutes[T types.DocContent](g *gin.Engine, path, dbCollection string, paramConf *queryParamsConfig) *gin.RouterGroup {
-	return AddRoutes(g, WithPath[T](path),
-		WithDBCollection[T](dbCollection),
-		WithNameQuery[T](consts.PolicyNameParam),
-		WithQueryConfig[T](paramConf),
-		WithIncludeGlobalDocs[T](true),
-		WithDeleteByName[T](true),
-		WithValidatePostUniqueName[T](true),
-		WithValidatePutGUID[T](true),
-	)
-}
-
-//Options for routes
-
-func newRouterOptions[T types.DocContent]() *routerOptions[T] {
-	return &routerOptions[T]{
-		serveGet:                  true,
-		servePost:                 true,
-		servePut:                  true,
-		serveDelete:               true,
-		serveGetIncludeGlobalDocs: false,
-		serveDeleteByName:         false,
-		validatePostUniqueName:    true,
-		validatePutGUID:           true,
-	}
-
+	return AddRoutes(g, NewRouterOptionsBuilder[T]().
+		WithPath(path).
+		WithDBCollection(dbCollection).
+		WithNameQuery(consts.PolicyNameParam).
+		WithQueryConfig(paramConf).
+		WithIncludeGlobalDocs(true).
+		WithDeleteByName(true).
+		WithValidatePostUniqueName(true).
+		WithValidatePutGUID(true).
+		Get()...)
 }
 
 func (opts *routerOptions[T]) apply(options []RouterOption[T]) {
@@ -114,86 +122,119 @@ func (opts *routerOptions[T]) validate() error {
 
 type RouterOption[T types.DocContent] func(*routerOptions[T])
 
-func WithDBCollection[T types.DocContent](dbCollection string) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+type RouterOptionsBuilder[T types.DocContent] struct {
+	options []RouterOption[T]
+}
+
+func NewRouterOptionsBuilder[T types.DocContent]() *RouterOptionsBuilder[T] {
+	return &RouterOptionsBuilder[T]{options: []RouterOption[T]{}}
+}
+
+func (b *RouterOptionsBuilder[T]) Get() []RouterOption[T] {
+	return b.options
+}
+
+func (b *RouterOptionsBuilder[T]) WithDBCollection(dbCollection string) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.dbCollection = dbCollection
-	}
+	})
+	return b
 }
 
-func WithPath[T types.DocContent](path string) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+func (b *RouterOptionsBuilder[T]) WithPath(path string) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.path = path
-	}
+	})
+	return b
 }
 
-func WithServeGet[T types.DocContent](serveGet bool) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+func (b *RouterOptionsBuilder[T]) WithServeGet(serveGet bool) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.serveGet = serveGet
-	}
+	})
+	return b
 }
 
-func WithServePost[T types.DocContent](servePost bool) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+func (b *RouterOptionsBuilder[T]) WithServePost(servePost bool) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.servePost = servePost
-	}
+	})
+	return b
 }
 
-func WithServePut[T types.DocContent](servePut bool) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+func (b *RouterOptionsBuilder[T]) WithServePut(servePut bool) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.servePut = servePut
-	}
+	})
+	return b
 }
 
-func WithServeDelete[T types.DocContent](serveDelete bool) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+func (b *RouterOptionsBuilder[T]) WithServeDelete(serveDelete bool) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.serveDelete = serveDelete
-	}
+	})
+	return b
 }
 
-func WithIncludeGlobalDocs[T types.DocContent](serveGetIncludeGlobalDocs bool) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+func (b *RouterOptionsBuilder[T]) WithIncludeGlobalDocs(serveGetIncludeGlobalDocs bool) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.serveGetIncludeGlobalDocs = serveGetIncludeGlobalDocs
-	}
+	})
+	return b
 }
 
-func WithDeleteByName[T types.DocContent](serveDeleteByName bool) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+func (b *RouterOptionsBuilder[T]) WithDeleteByName(serveDeleteByName bool) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.serveDeleteByName = serveDeleteByName
-	}
+	})
+	return b
 }
 
-func WithNameQuery[T types.DocContent](nameQueryParam string) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+func (b *RouterOptionsBuilder[T]) WithNameQuery(nameQueryParam string) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.nameQueryParam = nameQueryParam
-	}
+	})
+	return b
 }
 
-func WithQueryConfig[T types.DocContent](queryConfig *queryParamsConfig) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+func (b *RouterOptionsBuilder[T]) WithQueryConfig(queryConfig *queryParamsConfig) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.queryConfig = queryConfig
-	}
+	})
+	return b
 }
 
-func WithPutValidators[T types.DocContent](validators ...Validator[T]) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+func (b *RouterOptionsBuilder[T]) WithPutValidators(validators ...Validator[T]) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.putValidators = validators
-	}
+	})
+	return b
 }
 
-func WithPostValidators[T types.DocContent](validators ...Validator[T]) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+func (b *RouterOptionsBuilder[T]) WithPostValidators(validators ...Validator[T]) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.postValidators = validators
-	}
+	})
+	return b
 }
 
-func WithValidatePostUniqueName[T types.DocContent](validatePostUniqueName bool) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+func (b *RouterOptionsBuilder[T]) WithValidatePostUniqueName(validatePostUniqueName bool) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.validatePostUniqueName = validatePostUniqueName
-	}
+	})
+	return b
 }
 
-func WithValidatePutGUID[T types.DocContent](validatePutGUID bool) RouterOption[T] {
-	return func(opts *routerOptions[T]) {
+func (b *RouterOptionsBuilder[T]) WithValidatePutGUID(validatePutGUID bool) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.validatePutGUID = validatePutGUID
-	}
+	})
+	return b
+}
+
+func (b *RouterOptionsBuilder[T]) WithUniqueShortName(baseShortNameValue func(T) string) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
+		opts.uniqueShortName = baseShortNameValue
+	})
+	return b
 }

@@ -1,4 +1,4 @@
-package cluster
+package handlers
 
 import (
 	"config-service/db"
@@ -16,19 +16,24 @@ import (
 	"k8s.io/utils/strings/slices"
 )
 
-// getAllShortNames returns the short names of all clusters for the customer in context
-func getAllShortNames(c *gin.Context) []string {
-	if clusters, err := db.GetAllForCustomerWithProjection[types.Cluster](c, db.NewProjectionBuilder().
+// getAllShortNames returns the short names of all docs in collection for the customer in context
+func getAllShortNames[T types.DocContent](c *gin.Context) []string {
+	if docs, err := db.GetAllForCustomerWithProjection[T](c, db.NewProjectionBuilder().
 		ExcludeID().
 		Include(consts.ShortNameField).
 		Get(), false); err != nil {
-		log.LogNTraceError("failed to read clusters", err, c)
+		log.LogNTraceError("failed to read docs", err, c)
 		return nil
 	} else {
 		var shortNames []string
-		for _, doc := range clusters {
-			if doc.Attributes[consts.ShortNameAttribute] != nil {
-				shortNames = append(shortNames, doc.Attributes[consts.ShortNameAttribute].(string))
+		for _, doc := range docs {
+			attributes := doc.GetAttributes()
+			if attributes == nil {
+				attributes = map[string]interface{}{}
+			}
+			if attributes[consts.ShortNameAttribute] != nil {
+				shortNames = append(shortNames, attributes[consts.ShortNameAttribute].(string))
+				doc.SetAttributes(attributes)
 			}
 		}
 		return shortNames
@@ -36,9 +41,9 @@ func getAllShortNames(c *gin.Context) []string {
 }
 
 // getUniqueShortName tries to create a short name from a long name and if it fails, it creates a random one
-func getUniqueShortName(name string, c *gin.Context) string {
+func getUniqueShortName[T types.DocContent](name string, c *gin.Context) string {
 	maxSize := 5
-	filter := getAllShortNames(c)
+	filter := getAllShortNames[T](c)
 	if shortName := longName2short(name, maxSize, 9, filter); shortName != "" {
 		return shortName
 	}

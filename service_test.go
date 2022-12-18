@@ -73,11 +73,6 @@ func (suite *MainTestSuite) TestCluster() {
 	cluster.GUID = "wrongGUID"
 	delete(cluster.Attributes, "alias")
 	testBadRequest(suite, http.MethodPut, consts.ClusterPath, errorDocumentNotFound, cluster, http.StatusNotFound)
-
-	//put doc without attributes
-	errorNoAttributes := `{"error":"cluster attributes are required"}`
-	cluster.Attributes = nil
-	testBadRequest(suite, http.MethodPut, consts.ClusterPath, errorNoAttributes, cluster, http.StatusBadRequest)
 }
 
 //go:embed test_data/posturePolicies.json
@@ -461,4 +456,91 @@ func (suite *MainTestSuite) TestFrameworks() {
 	creationTime, err := time.Parse(time.RFC3339, fw1.CreationTime)
 	suite.NoError(err, "failed to parse creation time")
 	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
+}
+
+func modifyAttribute[T types.DocContent](repo T) T {
+	attributes := repo.GetAttributes()
+	if attributes == nil {
+		attributes = make(map[string]interface{})
+	}
+	if _, ok := attributes["test"]; ok {
+		attributes["test"] = attributes["test"].(string) + "-modified"
+	} else {
+		attributes["test"] = "test"
+	}
+	repo.SetAttributes(attributes)
+	return repo
+}
+
+//go:embed test_data/repositories.json
+var repositoriesJson []byte
+
+func (suite *MainTestSuite) TestRepository() {
+	var repositories []*types.Repository
+	if err := json.Unmarshal(repositoriesJson, &repositories); err != nil {
+		panic(err)
+	}
+
+	newRepoCompareFilter := cmp.FilterPath(func(p cmp.Path) bool {
+		switch p.String() {
+		case "PortalBase.GUID", "CreationDate", "LastLoginDate":
+			return true
+		case "PortalBase.Attributes":
+			if p.Last().String() == `["alias"]` {
+				return true
+			}
+		}
+		return false
+	}, cmp.Ignore())
+
+	commonTest(suite, consts.RepositoryPath, repositories, modifyAttribute[*types.Repository], newRepoCompareFilter)
+
+	//put doc without alias - expect the alias not to be deleted
+	repo := repositories[0]
+	repo.Name = "my-repo"
+	repo = testPostDoc(suite, consts.RepositoryPath, repo, newRepoCompareFilter)
+	creationTime, err := time.Parse(time.RFC3339, repo.CreationDate)
+	suite.NoError(err, "failed to parse creation time")
+	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
+	alias := repo.Attributes["alias"].(string)
+	//expect alias to use the first latter of the repo name
+	suite.Equal(alias, "M", "alias should be the first latter of the repo name")
+	suite.NotEmpty(alias)
+	delete(repo.Attributes, "alias")
+	w := suite.doRequest(http.MethodPut, consts.RepositoryPath, repo)
+	suite.Equal(http.StatusOK, w.Code)
+	response, err := decodeArray[*types.Repository](w)
+	if err != nil || len(response) != 2 {
+		panic(err)
+	}
+	repo = response[1]
+	suite.Equal(alias, repo.Attributes["alias"].(string))
+
+	//put doc without alias and wrong doc GUID
+	repo1 := clone(repo)
+	repo1.GUID = "wrongGUID"
+	delete(repo1.Attributes, "alias")
+	testBadRequest(suite, http.MethodPut, consts.RepositoryPath, errorDocumentNotFound, repo1, http.StatusNotFound)
+
+	//change read only fields - expect them to be ignored
+	repo1 = clone(repo)
+	repo1.Owner = "new-owner"
+	repo1.Provider = "new-provider"
+	repo1.BranchName = "new-branch"
+	repo1.RepoName = "new-repo"
+	repo1.Attributes = map[string]interface{}{"new-attribute": "new-value"}
+	w = suite.doRequest(http.MethodPut, consts.RepositoryPath, repo1)
+	suite.Equal(http.StatusOK, w.Code)
+	response, err = decodeArray[*types.Repository](w)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	newDoc := response[1]
+	//check updated field
+	suite.Equal(newDoc.Attributes["new-attribute"], "new-value")
+	//check read only fields
+	suite.Equal(repo.Owner, newDoc.Owner)
+	suite.Equal(repo.Provider, newDoc.Provider)
+	suite.Equal(repo.BranchName, newDoc.BranchName)
+	suite.Equal(repo.RepoName, newDoc.RepoName)
 }

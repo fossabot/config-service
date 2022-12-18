@@ -9,10 +9,10 @@ import (
 )
 
 func AddRoutes(g *gin.Engine) {
-	handlers.AddRoutes(g,
-		handlers.WithPath[*types.Framework](consts.FrameworkPath),
-		handlers.WithDBCollection[*types.Framework](consts.FrameworkCollection),
-		handlers.WithNameQuery[*types.Framework](consts.FrameworkNameParam),
-		handlers.WithDeleteByName[*types.Framework](true),
-	)
+	handlers.AddRoutes(g, handlers.NewRouterOptionsBuilder[*types.Framework]().
+		WithPath(consts.FrameworkPath).
+		WithDBCollection(consts.FrameworkCollection).
+		WithNameQuery(consts.FrameworkNameParam).
+		WithDeleteByName(true).
+		Get()...)
 }

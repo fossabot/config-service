@@ -10,6 +10,7 @@ const (
 	VulnerabilityExceptionPolicyPath = "/v1_vulnerability_exception_policy"
 	CustomerConfigPath               = "/v1_customer_configuration"
 	FrameworkPath                    = "/v1_opa_framework"
+	RepositoryPath                   = "/v1_repository"
 
 	//DB collections
 	ClustersCollection                     = "clusters"
@@ -18,6 +19,7 @@ const (
 	CustomerConfigCollection               = "v1_customer_configurations"
 	CustomersCollection                    = "customers"
 	FrameworkCollection                    = "v1_opa_frameworks"
+	RepositoryCollection                   = "v1_repositories"
 
 	//Common document fields
 	IdField         = "_id"
