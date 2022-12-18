@@ -117,6 +117,9 @@ func (opts *routerOptions[T]) validate() error {
 	if opts.serveDeleteByName && !opts.serveDelete {
 		return fmt.Errorf("serveDeleteByName can only be true when serveDelete is true")
 	}
+	if opts.uniqueShortName != nil && (!opts.servePost || !opts.servePut) {
+		return fmt.Errorf("uniqueShortName can only be set when servePost and servePut are true")
+	}
 	return nil
 }
 
