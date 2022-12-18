@@ -4,6 +4,7 @@ import (
 	"config-service/db"
 	"config-service/types"
 	"config-service/utils/consts"
+	"config-service/utils/log"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/exp/slices"
@@ -87,4 +88,48 @@ func ValidateUniqueValues[T types.DocContent](uniqueKeyValues ...UniqueKeyValueI
 
 func NameKeyGetter[T types.DocContent]() (key string, mandatory bool, valueGetter func(T) string) {
 	return "name", true, func(doc T) string { return doc.GetName() }
+}
+
+func NameValueGetter[T types.DocContent](doc T) string {
+	return doc.GetName()
+}
+
+func ValidatePostAttributeShortName[T types.DocContent](valueGetter func(T) string) func(c *gin.Context, docs []T) ([]T, bool) {
+	return func(c *gin.Context, docs []T) ([]T, bool) {
+		defer log.LogNTraceEnterExit("validatePostAttributeShortName", c)()
+		for i := range docs {
+			attributes := docs[i].GetAttributes()
+			if attributes == nil {
+				attributes = map[string]interface{}{}
+			}
+			if shortName, ok := attributes[consts.ShortNameAttribute]; !ok || shortName == "" {
+				attributes[consts.ShortNameAttribute] = getUniqueShortName[T](valueGetter(docs[i]), c)
+			}
+		}
+		return docs, true
+	}
+}
+
+func ValidatePutAttributerShortName[T types.DocContent](c *gin.Context, docs []T) ([]T, bool) {
+	defer log.LogNTraceEnterExit("validatePutAttributerShortName", c)()
+	for i := range docs {
+		attributes := docs[i].GetAttributes()
+		if len(attributes) == 0 {
+			attributes = map[string]interface{}{}
+		}
+		// if request attributes do not include alias add it from the old cluster
+		if _, ok := attributes[consts.ShortNameAttribute]; !ok {
+			if oldCluster, err := db.GetDocByGUID[types.Cluster](c, docs[i].GetGUID()); err != nil {
+				ResponseInternalServerError(c, "failed to read cluster", err)
+				return nil, false
+			} else if oldCluster == nil {
+				ResponseDocumentNotFound(c)
+				return nil, false
+			} else {
+				attributes[consts.ShortNameAttribute] = oldCluster.Attributes[consts.ShortNameAttribute]
+				docs[i].SetAttributes(attributes)
+			}
+		}
+	}
+	return docs, true
 }

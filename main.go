@@ -8,6 +8,7 @@ import (
 	"config-service/routes/login"
 	"config-service/routes/posture_exception"
 	"config-service/routes/prob"
+	"config-service/routes/repository"
 	"config-service/routes/vulnerability_exception"
 	"config-service/utils"
 	"context"
@@ -67,6 +68,7 @@ func setupRouter() *gin.Engine {
 	customer_config.AddRoutes(router)
 	customer.AddRoutes(router)
 	framework.AddRoutes(router)
+	repository.AddRoutes(router)
 
 	return router
 }

@@ -1,0 +1,68 @@
+[
+    {
+        "name": "2581756997",
+        "attributes": {
+            "createdBy": "armo-aggregator",
+            "defaultBranch": "",
+            "description": "created by Kubescape automatically",
+            "kind": "repository",
+            "kubescapeVersion": "v2.0.178",
+            "lastCommitHash": "9148b0651b0f6cdae8be3799b67b4b577965c3ae",
+            "lastCommitTime": "0001-01-01T00:00:00Z",
+            "lastCommitterEmail": "",
+            "lastCommitterName": "",
+            "lastPostureReportDate": "2022-12-15T17:18:34Z",
+            "lastPostureReportGUID": "e73da04c-0262-43d1-a85d-9f6fdbb907c3",
+            "remoteURL": "https://gitlab.com/lackingdocumentation/test1-me"
+        },
+        "creationDate": "2022-12-15T16:39:38.447902",
+        "provider": "gitlab",
+        "owner": "lackingdocumentation",
+        "repoName": "test1-me",
+        "branchName": "cicd"
+    },
+    {
+        "name": "3482706022",
+        "attributes": {
+            "createdBy": "armo-aggregator",
+            "defaultBranch": "",
+            "description": "created by Kubescape automatically",
+            "kind": "repository",
+            "kubescapeVersion": "v2.0.178",
+            "lastCommitHash": "3e5903de6ad690ba30e3cee0df07394201ad2f2e",
+            "lastCommitTime": "2022-12-11T13:02:04Z",
+            "lastCommitterEmail": "",
+            "lastCommitterName": "GitHub",
+            "lastPostureReportDate": "2022-12-17T12:42:03Z",
+            "lastPostureReportGUID": "27817365-8b0e-48f8-bf86-1d8c0af6efdf",
+            "remoteURL": "https://github.com/armosec/kubescape"
+        },
+        "creationDate": "2022-12-17T12:42:14.350357",
+        "provider": "github",
+        "owner": "armosec",
+        "repoName": "kubescape",
+        "branchName": "master"
+    },
+    {
+        "name": "1834185600",
+        "attributes": {
+            "createdBy": "armo-aggregator",
+            "defaultBranch": "",
+            "description": "created by Kubescape automatically",
+            "kind": "repository",
+            "kubescapeVersion": "v2.0.178",
+            "lastCommitHash": "31f22222b7c9c9fb83a4361059a4cec373ed18e0",
+            "lastCommitTime": "0001-01-01T00:00:00Z",
+            "lastCommitterEmail": "",
+            "lastCommitterName": "",
+            "lastPostureReportDate": "2022-12-17T15:19:42Z",
+            "lastPostureReportGUID": "63eb6435-0e85-46bf-8876-b67a93c1317b",
+            "remoteURL": "https://github.com/xyz/DevOps"
+        },
+        "creationDate": "2022-12-17T15:08:10.408507",
+        "provider": "github",
+        "owner": "xyz",
+        "repoName": "DevOps",
+        "branchName": "main"
+    }
+]

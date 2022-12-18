@@ -11,15 +11,15 @@ import (
 )
 
 func AddRoutes(g *gin.Engine) {
-	customerConfigRouter := handlers.AddRoutes(g,
-		handlers.WithPath[*types.CustomerConfig](consts.CustomerConfigPath),
-		handlers.WithDBCollection[*types.CustomerConfig](consts.CustomerConfigCollection),
-		handlers.WithServeGet[*types.CustomerConfig](false),        // customer config needs custom get handler
-		handlers.WithServeDelete[*types.CustomerConfig](false),     // customer config needs custom delete handler
-		handlers.WithValidatePutGUID[*types.CustomerConfig](false), // customer config needs custom put validator
-		handlers.WithPutValidators(validatePutCustomerConfig),      //customer config custom put validator
+	customerConfigRouter := handlers.AddRoutes(g, handlers.NewRouterOptionsBuilder[*types.CustomerConfig]().
+		WithPath(consts.CustomerConfigPath).
+		WithDBCollection(consts.CustomerConfigCollection).
+		WithServeGet(false).                          // customer config needs custom get handler
+		WithServeDelete(false).                       // customer config needs custom delete handler
+		WithValidatePutGUID(false).                   // customer config needs custom put validator
+		WithPutValidators(validatePutCustomerConfig). //customer config custom put validator
+		Get()...)
 
-	)
 	customerConfigRouter.GET("", getCustomerConfigHandler)
 	customerConfigRouter.DELETE("", deleteCustomerConfig)
 

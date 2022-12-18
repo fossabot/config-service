@@ -33,13 +33,16 @@ func NewDocument[T DocContent](content T, customerGUID string) Document[T] {
 // Doc Content interface for data types embedded in DB documents
 type DocContent interface {
 	*CustomerConfig | *Cluster | *PostureExceptionPolicy | *VulnerabilityExceptionPolicy | *Customer |
-		*PolicyRule | *Control | *Framework
+		*PolicyRule | *Control | *Framework | *Repository
 	InitNew()
+	GetReadOnlyFields() []string
+	//default implementation exist in portal base
 	GetName() string
 	SetName(name string)
-	GetReadOnlyFields() []string
 	GetGUID() string
 	SetGUID(guid string)
+	GetAttributes() map[string]interface{}
+	SetAttributes(attributes map[string]interface{})
 }
 
 // redefine types for Doc Content implementations
@@ -78,23 +81,17 @@ func (c *CustomerConfig) InitNew() {
 		c.Name = c.Scope.Attributes["cluster"]
 	}
 }
+func (c *CustomerConfig) GetAttributes() map[string]interface{} {
+	return c.Attributes
+}
+func (c *CustomerConfig) SetAttributes(attributes map[string]interface{}) {
+	c.Attributes = attributes
+}
 
 // DocContent implementations
 
 type PolicyRule opapolicy.PolicyRule
 
-func (p *PolicyRule) GetGUID() string {
-	return p.GUID
-}
-func (p *PolicyRule) SetGUID(guid string) {
-	p.GUID = guid
-}
-func (p *PolicyRule) GetName() string {
-	return p.Name
-}
-func (p *PolicyRule) SetName(name string) {
-	p.Name = name
-}
 func (*PolicyRule) GetReadOnlyFields() []string {
 	return commonReadOnlyFields
 }
@@ -104,18 +101,6 @@ func (p *PolicyRule) InitNew() {
 
 type Framework opapolicy.Framework
 
-func (f *Framework) GetGUID() string {
-	return f.GUID
-}
-func (f *Framework) SetGUID(guid string) {
-	f.GUID = guid
-}
-func (f *Framework) GetName() string {
-	return f.Name
-}
-func (f *Framework) SetName(name string) {
-	f.Name = name
-}
 func (*Framework) GetReadOnlyFields() []string {
 	return commonReadOnlyFields
 }
@@ -125,18 +110,6 @@ func (f *Framework) InitNew() {
 
 type Control opapolicy.Control
 
-func (c *Control) GetGUID() string {
-	return c.GUID
-}
-func (c *Control) SetGUID(guid string) {
-	c.GUID = guid
-}
-func (c *Control) GetName() string {
-	return c.Name
-}
-func (c *Control) SetName(name string) {
-	c.Name = name
-}
 func (c *Control) GetReadOnlyFields() []string {
 	return commonReadOnlyFields
 }
@@ -146,18 +119,6 @@ func (c *Control) InitNew() {
 
 type Customer armotypes.PortalCustomer
 
-func (c *Customer) GetGUID() string {
-	return c.GUID
-}
-func (c *Customer) SetGUID(guid string) {
-	c.GUID = guid
-}
-func (c *Customer) GetName() string {
-	return c.Name
-}
-func (c *Customer) SetName(name string) {
-	c.Name = name
-}
 func (c *Customer) GetReadOnlyFields() []string {
 	return commonReadOnlyFields
 }
@@ -167,18 +128,6 @@ func (c *Customer) InitNew() {
 
 type Cluster armotypes.PortalCluster
 
-func (c *Cluster) GetGUID() string {
-	return c.GUID
-}
-func (c *Cluster) SetGUID(guid string) {
-	c.GUID = guid
-}
-func (c *Cluster) GetName() string {
-	return c.Name
-}
-func (c *Cluster) SetName(name string) {
-	c.Name = name
-}
 func (c *Cluster) GetReadOnlyFields() []string {
 	return clusterReadOnlyFields
 }
@@ -191,19 +140,6 @@ func (c *Cluster) InitNew() {
 
 type VulnerabilityExceptionPolicy armotypes.VulnerabilityExceptionPolicy
 
-func (c *VulnerabilityExceptionPolicy) GetGUID() string {
-	return c.GUID
-}
-func (c *VulnerabilityExceptionPolicy) SetGUID(guid string) {
-	c.GUID = guid
-}
-func (c *VulnerabilityExceptionPolicy) GetName() string {
-	return c.Name
-}
-func (c *VulnerabilityExceptionPolicy) SetName(name string) {
-	c.Name = name
-}
-
 func (c *VulnerabilityExceptionPolicy) GetReadOnlyFields() []string {
 	return exceptionPolicyReadOnlyFields
 }
@@ -213,18 +149,6 @@ func (c *VulnerabilityExceptionPolicy) InitNew() {
 
 type PostureExceptionPolicy armotypes.PostureExceptionPolicy
 
-func (p *PostureExceptionPolicy) GetGUID() string {
-	return p.GUID
-}
-func (p *PostureExceptionPolicy) SetGUID(guid string) {
-	p.GUID = guid
-}
-func (p *PostureExceptionPolicy) GetName() string {
-	return p.Name
-}
-func (p *PostureExceptionPolicy) SetName(name string) {
-	p.Name = name
-}
 func (p *PostureExceptionPolicy) GetReadOnlyFields() []string {
 	return exceptionPolicyReadOnlyFields
 }
@@ -232,9 +156,20 @@ func (p *PostureExceptionPolicy) InitNew() {
 	p.CreationTime = time.Now().UTC().Format(time.RFC3339)
 }
 
+type Repository armotypes.PortalRepository
+
+func (*Repository) GetReadOnlyFields() []string {
+	return repositoryReadOnlyFields
+}
+func (r *Repository) InitNew() {
+	r.CreationDate = time.Now().UTC().Format(time.RFC3339)
+	if r.Attributes == nil {
+		r.Attributes = make(map[string]interface{})
+	}
+}
+
 var commonReadOnlyFields = []string{consts.IdField, consts.NameField, consts.GUIDField}
 var clusterReadOnlyFields = append([]string{"subscription_date"}, commonReadOnlyFields...)
 var exceptionPolicyReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
 var customerConfigReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
-
-//var repositoryReadOnlyFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, commonReadOnlyFields...)
+var repositoryReadOnlyFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, commonReadOnlyFields...)
