@@ -158,7 +158,7 @@ func GetDocByGUID[T any](c context.Context, guid string) (*T, error) {
 
 // GetDo returns document by given filter
 func GetDoc[T any](c context.Context, filter *FilterBuilder) (*T, error) {
-	defer log.LogNTraceEnterExit("GetDocByGUID", c)()
+	defer log.LogNTraceEnterExit("GetDoc", c)()
 	collection, _, err := ReadContext(c)
 	if err != nil {
 		return nil, err
