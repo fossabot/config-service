@@ -28,7 +28,9 @@ func getCustomer(c *gin.Context) {
 		handlers.ResponseInternalServerError(c, "failed to read customer guid from context", err)
 		return
 	}
-	if doc, err := db.GetDocByGUID[*types.Customer](c, customerGUID); err != nil {
+	//do not filter per customer since old data does not have customer field
+	filter := db.NewFilterBuilder().WithGUID(customerGUID)
+	if doc, err := db.GetDoc[*types.Customer](c, filter); err != nil {
 		handlers.ResponseInternalServerError(c, "failed to read document", err)
 		return
 	} else if doc == nil {

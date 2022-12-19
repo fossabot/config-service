@@ -12,7 +12,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/imdario/mergo v0.3.13
-	github.com/kubescape/opa-utils v0.0.210
+	github.com/kubescape/opa-utils v0.0.213
 	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.8.0
 	github.com/tkanos/gonfig v0.0.0-20210106201359-53e13348de2f
