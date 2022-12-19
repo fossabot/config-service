@@ -448,11 +448,19 @@ func (suite *MainTestSuite) TestFrameworks() {
 		return fw
 	}
 
-	commonTest(suite, consts.FrameworkPath, frameworks, modifyFunc, commonCmpFilter)
+	fwCmpFilter := cmp.FilterPath(func(p cmp.Path) bool {
+		return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "Controls"
+	}, cmp.Ignore())
 
-	testGetDeleteByNameAndQuery(suite, consts.FrameworkPath, consts.FrameworkNameParam, frameworks, nil)
+	commonTest(suite, consts.FrameworkPath, frameworks, modifyFunc, fwCmpFilter)
 
-	fw1 := testPostDoc(suite, consts.FrameworkPath, frameworks[0], commonCmpFilter)
+	fwCmpIgnoreControls := cmp.FilterPath(func(p cmp.Path) bool {
+		return p.String() == "Controls"
+	}, cmp.Ignore())
+
+	testGetDeleteByNameAndQuery(suite, consts.FrameworkPath, consts.FrameworkNameParam, frameworks, nil, fwCmpIgnoreControls)
+
+	fw1 := testPostDoc(suite, consts.FrameworkPath, frameworks[0], fwCmpFilter)
 	creationTime, err := time.Parse(time.RFC3339, fw1.CreationTime)
 	suite.NoError(err, "failed to parse creation time")
 	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")

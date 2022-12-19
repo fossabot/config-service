@@ -47,7 +47,7 @@ func commonTest[T types.DocContent](suite *MainTestSuite, path string, testDocs 
 	//PUT
 	oldDoc1 := clone(doc1)
 	doc1 = modifyFunc(doc1)
-	testPutDoc(suite, path, oldDoc1, doc1)
+	testPutDoc(suite, path, oldDoc1, doc1, compareNewOpts...)
 
 	//test changed name - should be ignored
 	changedNamedDoc := clone(doc1)
@@ -59,13 +59,13 @@ func commonTest[T types.DocContent](suite *MainTestSuite, path string, testDocs 
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
-	diff := cmp.Diff(response, expectedResponse)
+	diff := cmp.Diff(response, expectedResponse, compareNewOpts...)
 	suite.Equal("", diff)
 
 	//test put with guid in path
 	oldDoc1 = clone(doc1)
 	doc1 = modifyFunc(doc1)
-	testPutDocWGuid(suite, path, oldDoc1, doc1)
+	testPutDocWGuid(suite, path, oldDoc1, doc1, compareNewOpts...)
 	//test put with no guid should fail
 	noGuidDoc := clone(doc1)
 	noGuidDoc.SetGUID("")
@@ -78,7 +78,7 @@ func commonTest[T types.DocContent](suite *MainTestSuite, path string, testDocs 
 	//GET
 	//test get by guid
 	pathWGuid := fmt.Sprintf("%s/%s", path, doc1.GetGUID())
-	testGetDoc(suite, pathWGuid, doc1)
+	testGetDoc(suite, pathWGuid, doc1, compareNewOpts...)
 	//test get all
 	docs := []T{doc1}
 	docs = append(docs, documents...)
@@ -87,12 +87,12 @@ func commonTest[T types.DocContent](suite *MainTestSuite, path string, testDocs 
 	testBadRequest(suite, http.MethodGet, fmt.Sprintf("%s/%s", path, "no_exist"), errorDocumentNotFound, nil, http.StatusNotFound)
 
 	//test delete by guid
-	testDeleteDocByGUID(suite, path, doc1)
+	testDeleteDocByGUID(suite, path, doc1, compareNewOpts...)
 	//test get all after delete
 	testGetDocs(suite, path, documents, compareNewOpts...)
 	//delete the rest of the docs
 	for _, doc := range documents {
-		testDeleteDocByGUID(suite, path, doc)
+		testDeleteDocByGUID(suite, path, doc, compareNewOpts...)
 	}
 	//test get all after delete all
 	testGetDocs(suite, path, []T{}, compareNewOpts...)
@@ -106,7 +106,7 @@ type queryTest[T types.DocContent] struct {
 	expectedIndexes []int
 }
 
-func testGetDeleteByNameAndQuery[T types.DocContent](suite *MainTestSuite, basePath, nameParam string, testDocs []T, getQueries []queryTest[T]) {
+func testGetDeleteByNameAndQuery[T types.DocContent](suite *MainTestSuite, basePath, nameParam string, testDocs []T, getQueries []queryTest[T], compareOpts ...cmp.Option) {
 	newDocs := testBulkPostDocs(suite, basePath, testDocs, commonCmpFilter)
 	suite.Equal(len(testDocs), len(newDocs))
 	docNames := []string{}
@@ -118,7 +118,7 @@ func testGetDeleteByNameAndQuery[T types.DocContent](suite *MainTestSuite, baseP
 	testGetNameList(suite, basePath, docNames)
 	//test get by name
 	path := fmt.Sprintf("%s?%s=%s", basePath, nameParam, newDocs[0].GetName())
-	testGetDoc(suite, path, newDocs[0])
+	testGetDoc(suite, path, newDocs[0], compareOpts...)
 	//test get by not existing name
 	path = fmt.Sprintf("%s?%s=%s", basePath, nameParam, "notExistingName")
 	testBadRequest(suite, http.MethodGet, path, errorDocumentNotFound, nil, http.StatusNotFound)
@@ -134,7 +134,7 @@ func testGetDeleteByNameAndQuery[T types.DocContent](suite *MainTestSuite, baseP
 	}
 
 	//test delete by name
-	testDeleteDocByName(suite, basePath, nameParam, newDocs[0])
+	testDeleteDocByName(suite, basePath, nameParam, newDocs[0], compareOpts...)
 	//test bulk delete by name
 	docNames = docNames[1:]
 	testBulkDeleteByName(suite, basePath, nameParam, docNames)
@@ -252,7 +252,7 @@ func testBulkPostDocs[T types.DocContent](suite *MainTestSuite, path string, doc
 }
 
 // //////////////////////////////////////// PUT //////////////////////////////////////////
-func testPutDoc[T types.DocContent](suite *MainTestSuite, path string, oldDoc, newDoc T) {
+func testPutDoc[T types.DocContent](suite *MainTestSuite, path string, oldDoc, newDoc T, compareNewOpts ...cmp.Option) {
 	w := suite.doRequest(http.MethodPut, path, newDoc)
 	suite.Equal(http.StatusOK, w.Code)
 	response, err := decodeArray[T](w)
@@ -266,11 +266,11 @@ func testPutDoc[T types.DocContent](suite *MainTestSuite, path string, oldDoc, n
 	sort.Slice(expectedResponse, func(i, j int) bool {
 		return expectedResponse[i].GetName() < expectedResponse[j].GetName()
 	})
-	diff := cmp.Diff(response, expectedResponse)
+	diff := cmp.Diff(response, expectedResponse, compareNewOpts...)
 	suite.Equal("", diff)
 }
 
-func testPutDocWGuid[T types.DocContent](suite *MainTestSuite, path string, oldDoc, newDoc T) {
+func testPutDocWGuid[T types.DocContent](suite *MainTestSuite, path string, oldDoc, newDoc T, compareNewOpts ...cmp.Option) {
 	guid := newDoc.GetGUID()
 	path = fmt.Sprintf("%s/%s", path, guid)
 	newDoc.SetGUID("")
@@ -288,7 +288,7 @@ func testPutDocWGuid[T types.DocContent](suite *MainTestSuite, path string, oldD
 	sort.Slice(expectedResponse, func(i, j int) bool {
 		return expectedResponse[i].GetName() < expectedResponse[j].GetName()
 	})
-	diff := cmp.Diff(response, expectedResponse)
+	diff := cmp.Diff(response, expectedResponse, compareNewOpts...)
 	suite.Equal("", diff)
 }
 
@@ -305,7 +305,7 @@ func testDeleteDocByGUID[T types.DocContent](suite *MainTestSuite, path string, 
 	suite.Equal("", diff)
 }
 
-func testDeleteDocByName[T types.DocContent](suite *MainTestSuite, path string, nameParam string, doc2Delete T) {
+func testDeleteDocByName[T types.DocContent](suite *MainTestSuite, path string, nameParam string, doc2Delete T, compareOpts ...cmp.Option) {
 	path = fmt.Sprintf("%s?%s=%s", path, nameParam, doc2Delete.GetName())
 	w := suite.doRequest(http.MethodDelete, path, nil)
 	suite.Equal(http.StatusOK, w.Code)
@@ -313,7 +313,7 @@ func testDeleteDocByName[T types.DocContent](suite *MainTestSuite, path string, 
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
-	diff := cmp.Diff(deleteDoc, doc2Delete)
+	diff := cmp.Diff(deleteDoc, doc2Delete, compareOpts...)
 	suite.Equal("", diff)
 }
 
