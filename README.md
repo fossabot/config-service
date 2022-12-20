@@ -52,7 +52,7 @@ frameworks, err = db.GetAllForCustomer[*types.Framework](c)
 
 
 ## Handlers package
-*Note: as described in the [Using the generic handlers](#using-the-generic-handlers) section, most endpoints will use the generic handlers by configuring the routes options and therefor will not need to use the `handlers` package functions directly.*
+*Note: as described in the [Using the generic handlers](#using-the-generic-handlers) section, most endpoints will use the generic handlers by configuring routes options and therefor will not need to use the `handlers` package functions directly.*
 
 The `handlers` package defines:
 1. [gin handlers](handlers/handlers.go) for handing the full lifecycle of a request for common `CRUD` operations.
@@ -65,13 +65,11 @@ The `handlers` package defines:
 
 
 
-*Note:The functions in the `handlers` package use data stored in the gin context by other middlewares.
+The functions in the `handlers` package use data stored in the gin context by other middlewares.
 For instance `CustomerGUID` is set by the `authenticate` middleware, `RequestLogger` is set by the logger middleware, db collection name set by the db middleware and so on.
-For full list ok context keys see [const.go](/utils/consts/const.go).*
+For full list ok context keys see [const.go](/utils/consts/const.go).
 
 ## DB package
-*Note: Most endpoints will not need to use the `db` package directly, even when customized implementation is needed.
-Customized handlers will find most of what's needed to implement customized handlers in the `handlers` package.*
 
 The db package provides:
 1. Common database [CRUD functions](db/utils.go)
@@ -79,6 +77,9 @@ The db package provides:
 3. [Projection builder](db/projection.go)
 4. [Update command generator](db/update.go)
 5. [Cache](db/cached_doc.go) rarely updated and frequently read documents.
+
+*Note: Most endpoints will not need to use the `db` package directly, even when customized implementation is needed.
+Customized handlers will find most of what's needed to implement customized handlers in the `handlers` package.*
 
 ## Adding a new document type handler
 - ### Todo List
