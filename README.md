@@ -36,7 +36,14 @@ type DocContent interface {
     InitNew()
 	GetReadOnlyFields() []string
 ```
-
+Document types also need [bson](https://www.mongodb.com/docs/drivers/go/current/usage-examples/struct-tagging/) tags for the fields that are stored in the database.
+```go
+type PortalCluster struct {
+	PortalBase       `json:",inline" bson:"inline"`
+	SubscriptionDate string `json:"subscription_date" bson:"subscription_date"`
+	LastLoginDate    string `json:"last_login_date" bson:"last_login_date"`
+}
+```
 
 
 ![Document Types](docs/types.drawio.svg)
@@ -54,11 +61,11 @@ frameworks, err = db.GetAllForCustomer[*types.Framework](c)
 ## Handlers package
 *Note: as described in the [Using the generic handlers](#using-the-generic-handlers) section, most endpoints will use the generic handlers by configuring routes options and therefor will not need to use the `handlers` package functions directly.*
 
-The `handlers` package defines:
-1. [gin handlers](handlers/handlers.go) for handing the full lifecycle of a request for common `CRUD` operations.
- The name convention of a full lifecycle handler is `Handle<method><operation>` e.g. `HandleGetAll`.
-2. [Functions](handlers/handlers.go) for handling different parts of the request lifecycle.These functions are the building blocks of the full lifecycle handlers and their naming convention is `<method><operation>Handler` e.g. `PostDocHandler` or  `GetByNameParamHandler`.
-3. Common [middleware](handlers/middleware.go) functions, the middleware name convention is  `<method><operation>Middleware` e.g. `PostValidationMiddleware`.
+The `handlers` package provides:
+1. [gin handlers](handlers/handlers.go) for handing requests with common `CRUD` operations.
+ The name convention of a request handler is `Handle<method><operation>` e.g. `HandleGetAll`.
+2. [Handlers helpers](handlers/handlers.go) for handling different parts of the request lifecycle.These functions are the building blocks of the request handlers and can also be reused when implementing customized handlers. The naming convention for the handlers helpers is `<method><operation>Handler` e.g. `PostDocHandler` or  `GetByNameParamHandler`.
+3. Common [middleware](handlers/middleware.go) functions. The middleware name convention is  `<method><operation>Middleware` e.g. `PostValidationMiddleware`.
 4. Handlers for common [responses](handlers/response.go).
 5. Predefined [validators](handlers/validate.go) to customized Put and Post validation.
 6. [Routes configuration](handlers/routes.go) to easily use all the above as described in [Using the generic handlers](#using-the-generic-handlers) section.
@@ -66,8 +73,8 @@ The `handlers` package defines:
 
 
 The functions in the `handlers` package use data stored in the gin context by other middlewares.
-For instance `CustomerGUID` is set by the `authenticate` middleware, `RequestLogger` is set by the logger middleware, db collection name set by the db middleware and so on.
-For full list ok context keys see [const.go](/utils/consts/const.go).
+For instance `CustomerGUID` is set by the authentication middleware, `RequestLogger` is set by the logger middleware, `dbCollection` is set by the db middleware and so on.
+For full list of context keys see [const.go](/utils/consts/const.go).
 
 ## DB package
 
@@ -76,21 +83,22 @@ The db package provides:
 2. [Query filter builder](db/filter.go)
 3. [Projection builder](db/projection.go)
 4. [Update command generator](db/update.go)
-5. [Cache](db/cached_doc.go) rarely updated and frequently read documents.
+5. [Cache](db/cached_doc.go) for rarely updated and frequently read documents.
 
-*Note: Most endpoints will not need to use the `db` package directly, even when customized implementation is needed.
-Customized handlers will find most of what's needed to implement customized handlers in the `handlers` package.*
+*Note: Most endpoints will not need to use the `db` package directly.
+Most handlers will be able to implement even customized behavior using just the `handlers` package functions.*
 
 ## Adding a new document type handler
 - ### Todo List
-1. Add your the type to the [DocContent](/types/types.go) types constraint in the [types package](/types/types.go) and implement the [DocContent](/types/types.go) interface.
-2. Add the strings of the new type path and DB collection to [const.go](/utils/consts/const.go).
-3. Add a folder under the routes folder for the new type and add a new file with ```func AddRoutes(g *gin.Engine) ``` function that adds handlers for the new type.
-4. call the `AddRoutes` function in the [main.go](/main.go) file after the authentication middleware.
-5. Add e2e [tests](#testing) the new type endpoint.
+1. Add the type to [DocContent](/types/types.go) types constraint and implement [DocContent](/types/types.go) methods.
+2. Add `bson` tags to the new type fields.
+3. Add the strings of the new type path and DB collection to [const.go](/utils/consts/const.go).
+4. Add a folder under the `routes` folder for the new type and a file with ```func AddRoutes(g *gin.Engine) ``` function for setting up the `http` handlers for the new type.
+5. call `myType.AddRoutes` function from [main.go](/main.go) after the authentication middleware.
+6. Add e2e [tests](#testing) the new type endpoint.
 
 ### Using the generic handlers
-Endpoint handlers can use `handlers.AddRoutes` function and configure the routes [options](handlers/routes.go) without writhing customized handlers 
+Endpoint handlers can configure the desired handling behavior by setting [routes options](handlers/routes.go) and calling the `handlers.AddRoutes` function.
 
 
 ```go
