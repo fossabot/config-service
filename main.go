@@ -57,7 +57,7 @@ func setupRouter() *gin.Engine {
 
 	//login routes
 	login.AddRoutes(router)
-	//public routes
+	//public (not authenticate routes
 	customer.AddPublicRoutes(router)
 
 	//auth middleware
