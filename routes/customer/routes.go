@@ -14,11 +14,14 @@ import (
 
 func AddRoutes(g *gin.Engine) {
 	customer := g.Group("/")
-
 	customer.Use(handlers.DBContextMiddleware(consts.CustomersCollection))
-
 	customer.GET("customer", getCustomer)
-	customer.POST("customer_tenant", postCustomerTenant)
+}
+
+func AddPublicRoutes(g *gin.Engine) {
+	tenant := g.Group("/")
+	tenant.Use(handlers.DBContextMiddleware(consts.CustomersCollection))
+	tenant.POST("customer_tenant", postCustomerTenant)
 }
 
 func getCustomer(c *gin.Context) {
