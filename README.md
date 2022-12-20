@@ -78,7 +78,7 @@ The db package provides:
 2. [Query filter builder](db/filter.go)
 3. [Projection builder](db/projection.go)
 4. [Update command generator](db/update.go)
-
+5. [Cache](db/cached_doc.go) rarely updated and frequently read documents.
 
 ## Adding a new document type handler
 - ### Todo List
