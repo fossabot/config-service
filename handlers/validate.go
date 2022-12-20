@@ -10,6 +10,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+// Validator is a function that validates the request body and returns true if the request is valid
+// a validator may initialize the doc with required values therefor it returns the docs as well
 type Validator[T types.DocContent] func(c *gin.Context, docs []T) (verifiedDocs []T, valid bool)
 
 func ValidateGUIDExistence[T types.DocContent](c *gin.Context, docs []T) ([]T, bool) {

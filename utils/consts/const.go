@@ -1,8 +1,12 @@
 package consts
 
 const (
-	CustomerGUID = "customerGUID"
-	Collection   = "collection"
+
+	//Context keys
+	DocContentKey = "docContent"
+	CustomerGUID  = "customerGUID"
+	Collection    = "collection"
+	ReqLogger     = "reqLogger"
 
 	//PATHS
 	ClusterPath                      = "/cluster"
@@ -36,9 +40,6 @@ const (
 	ListParam          = "list"
 	PolicyNameParam    = "policyName"
 	FrameworkNameParam = "frameworkName"
-
-	//Context keys
-	DocContentKey = "docContent"
 
 	//Cached documents keys
 	DefaultCustomerConfigKey = "defaultCustomerConfig"

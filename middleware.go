@@ -49,7 +49,7 @@ func requestLoggerWithFields(c *gin.Context) {
 		zap.String("path", c.Request.URL.Path),
 	}
 	fields = append(fields, telemetryLogFields(c)...)
-	c.Set("zapLogger", zapLogger.WithOptions(zap.Fields(fields...)))
+	c.Set(consts.ReqLogger, zapLogger.WithOptions(zap.Fields(fields...)))
 	c.Next()
 }
 
