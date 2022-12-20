@@ -3,55 +3,93 @@
 
 1. [Overview](#overview)
 2. [Document types](#document-types)
-3. [Generic Handlers](#generic-handlers)
-4. [Adding new document type handler](#adding-new-document-type-handler)
+3. [Handlers package](#handlers-package)
+4. [DB package](#handlers-package)
+5. [Adding a new document type handler](#adding-a-new-document-type-handler)
     1. [Todo List](#todo-list)
     2. [Using the generic handlers](#using-the-generic-handlers)
     3. [Router options](#router-options)
     4. [Customized behavior](#customized-behavior)
+6. [Testing](#testing)
 
 
 
 
 ## Overview
 
-The config service is a CRUD service of configuration data for kubescape.
+ The `config-service` is a CRUD service of configuration data for kubescape.
 
-It uses [gin web framework](https://github.com/gin-gonic/gin) for http handling and  [mongo](https://github.com/mongodb/mongo-go-driver) as the service data base.
+It uses [gin web framework](https://github.com/gin-gonic/gin) for `http` handling and  [mongo](https://github.com/mongodb/mongo-go-driver) as the service database.
 
-The config service provides DB package for generic documents handling operations and handlers package for common handling.
+The config service provides a ```db``` package for common database `CRUD` operations and a ```handlers``` package for common `http` handling.
 
-![Alt text](docs/overview.jpg?raw=true "Overview")
+
+![Packages](docs/overview.drawio.svg)
 
 ## Document types
-The service serve documents of DocContent type parameter, each document type should be added to the Doc content types constraint and implement the DocContent interface.
-Both the db and handlers functions are parameterized by the DocContent type and do not need type casting.
+The service serves documents of [DocContent](/types/types.go) type.
 
+All served document types need to be part of the [DocContent](/types/types.go) types constraint and implement the [DocContent](/types/types.go) interface.
+```go
+type DocContent interface {
+	*MyType | *CustomerConfig | *Cluster | *PostureExceptionPolicy ...
+    InitNew()
+	GetReadOnlyFields() []string
+```
+
+
+
+![Document Types](docs/types.drawio.svg)
+
+Functions in the `db` and `handlers` packages are using [DocContent](/types/types.go) type parameter.
 ```go
 clusters := []*types.Cluster{}
 frameworks := []*types.Framework{}
 //method returns array of specified type 
-clusters, err = db.GetAllForCustomer[*types.Cluster](...)
-frameworks, err = db.GetAllForCustomer[*types.Framework](...)
+clusters, err = db.GetAllForCustomer[*types.Cluster](c)
+frameworks, err = db.GetAllForCustomer[*types.Framework](c)
 ```
-For more details see the [types package](/types/types.go) section. 
-
-![Alt text](docs/types.jpg?raw=true "Types")
-
-## Generic Handlers
-The generic handlers uses data in the gin context that were set by other middleware or handlers to perform the desired action like DocContent that was sent in the request body customer by the Post/Put handlers, customer guid set by the authenticate middleware, request logger set by the logger middleware, db collection name set by the db middleware and so on.
-For full list ok context keys see [const.go](/utils/consts/const.go).
 
 
-## Adding new document type handler
-### Todo List
-1. Add your new type to the DocContent types constraint in the [types package](/types/types.go) and implement the DocContent interface.
-2. Add the strings of the new type path and DB collection in [const.go](/utils/consts/const.go) for the new type.
+## Handlers package
+*Note: as described in the [Using the generic handlers](#using-the-generic-handlers) section, most endpoints will use the generic handlers by configuring the routes options and therefor will not need to use the `handlers` package functions directly.*
+
+The `handlers` package defines:
+1. [gin handlers](handlers/handlers.go) for handing the full lifecycle of a request for common `CRUD` operations.
+ The name convention of a full lifecycle handler is `Handle<method><operation>` e.g. `HandleGetAll`.
+2. [Functions](handlers/handlers.go) for handling different parts of the request lifecycle.These functions are the building blocks of the full lifecycle handlers and their naming convention is `<method><operation>Handler` e.g. `PostDocHandler` or  `GetByNameParamHandler`.
+3. Common [middleware](handlers/middleware.go) functions, the middleware name convention is  `<method><operation>Middleware` e.g. `PostValidationMiddleware`.
+4. Handlers for common [responses](handlers/response.go).
+5. Predefined [validators](handlers/validate.go) to customized Put and Post validation.
+6. [Routes configuration](handlers/routes.go) to easily use all the above as described in [Using the generic handlers](#using-the-generic-handlers) section.
+
+
+
+*Note:The functions in the `handlers` package use data stored in the gin context by other middlewares.
+For instance `CustomerGUID` is set by the `authenticate` middleware, `RequestLogger` is set by the logger middleware, db collection name set by the db middleware and so on.
+For full list ok context keys see [const.go](/utils/consts/const.go).*
+
+## DB package
+*Note: Most endpoints will not need to use the `db` package directly, even when customized implementation is needed.
+Customized handlers will find most of what's needed to implement customized handlers in the `handlers` package.*
+
+The db package provides:
+1. Common database [CRUD functions](db/utils.go)
+2. [Query filter builder](db/filter.go)
+3. [Projection builder](db/projection.go)
+4. [Update command generator](db/update.go)
+
+
+## Adding a new document type handler
+- ### Todo List
+1. Add your the type to the [DocContent](/types/types.go) types constraint in the [types package](/types/types.go) and implement the [DocContent](/types/types.go) interface.
+2. Add the strings of the new type path and DB collection to [const.go](/utils/consts/const.go).
 3. Add a folder under the routes folder for the new type and add a new file with ```func AddRoutes(g *gin.Engine) ``` function that adds handlers for the new type.
-4. call the ```AddRoutes``` function in the [main.go](/main.go) file after the authentication middleware.
+4. call the `AddRoutes` function in the [main.go](/main.go) file after the authentication middleware.
+5. Add e2e [tests](#testing) the new type endpoint.
 
 ### Using the generic handlers
-Endpoint handlers can configure the endpoint behavior and add handlers using ```handlers.AddRoutes ``` function with desired options 
+Endpoint handlers can use `handlers.AddRoutes` function and configure the routes [options](handlers/routes.go) without writhing customized handlers 
 
 
 ```go
@@ -63,48 +101,87 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
-
+//Add routes for serving myType 
 function AddRoutes(g *gin.Engine) {
-    //create a new router for myType endpoint with default options 
+    //create a new router options builder for myType with default options 
     routerOptions := handlers.NewRouterOptionsBuilder[*types.MyType].
     WithPath("/myType").
     WithDBCollection(consts.MyTypeCollection).
     //add get by name e.g. GET /myType?typeName="x"
-    WithNameQuery(consts.MyTypeNameQueryParam).
-    //remove get name list e.g. GET /myType?list
+    WithNameQuery("typeName").
+    //disable get names list e.g. GET /myType?list
     WithGetNamesList(false)
-    //add handlers for myType endpoint
+    //use handlers AddRoutes with the options to build the http handlers 
     handlers.AddRoutes(g, routerOptions.Get()...)
 }
 ```
-#### Router options
+#### [Router options](handlers/routes.go)
 | Method/Action | Description | Option setting example | Default |
 | ------------- | ----------- | -------- | -------- | 
 |GET all  | get all user's documents | routerOptions.WithServeGet(true) | On |
 |GET list of names  | get list of documents names if "list" query param is set (e.g. GET /myType?list) |  routerOptions.WithGetNamesList(true) | On
-|GET all with global  | get all user's and global (no owner) documents | routerOptions.WithIncludeGlobalDocs(true) | Off |
+|GET all with global  | get all user's and global (without an owner) documents | routerOptions.WithIncludeGlobalDocs(true) | Off |
 |GET by name  | get a document by name using query param (e.g. GET /myType?typeName="x") |  routerOptions.WithNameQuery("typeName") | Off
 |GET by query  | get a document by query params according to given [query config](handlers/scopequery.go) (e.g. GET /myType?scope.cluster="nginx") |  routerOptions.WithQueryConfig(&queryConfig) | Off |
-|POST with guid in path or body | create a new document, the post operation can be configured with additional customized or predefined [validators](handlers/validate.go) like unique name, unique short name attribute or custom validator   |  routerOptions.WithServePost(true).WithValidatePostUniqueName(true).WithPostValidator(myValidator) | On with unique name validator
-|PUT  | update a document, the put operation can be configured with additional customized or predefined [validators](handlers/validate.go) like GUID existence , or custom validator   |  routerOptions.WithServePut(true).WithValidatePutGUID(true).WithPutValidator(myValidator) | On with guid existence validator
+|POST with guid in path or body | create a new document, the post operation can be configured with additional customized or predefined [validators](handlers/validate.go) like unique name, unique short name attribute   |  routerOptions.WithServePost(true).WithValidatePostUniqueName(true).WithPostValidator(myValidator) | On with unique name validator
+|PUT  | update a document or a list of documents, the put operation can be configured with additional customized or predefined [validators](handlers/validate.go) like GUID existence in body or path  |  routerOptions.WithServePut(true).WithValidatePutGUID(true).WithPutValidator(myValidator) | On with guid existence validator
 |DELETE with guid in path | delete a document   |  routerOptions.WithServeDelete(true) | On
-|DELETE by name  | delete a document by name   |  routerOptions.WithDeleteByName(true) | Off
+|DELETE by name  | delete a document or a list of documents by name   |  routerOptions.WithDeleteByName(true) | Off
 
 ### Customized behavior
-Endpoint that requirers customized behavior for some routes can still use the generic ```handlers.AddRoutes ``` for the rest of the routes and add custom handlers for the specific routes or add custom validators for the generic handlers, see [customer configuration](routes/customer_config/routes.go) for example.
+Endpoints that need to implement customized behavior for some routes can still use `handlers.AddRoutes ` for the rest of the routes, see [customer configuration endpoint](routes/customer_config/routes.go) for example.
+
+If an endpoint does not use any of the common handlers it needs to use other helper functions from the `handlers` package and/or function from the `db`, see [customer endpoint](routes/customer/routes.go) for example.
 
 
 
 ## Testing
-The service main test create a [testify suite](suite_test.go) that runs a mongo container and the config service for end to end testing.
-Endpoint that are served using the generic handlers can reuse the [common tests functions](testers_test.go) to test the endpoint behavior.
+The service main test defines a [testify suite](suite_test.go) that runs a mongo container and the config service for end to end testing.
+
+Endpoints use the common handlers can also reuse the [common tests functions](testers_test.go) to test the endpoint behavior.
+
+#### Coverage
+At the top of the [suite](suite_test.go) file there is a comment with command line needed to run the tests and generate a coverage report, please make sure your code is covered by the tests before submitting a PR.
+
 For details see the existing [endpoint tests](service_test.go) 
 
 
 
 
+## Log & trace 
+Each in-coming request is logged by the `RequestSummary` middleware, the log format is: 
+```json
+{"level":"info","ts":"2022-12-20T19:46:08.809161523+02:00","msg":"/v1_vulnerability_exception_policy","status":200,"method":"DELETE","path":"/v1_vulnerability_exception_policy","query":"policyName=1660467597.8207463&policyName=1660475024.9930612","ip":"","user-agent":"","latency":0.001204906,"time":"2022-12-20T17:46:08Z","customerGUID":"test-customer-guid","trace_id":"14793d67ea475427a8881f8aebee9c18","span_id":"e5d98f9f362690b4"}
+```
 
 
+In addition other middleware also set in the gin.Context of each request a new logger with the request data and an OpenTelematry tracer. 
+Handlers should use [log](utils/log/logtrace..go) functions for specific logging 
 
+Code
 
+```go
+import "config-service/utils/log"
+ func myHandler(c *gin.Context) {
+    ...
+    log.LogNTrace("hello world", c)
+```
+Log
+```json
+{"level":"info","ts":"2022-12-20T20:11:17.180274896+02:00","msg":"hello world","method":"GET","query":"posturePolicies.controlName=Allowed hostPath&posturePolicies.controlName=Applications credentials in configuration files","path":"/v1_posture_exception_policy","trace_id":"afa45fe66bd47fb7592a76c0fc4c3715","span_id":"98e47f28bc3503a6"}
+```
 
+For tracing times of heavy time consumers functions use:
+```go 
+func deleteAll(c gin.Context) {
+    defer log.LogNTraceEnterExit("deleteAll", c)()
+    ....
+```
+log on entry
+```json
+{"level":"info","ts":"2022-12-20T20:14:05.518747309+02:00","msg":"deleteAll","method":"DELETE","query":"","path":"/v1_myType","trace_id":"71e0cf6b3d355a0733e42c514c9a7772","span_id":"ff51efe3cdf366fd"}
+```
+log on exit
+```json
+{"level":"info","ts":"2022-12-20T20:30:05.518747309+02:00","msg":"deleteAll completed","method":"DELETE","query":"","path":"/v1_myType","trace_id":"71e0cf6b3d355a0733e42c514c9a7772","span_id":"ff51efe3cdf366fd"}
+```
