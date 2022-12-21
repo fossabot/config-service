@@ -229,7 +229,7 @@ docker run --name=mongo -d -p 27017:27017 --network mongo -e "MONGO_INITDB_ROOT_
 docker run --name=mongo-express -d -p 8081:8081 --network mongo -e "ME_MONGO_INITDB_ROOT_USERNAME=admin" -e "ME_MONGO_INITDB_ROOT_PASSWORD=admin" -e "ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongo:27017/" mongo-express
 ```
 Then you can run the service.
-```json
+```bash
 go run .
 {"level":"info","ts":"2022-12-21T15:59:17.579524706+02:00","msg":"connecting to single node localhost"}
 {"level":"info","ts":"2022-12-21T15:59:17.579589138+02:00","msg":"checking mongo connectivity"}
