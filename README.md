@@ -206,6 +206,13 @@ go test ./...
 #run the tests and generate a coverage report 
 #TODO add new packages to the coverpkg list if needed
 go test -timeout 30s  -coverpkg=./handlers,./db,./types,./routes/prob,./routes/login,./routes/v1/cluster,./routes/v1/posture_exception,./routes/v1/vulnerability_exception,./routes/v1/customer,./routes/v1/customer_config,./routes/v1/repository -coverprofile coverage.out  
+...
+...
+PASS
+coverage: 75.3% of statements in ./handlers, ./db, ./types, ./routes/prob, ./routes/login, ./routes/v1/cluster, ./routes/v1/posture_exception, ./routes/v1/vulnerability_exception, ./routes/v1/customer, ./routes/v1/customer_config, ./routes/v1/repository
+ok      config-service  7.170s
+
+
 #convert the coverage report to html and open it in the browser
 go tool cover -html=coverage.out -o coverage.html \
 && open coverage.html
@@ -217,12 +224,15 @@ docker run --name=mongo -d -p 27017:27017 --network mongo -e "MONGO_INITDB_ROOT_
 ```
 For debug purposes you can also run a mongo-express instance to view the data in the mongo instance.
 ```bash
-#!/bin/bash
 docker network create mongo
 docker run --name=mongo -d -p 27017:27017 --network mongo -e "MONGO_INITDB_ROOT_USERNAME=admin" -e "MONGO_INITDB_ROOT_PASSWORD=admin" mongo 
 docker run --name=mongo-express -d -p 8081:8081 --network mongo -e "ME_MONGO_INITDB_ROOT_USERNAME=admin" -e "ME_MONGO_INITDB_ROOT_PASSWORD=admin" -e "ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongo:27017/" mongo-express
 ```
 Then you can run the service.
-```bash
+```json
 go run .
+{"level":"info","ts":"2022-12-21T15:59:17.579524706+02:00","msg":"connecting to single node localhost"}
+{"level":"info","ts":"2022-12-21T15:59:17.579589138+02:00","msg":"checking mongo connectivity"}
+{"level":"info","ts":"2022-12-21T15:59:17.594646374+02:00","msg":"mongo connection verified"}
+{"level":"info","ts":"2022-12-21T15:59:17.594796442+02:00","msg":"Starting server on port 8080"}
 ```
