@@ -29,9 +29,9 @@ The config service provides a ```db``` package for common database `CRUD` operat
 ![Packages](docs/overview.drawio.svg)
 
 ## Document types
-The service serves documents of [DocContent](/types/types.go) type.
+The service serves documents of [DocContent](types/types.go) type.
 
-All served document types need to be part of the [DocContent](/types/types.go) types constraint and implement the [DocContent](/types/types.go) interface.
+All served document types need to be part of the [DocContent](types/types.go) types constraint and implement the [DocContent](types/types.go) interface.
 ```go
 type DocContent interface {
 	*MyType | *CustomerConfig | *Cluster | *PostureExceptionPolicy ...
@@ -50,7 +50,7 @@ type PortalCluster struct {
 
 ![Document Types](docs/types.drawio.svg)
 
-Functions in the `db` and `handlers` packages are using [DocContent](/types/types.go) type parameter.
+Functions in the `db` and `handlers` packages are using [DocContent](types/types.go) type parameter.
 ```go
 clusters := []*types.Cluster{}
 frameworks := []*types.Framework{}
@@ -76,7 +76,7 @@ The `handlers` package provides:
 
 The functions in the `handlers` package use data stored in the gin context by other middlewares.
 For instance `CustomerGUID` is set by the authentication middleware, `RequestLogger` is set by the logger middleware, `dbCollection` is set by the db middleware and so on.
-For full list of context keys see [const.go](/utils/consts/const.go).
+For full list of context keys see [const.go](utils/consts/const.go).
 
 ## DB package
 
@@ -92,11 +92,11 @@ Most handlers will be able to implement even customized behavior using just the 
 
 ## Adding a new document type handler
 - ### Todo List
-1. Add the type to [DocContent](/types/types.go) types constraint and implement [DocContent](/types/types.go) methods.
+1. Add the type to [DocContent](types/types.go) types constraint and implement [DocContent](types/types.go) methods.
 2. Add `bson` tags to the new type fields.
-3. Add the strings of the new type path and DB collection to [const.go](/utils/consts/const.go).
+3. Add the strings of the new type path and DB collection to [const.go](utils/consts/const.go).
 4. Add a folder under the `routes` folder for the new type and a file with ```func AddRoutes(g *gin.Engine) ``` function for setting up the `http` handlers for the new type.
-5. call `myType.AddRoutes` function from [main.go](/main.go) after the authentication middleware.
+5. call `myType.AddRoutes` function from [main.go](main.go) after the authentication middleware.
 6. Add e2e [tests](#testing) the new type endpoint.
 
 ### Using the generic handlers
@@ -197,13 +197,17 @@ For details see the existing [endpoint tests](service_test.go)
 ## Running 
 ### Running  the tests
 ```bash
-
 # run the tests
 go test ./...
+```
+### Running the tests with coverage
 
-#run the tests and generate a coverage report
-go test -timeout 30s  -coverpkg=./handlers,./db,./types,./routes/prob,./routes/login,./routes/cluster,./routes/posture_exception,./routes/vulnerability_exception,./routes/customer,./routes/customer_config -coverprofile coverage.out  \
-&& go tool cover -html=coverage.out -o coverage.html \
+```bash
+#run the tests and generate a coverage report 
+#TODO add new packages to the coverpkg list if needed
+go test -timeout 30s  -coverpkg=./handlers,./db,./types,./routes/prob,./routes/login,./routes/v1/cluster,./routes/v1/posture_exception,./routes/v1/vulnerability_exception,./routes/v1/customer,./routes/v1/customer_config,./routes/v1/repository -coverprofile coverage.out  
+#convert the coverage report to html and open it in the browser
+go tool cover -html=coverage.out -o coverage.html \
 && open coverage.html
 ```
 ### Running the service locally
