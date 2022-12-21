@@ -138,9 +138,9 @@ function AddRoutes(g *gin.Engine) {
 |DELETE by name  | delete a document or a list of documents by name   |  routerOptions.WithDeleteByName(true) | Off
 
 ### Customized behavior
-Endpoints that need to implement customized behavior for some routes can still use `handlers.AddRoutes ` for the rest of the routes, see [customer configuration endpoint](routes/customer_config/routes.go) for example.
+Endpoints that need to implement customized behavior for some routes can still use `handlers.AddRoutes ` for the rest of the routes, see [customer configuration endpoint](routes/v1/customer_config/routes.go) for example.
 
-If an endpoint does not use any of the common handlers it needs to use other helper functions from the `handlers` package and/or function from the `db`, see [customer endpoint](routes/customer/routes.go) for example.
+If an endpoint does not use any of the common handlers it needs to use other helper functions from the `handlers` package and/or function from the `db`, see [customer endpoint](routes/v1/customer/routes.go) for example.
 
 
 
