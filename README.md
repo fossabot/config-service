@@ -10,7 +10,9 @@
     2. [Using the generic handlers](#using-the-generic-handlers)
     3. [Router options](#router-options)
     4. [Customized behavior](#customized-behavior)
-6. [Testing](#testing)
+6. [Log & trace](#log--trace)
+7. [Testing](#testing)
+8. [Running](#running)
 
 
 
@@ -143,20 +145,6 @@ Endpoints that need to implement customized behavior for some routes can still u
 If an endpoint does not use any of the common handlers it needs to use other helper functions from the `handlers` package and/or function from the `db`, see [customer endpoint](routes/v1/customer/routes.go) for example.
 
 
-
-## Testing
-The service main test defines a [testify suite](suite_test.go) that runs a mongo container and the config service for end to end testing.
-
-Endpoints use the common handlers can also reuse the [common tests functions](testers_test.go) to test the endpoint behavior.
-
-#### Coverage
-At the top of the [suite](suite_test.go) file there is a comment with command line needed to run the tests and generate a coverage report, please make sure your code is covered by the tests before submitting a PR.
-
-For details see the existing [endpoint tests](service_test.go) 
-
-
-
-
 ## Log & trace 
 Each in-coming request is logged by the `RequestSummary` middleware, the log format is: 
 ```json
@@ -193,4 +181,33 @@ log on entry
 log on exit
 ```json
 {"level":"info","ts":"2022-12-20T20:30:05.518747309+02:00","msg":"deleteAll completed","method":"DELETE","query":"","path":"/v1_myType","trace_id":"71e0cf6b3d355a0733e42c514c9a7772","span_id":"ff51efe3cdf366fd"}
+```
+
+## Testing
+The service main test defines a [testify suite](suite_test.go) that runs a mongo container and the config service for end to end testing.
+
+Endpoints use the common handlers can also reuse the [common tests functions](testers_test.go) to test the endpoint behavior.
+
+#### Coverage
+At the top of the [suite](suite_test.go) file there is a comment with command line needed to run the tests and generate a coverage report, please make sure your code is covered by the tests before submitting a PR.
+
+For details see the existing [endpoint tests](service_test.go) 
+
+
+## Running 
+### Running  the tests
+```bash
+
+# run the tests
+go test ./...
+
+#run the tests and generate a coverage report
+go test -timeout 30s  -coverpkg=./handlers,./db,./types,./routes/prob,./routes/login,./routes/cluster,./routes/posture_exception,./routes/vulnerability_exception,./routes/customer,./routes/customer_config -coverprofile coverage.out  \
+&& go tool cover -html=coverage.out -o coverage.html \
+&& open coverage.html
+```
+### Running the service 
+```bash
+# run the service form the root folder 
+go run .
 ```
