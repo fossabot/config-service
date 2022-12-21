@@ -206,8 +206,19 @@ go test -timeout 30s  -coverpkg=./handlers,./db,./types,./routes/prob,./routes/l
 && go tool cover -html=coverage.out -o coverage.html \
 && open coverage.html
 ```
-### Running the service 
+### Running the service locally
+To run the service locally you need first to run a mongo instance.
 ```bash
-# run the service form the root folder 
+docker run --name=mongo -d -p 27017:27017 --network mongo -e "MONGO_INITDB_ROOT_USERNAME=admin" -e "MONGO_INITDB_ROOT_PASSWORD=admin" mongo 
+```
+For debug purposes you can also run a mongo-express instance to view the data in the mongo instance.
+```bash
+#!/bin/bash
+docker network create mongo
+docker run --name=mongo -d -p 27017:27017 --network mongo -e "MONGO_INITDB_ROOT_USERNAME=admin" -e "MONGO_INITDB_ROOT_PASSWORD=admin" mongo 
+docker run --name=mongo-express -d -p 8081:8081 --network mongo -e "ME_MONGO_INITDB_ROOT_USERNAME=admin" -e "ME_MONGO_INITDB_ROOT_PASSWORD=admin" -e "ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongo:27017/" mongo-express
+```
+Then you can run the service.
+```bash
 go run .
 ```
