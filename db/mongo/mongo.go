@@ -52,9 +52,9 @@ func EnsureConnected() error {
 		err = multierror.Append(err)
 	}
 	if err != nil {
-		zap.L().Error("connection check to mongo failed", zap.Error(err))
+		zap.L().Error("mongo connection failed", zap.Error(err))
 	} else {
-		zap.L().Info("connection check to mongo success")
+		zap.L().Info("mongo connection verified")
 	}
 	return err
 }

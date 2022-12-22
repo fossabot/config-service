@@ -15,6 +15,7 @@ type routerOptions[T types.DocContent] struct {
 	nameQueryParam            string
 	queryConfig               *queryParamsConfig
 	serveGet                  bool           //default true, when false, GET will not be served
+	serveGetNamesList         bool           //default true, when true, GET will return all documents names if "list" query param exist
 	servePost                 bool           //default true, when false, POST will not be served
 	servePut                  bool           //default true, when false, PUT will not be served
 	serveDelete               bool           //default true, when false, DELETE will not be served
@@ -35,6 +36,7 @@ func newRouterOptions[T types.DocContent]() *routerOptions[T] {
 		serveDelete:               true,
 		validatePostUniqueName:    true,
 		validatePutGUID:           true,
+		serveGetNamesList:         true,
 		serveGetIncludeGlobalDocs: false,
 		serveDeleteByName:         false,
 		uniqueShortName:           nil,
@@ -52,7 +54,7 @@ func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *g
 	routerGroup.Use(DBContextMiddleware(opts.dbCollection))
 
 	if opts.serveGet {
-		routerGroup.GET("", HandleGetByQueryOrAll[T](opts.nameQueryParam, opts.queryConfig, opts.serveGetIncludeGlobalDocs))
+		routerGroup.GET("", HandleGetByQueryOrAll[T](opts.nameQueryParam, opts.queryConfig, opts.serveGetIncludeGlobalDocs, opts.serveGetNamesList))
 		routerGroup.GET("/:"+consts.GUIDField, HandleGetDocWithGUIDInPath[T])
 	}
 	if opts.servePost {
@@ -238,6 +240,13 @@ func (b *RouterOptionsBuilder[T]) WithValidatePutGUID(validatePutGUID bool) *Rou
 func (b *RouterOptionsBuilder[T]) WithUniqueShortName(baseShortNameValue func(T) string) *RouterOptionsBuilder[T] {
 	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.uniqueShortName = baseShortNameValue
+	})
+	return b
+}
+
+func (b *RouterOptionsBuilder[T]) WithGetNamesList(serveNameList bool) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
+		opts.serveGetNamesList = serveNameList
 	})
 	return b
 }

@@ -1,6 +1,7 @@
 package log
 
 import (
+	"config-service/utils/consts"
 	"context"
 	"fmt"
 
@@ -59,7 +60,7 @@ func TraceErrorSetStatus(msg string, err error, c context.Context) {
 }
 
 func GetLogger(c context.Context) *zap.Logger {
-	if z := c.Value("zapLogger"); z != nil {
+	if z := c.Value(consts.ReqLogger); z != nil {
 		return z.(*zap.Logger)
 	}
 	return zap.L()

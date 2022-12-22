@@ -1,15 +1,15 @@
 package main
 
 import (
-	"config-service/routes/cluster"
-	"config-service/routes/customer"
-	"config-service/routes/customer_config"
-	"config-service/routes/framework"
 	"config-service/routes/login"
-	"config-service/routes/posture_exception"
 	"config-service/routes/prob"
-	"config-service/routes/repository"
-	"config-service/routes/vulnerability_exception"
+	"config-service/routes/v1/cluster"
+	"config-service/routes/v1/customer"
+	"config-service/routes/v1/customer_config"
+	"config-service/routes/v1/framework"
+	"config-service/routes/v1/posture_exception"
+	"config-service/routes/v1/repository"
+	"config-service/routes/v1/vulnerability_exception"
 	"config-service/utils"
 	"context"
 	"log"
