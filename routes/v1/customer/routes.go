@@ -6,6 +6,7 @@ import (
 	"config-service/types"
 	"config-service/utils/consts"
 	"config-service/utils/log"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -13,15 +14,16 @@ import (
 )
 
 func AddRoutes(g *gin.Engine) {
-	customer := g.Group("/")
+	customer := g.Group(consts.CustomerPath)
 	customer.Use(handlers.DBContextMiddleware(consts.CustomersCollection))
-	customer.GET("customer", getCustomer)
+	customer.GET("", getCustomer)
+	customer.DELETE("", deleteCustomer)
 }
 
 func AddPublicRoutes(g *gin.Engine) {
-	tenant := g.Group("/")
+	tenant := g.Group(consts.TenantPath)
 	tenant.Use(handlers.DBContextMiddleware(consts.CustomersCollection))
-	tenant.POST("customer_tenant", postCustomerTenant)
+	tenant.POST("", postCustomerTenant)
 }
 
 func getCustomer(c *gin.Context) {
@@ -41,6 +43,17 @@ func getCustomer(c *gin.Context) {
 		return
 	} else {
 		c.JSON(http.StatusOK, doc)
+	}
+}
+
+func deleteCustomer(c *gin.Context) {
+	defer log.LogNTraceEnterExit("deleteCustomer", c)()
+	deletedCount, err := db.DeleteCustomerDocs(c)
+	if err != nil {
+		handlers.ResponseInternalServerError(c, fmt.Sprintf("failed to delete customer docs. %d docs deleted", deletedCount), err)
+		return
+	} else {
+		c.JSON(http.StatusOK, gin.H{"deleted": deletedCount})
 	}
 }
 

@@ -108,12 +108,15 @@ func Disconnect() {
 }
 
 func GetReadCollection(collectionName string) *mongo.Collection {
-	mongoDB.Client().NumberSessionsInProgress()
 	return mongoDB.Collection(collectionName)
 }
 
 func GetWriteCollection(collectionName string) *mongo.Collection {
 	return mongoDBprimary.Collection(collectionName)
+}
+
+func ListCollectionNames(c context.Context) ([]string, error) {
+	return mongoDB.ListCollectionNames(c, bson.D{}, options.ListCollections().SetAuthorizedCollections(true).SetNameOnly(true))
 }
 
 func generateMongoUrl(host, port, user, password string) (mongoUrl string) {

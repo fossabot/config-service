@@ -23,6 +23,10 @@ func AddRoutes(g *gin.Engine) {
 			handlers.ResponseFailedToBindJson(c, err)
 			return
 		}
+		if loginDetails.CustomerGUID == "" {
+			handlers.ResponseBadRequest(c, "customerGUID is required")
+			return
+		}
 		c.SetCookie(consts.CustomerGUID, loginDetails.CustomerGUID, 2*60*60*24, "/", "", false, true)
 		c.JSON(http.StatusOK, nil)
 	})
