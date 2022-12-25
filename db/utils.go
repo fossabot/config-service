@@ -376,11 +376,11 @@ func AdminDeleteCustomersDocs(c context.Context, customerGUIDs ...string) (delet
 			}
 			if res != nil {
 				deletedCountAtom.Add(res.DeletedCount)
+				log.LogNTrace(fmt.Sprintf("AdminDeleteAllCustomerDocs deleted %d documents in collection:%s", res.DeletedCount, collection), c)
 			}
 		}(collection, customerGUIDs)
 
 	}
-
 	wg.Wait()
 	close(errChanel)
 	errWg.Wait()

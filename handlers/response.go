@@ -96,6 +96,10 @@ func ResponseMissingKey(c *gin.Context, key string) {
 	ResponseBadRequest(c, fmt.Sprintf(MissingKey, key))
 }
 
+func ResponseMissingQueryParam(c *gin.Context, paramNem string) {
+	ResponseBadRequest(c, fmt.Sprintf(MissingKey, paramNem+" query param"))
+}
+
 func ResponseBulkNotSupported(c *gin.Context) {
 	ResponseBadRequest(c, "bulk operations are not supported")
 }

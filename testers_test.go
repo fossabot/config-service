@@ -155,6 +155,7 @@ const (
 	errorMissingGUID      = `{"error":"guid is required"}`
 	errorGUIDExists       = `{"error":"guid already exists"}`
 	errorDocumentNotFound = `{"error":"document not found"}`
+	errorNotAdminUser     = `{"error":"Unauthorized - not an admin user"}`
 )
 
 func errorNameExist(name ...string) string {

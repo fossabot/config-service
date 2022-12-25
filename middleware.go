@@ -3,6 +3,7 @@ package main
 import (
 	"config-service/utils/consts"
 	"net/http"
+	"strings"
 	"time"
 
 	ginzap "github.com/gin-contrib/zap"
@@ -13,14 +14,18 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/exp/slices"
 )
 
 //////////////////////////////////////////middleware handlers//////////////////////////////////////////
 
 // authenticate middleware for request authentication
 func authenticate(c *gin.Context) {
-	customerGuid, err := c.Cookie(consts.CustomerGUID)
+	cookieVal, err := c.Cookie(consts.CustomerGUID)
+	customerValues := strings.Split(cookieVal, ";")
+	customerGuid := customerValues[0]
 	if err != nil || customerGuid == "" {
+
 		customerGuid := c.Query(consts.CustomerGUID)
 		if customerGuid == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -28,6 +33,9 @@ func authenticate(c *gin.Context) {
 		}
 	}
 	c.Set(consts.CustomerGUID, customerGuid)
+	if len(customerValues) > 1 && slices.Contains(customerValues[1:], consts.AdminAccess) {
+		c.Set(consts.AdminAccess, true)
+	}
 	c.Next()
 }
 

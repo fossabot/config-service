@@ -3,11 +3,12 @@ package main
 import (
 	"bytes"
 	"config-service/db/mongo"
+	"config-service/types"
 	"config-service/utils/consts"
 	"context"
 	_ "embed"
 	"fmt"
-	"io/ioutil"
+	"sort"
 
 	"net/http"
 	"net/http/httptest"
@@ -31,6 +32,7 @@ go tool cover -html=coverage.out -o coverage.html
 const (
 	mongoDockerCommand = `docker run --name=mongo -d -p 27017:27017 -e  "MONGO_INITDB_ROOT_USERNAME=admin" -e "MONGO_INITDB_ROOT_PASSWORD=admin" mongo`
 	mongoStopCommand   = "docker stop mongo && docker rm mongo"
+	defaultUserGUID    = "test-customer-guid"
 )
 
 //go:embed test_data/customer_config/defaultConfig.json
@@ -80,7 +82,11 @@ func (suite *MainTestSuite) SetupSuite() {
 	if _, err := mongo.GetWriteCollection(consts.CustomerConfigCollection).InsertOne(context.Background(), defaultCustomerConfig); err != nil {
 		suite.FailNow("failed to insert defaultCustomerConfigJson", err.Error())
 	}
-	suite.login("test-customer-guid")
+}
+
+func (suite *MainTestSuite) SetupTest() {
+	//login with default user
+	suite.login(defaultUserGUID)
 }
 
 func (suite *MainTestSuite) login(customerGUID string) {
@@ -88,6 +94,24 @@ func (suite *MainTestSuite) login(customerGUID string) {
 		CustomerGUID string `json:"customerGUID"`
 	}{
 		CustomerGUID: customerGUID,
+	}
+	w := suite.doRequest(http.MethodPost, "/login", loginDetails)
+	if w.Code != http.StatusOK {
+		suite.FailNow("failed to login")
+	}
+	suite.authCookie = w.Header().Get("Set-Cookie")
+	suite.authCustomerGUID = customerGUID
+}
+
+func (suite *MainTestSuite) loginAsAdmin(customerGUID string) {
+	loginDetails := struct {
+		CustomerGUID string                 `json:"customerGUID"`
+		Attributes   map[string]interface{} `json:"attributes"`
+	}{
+		CustomerGUID: customerGUID,
+		Attributes: map[string]interface{}{
+			"admin": true,
+		},
 	}
 	w := suite.doRequest(http.MethodPost, "/login", loginDetails)
 	if w.Code != http.StatusOK {
@@ -128,6 +152,22 @@ func (suite *MainTestSuite) doRequest(method, path string, body interface{}) *ht
 	return w
 }
 
+func loadJson[T types.DocContent](jsonBytes []byte) (docs []T, names []string) {
+	if err := json.Unmarshal(jsonBytes, &docs); err != nil {
+		panic(err)
+	}
+
+	sort.Slice(docs, func(i, j int) bool {
+		return docs[i].GetName() < docs[j].GetName()
+	})
+
+	names = make([]string, len(docs))
+	for i, doc := range docs {
+		names[i] = doc.GetName()
+	}
+	return docs, names
+}
+
 func retry(attempt int, delay time.Duration, f func() error) error {
 	var err error
 	for i := 0; i < attempt; i++ {
@@ -138,9 +178,4 @@ func retry(attempt int, delay time.Duration, f func() error) error {
 		time.Sleep(delay)
 	}
 	return err
-}
-
-func save2TestData(i interface{}, fileName string) {
-	data, _ := json.MarshalIndent(i, "", "    ")
-	ioutil.WriteFile("test_data/"+fileName, data, 0644)
 }

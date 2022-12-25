@@ -205,11 +205,11 @@ go test ./...
 ```bash
 #run the tests and generate a coverage report 
 #TODO add new packages to the coverpkg list if needed
-go test -timeout 30s  -coverpkg=./handlers,./db,./types,./routes/prob,./routes/login,./routes/v1/cluster,./routes/v1/posture_exception,./routes/v1/vulnerability_exception,./routes/v1/customer,./routes/v1/customer_config,./routes/v1/repository -coverprofile coverage.out  
+go test -timeout 30s  -coverpkg=./handlers,./db,./types,./routes/prob,./routes/login,./routes/v1/cluster,./routes/v1/posture_exception,./routes/v1/vulnerability_exception,./routes/v1/customer,./routes/v1/customer_config,./routes/v1/repository,./routes/v1/admin -coverprofile coverage.out  
 ...
 ...
 PASS
-coverage: 75.3% of statements in ./handlers, ./db, ./types, ./routes/prob, ./routes/login, ./routes/v1/cluster, ./routes/v1/posture_exception, ./routes/v1/vulnerability_exception, ./routes/v1/customer, ./routes/v1/customer_config, ./routes/v1/repository
+coverage: 75.3% of statements in ./handlers, ./db, ./types, ./routes/prob, ./routes/login, ./routes/v1/cluster, ./routes/v1/posture_exception, ./routes/v1/vulnerability_exception, ./routes/v1/customer, ./routes/v1/customer_config, ./routes/v1/repository,./routes/v1/admin
 ok      config-service  7.170s
 
 

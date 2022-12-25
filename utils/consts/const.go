@@ -7,6 +7,7 @@ const (
 	CustomerGUID  = "customerGUID"
 	Collection    = "collection"
 	ReqLogger     = "reqLogger"
+	AdminAccess   = "adminAccess"
 
 	//PATHS
 	ClusterPath                      = "/cluster"
@@ -43,7 +44,7 @@ const (
 	ListParam          = "list"
 	PolicyNameParam    = "policyName"
 	FrameworkNameParam = "frameworkName"
-	CustomersParam = "customers"
+	CustomersParam     = "customers"
 
 	//Cached documents keys
 	DefaultCustomerConfigKey = "defaultCustomerConfig"
@@ -56,4 +57,6 @@ const (
 	ScopeParam         = "scope"
 	CustomerScope      = "customer"
 	DefaultScope       = "default"
+
+	
 )

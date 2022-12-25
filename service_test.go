@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sort"
 	"time"
 
 	_ "embed"
@@ -19,11 +18,20 @@ import (
 //go:embed test_data/clusters.json
 var clustersJson []byte
 
-func (suite *MainTestSuite) TestCluster() {
-	var clusters []*types.Cluster
-	if err := json.Unmarshal(clustersJson, &clusters); err != nil {
-		panic(err)
+var newClusterCompareFilter = cmp.FilterPath(func(p cmp.Path) bool {
+	switch p.String() {
+	case "PortalBase.GUID", "SubscriptionDate", "LastLoginDate":
+		return true
+	case "PortalBase.Attributes":
+		if p.Last().String() == `["alias"]` {
+			return true
+		}
 	}
+	return false
+}, cmp.Ignore())
+
+func (suite *MainTestSuite) TestCluster() {
+	clusters, _ := loadJson[*types.Cluster](clustersJson)
 
 	modifyFunc := func(cluster *types.Cluster) *types.Cluster {
 		if cluster.Attributes == nil {
@@ -36,18 +44,6 @@ func (suite *MainTestSuite) TestCluster() {
 		}
 		return cluster
 	}
-
-	newClusterCompareFilter := cmp.FilterPath(func(p cmp.Path) bool {
-		switch p.String() {
-		case "PortalBase.GUID", "SubscriptionDate", "LastLoginDate":
-			return true
-		case "PortalBase.Attributes":
-			if p.Last().String() == `["alias"]` {
-				return true
-			}
-		}
-		return false
-	}, cmp.Ignore())
 
 	commonTest(suite, consts.ClusterPath, clusters, modifyFunc, newClusterCompareFilter)
 
@@ -83,13 +79,7 @@ var commonCmpFilter = cmp.FilterPath(func(p cmp.Path) bool {
 }, cmp.Ignore())
 
 func (suite *MainTestSuite) TestPostureException() {
-	var posturePolicies []*types.PostureExceptionPolicy
-	if err := json.Unmarshal(posturePoliciesJson, &posturePolicies); err != nil {
-		panic(err)
-	}
-	sort.Slice(posturePolicies, func(i, j int) bool {
-		return posturePolicies[i].GetName() < posturePolicies[j].GetName()
-	})
+	posturePolicies, _ := loadJson[*types.PostureExceptionPolicy](posturePoliciesJson)
 
 	modifyFunc := func(policy *types.PostureExceptionPolicy) *types.PostureExceptionPolicy {
 		if policy.Attributes == nil {
@@ -155,13 +145,7 @@ func (suite *MainTestSuite) TestPostureException() {
 var vulnerabilityPoliciesJson []byte
 
 func (suite *MainTestSuite) TestVulnerabilityPolicies() {
-	var vulnerabilities []*types.VulnerabilityExceptionPolicy
-	if err := json.Unmarshal(vulnerabilityPoliciesJson, &vulnerabilities); err != nil {
-		panic(err)
-	}
-	sort.Slice(vulnerabilities, func(i, j int) bool {
-		return vulnerabilities[i].GetName() < vulnerabilities[j].GetName()
-	})
+	vulnerabilities, _ := loadJson[*types.VulnerabilityExceptionPolicy](vulnerabilityPoliciesJson)
 
 	modifyFunc := func(policy *types.VulnerabilityExceptionPolicy) *types.VulnerabilityExceptionPolicy {
 		if policy.Attributes == nil {
@@ -383,6 +367,10 @@ func (suite *MainTestSuite) TestCustomerConfiguration() {
 
 }
 
+var customerCompareFilter = cmp.FilterPath(func(p cmp.Path) bool {
+	return p.String() == "SubscriptionDate"
+}, cmp.Ignore())
+
 func (suite *MainTestSuite) TestCustomer() {
 	customer := &types.Customer{
 		PortalBase: armotypes.PortalBase{
@@ -400,12 +388,11 @@ func (suite *MainTestSuite) TestCustomer() {
 	}
 
 	//create compare options
-	compareFilter := cmp.FilterPath(func(p cmp.Path) bool {
-		return p.String() == "SubscriptionDate"
-	}, cmp.Ignore())
 
+	//create customer is public so - remove auth cookie
+	suite.authCookie = ""
 	//post new customer
-	newCustomer := testPostDoc(suite, "/customer_tenant", customer, compareFilter)
+	newCustomer := testPostDoc(suite, "/customer_tenant", customer, customerCompareFilter)
 	//check creation time
 	creationTime, err := time.Parse(time.RFC3339, newCustomer.SubscriptionDate)
 	suite.NoError(err, "failed to parse SubscriptionDate time")
@@ -413,6 +400,7 @@ func (suite *MainTestSuite) TestCustomer() {
 	//check that the guid stays the same
 	suite.Equal(customer.GUID, newCustomer.GUID, "customer GUID should be preserved")
 	//test get customer with current customer logged in - expect error 404
+	suite.login(defaultUserGUID)
 	testBadRequest(suite, http.MethodGet, "/customer", errorDocumentNotFound, nil, http.StatusNotFound)
 
 	//login new customer
@@ -430,15 +418,12 @@ func (suite *MainTestSuite) TestCustomer() {
 
 //go:embed test_data/frameworks.json
 var frameworksJson []byte
+var fwCmpFilter = cmp.FilterPath(func(p cmp.Path) bool {
+	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "Controls"
+}, cmp.Ignore())
 
 func (suite *MainTestSuite) TestFrameworks() {
-	var frameworks []*types.Framework
-	if err := json.Unmarshal(frameworksJson, &frameworks); err != nil {
-		panic(err)
-	}
-	sort.Slice(frameworks, func(i, j int) bool {
-		return frameworks[i].GetName() < frameworks[j].GetName()
-	})
+	frameworks, _ := loadJson[*types.Framework](frameworksJson)
 
 	modifyFunc := func(fw *types.Framework) *types.Framework {
 		if fw.ControlsIDs == nil {
@@ -447,10 +432,6 @@ func (suite *MainTestSuite) TestFrameworks() {
 		*fw.ControlsIDs = append(*fw.ControlsIDs, "new-control"+rndStr.NewLen(5))
 		return fw
 	}
-
-	fwCmpFilter := cmp.FilterPath(func(p cmp.Path) bool {
-		return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "Controls"
-	}, cmp.Ignore())
 
 	commonTest(suite, consts.FrameworkPath, frameworks, modifyFunc, fwCmpFilter)
 
@@ -483,36 +464,33 @@ func modifyAttribute[T types.DocContent](repo T) T {
 //go:embed test_data/repositories.json
 var repositoriesJson []byte
 
-func (suite *MainTestSuite) TestRepository() {
-	var repositories []*types.Repository
-	if err := json.Unmarshal(repositoriesJson, &repositories); err != nil {
-		panic(err)
-	}
-
-	newRepoCompareFilter := cmp.FilterPath(func(p cmp.Path) bool {
-		switch p.String() {
-		case "PortalBase.GUID", "CreationDate", "LastLoginDate":
+var repoCompareFilter = cmp.FilterPath(func(p cmp.Path) bool {
+	switch p.String() {
+	case "PortalBase.GUID", "CreationDate", "LastLoginDate":
+		return true
+	case "PortalBase.Attributes":
+		if p.Last().String() == `["alias"]` {
 			return true
-		case "PortalBase.Attributes":
-			if p.Last().String() == `["alias"]` {
-				return true
-			}
 		}
-		return false
-	}, cmp.Ignore())
+	}
+	return false
+}, cmp.Ignore())
 
-	commonTest(suite, consts.RepositoryPath, repositories, modifyAttribute[*types.Repository], newRepoCompareFilter)
+func (suite *MainTestSuite) TestRepository() {
+	repositories, _ := loadJson[*types.Repository](repositoriesJson)
+
+	commonTest(suite, consts.RepositoryPath, repositories, modifyAttribute[*types.Repository], repoCompareFilter)
 
 	//put doc without alias - expect the alias not to be deleted
 	repo := repositories[0]
 	repo.Name = "my-repo"
-	repo = testPostDoc(suite, consts.RepositoryPath, repo, newRepoCompareFilter)
+	repo = testPostDoc(suite, consts.RepositoryPath, repo, repoCompareFilter)
 	creationTime, err := time.Parse(time.RFC3339, repo.CreationDate)
 	suite.NoError(err, "failed to parse creation time")
 	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
 	alias := repo.Attributes["alias"].(string)
 	//expect alias to use the first latter of the repo name
-	suite.Equal(alias, "M", "alias should be the first latter of the repo name")
+	suite.Equal("O", alias, "alias should be the first latter of the repo name")
 	suite.NotEmpty(alias)
 	delete(repo.Attributes, "alias")
 	w := suite.doRequest(http.MethodPut, consts.RepositoryPath, repo)
@@ -551,4 +529,119 @@ func (suite *MainTestSuite) TestRepository() {
 	suite.Equal(repo.Provider, newDoc.Provider)
 	suite.Equal(repo.BranchName, newDoc.BranchName)
 	suite.Equal(repo.RepoName, newDoc.RepoName)
+}
+
+func (suite *MainTestSuite) TestAdminAndUsers() {
+	const (
+		user1 = "user1-guid"
+		user2 = "f5f360bb-c233-4c33-a9af-5692e7795d61"
+		user3 = "2ce5daf4-e28d-4e6e-a239-03fda048070b"
+		admin = "admin-user-guid"
+	)
+
+	users := []string{user1, user2, user3}
+
+	clusters, clustersNames := loadJson[*types.Cluster](clustersJson)
+	frameworks, frameworksNames := loadJson[*types.Framework](frameworksJson)
+	posturePolices, policiesNames := loadJson[*types.PostureExceptionPolicy](posturePoliciesJson)
+	vulnerabilityPolicies, vulnerabilityNames := loadJson[*types.VulnerabilityExceptionPolicy](vulnerabilityPoliciesJson)
+	repositories, repositoriesNames := loadJson[*types.Repository](repositoriesJson)
+
+	populateUser := func(userGUID string) {
+		suite.login(userGUID)
+		testBulkPostDocs(suite, consts.ClusterPath, clusters, newClusterCompareFilter)
+		testBulkPostDocs(suite, consts.FrameworkPath, frameworks, fwCmpFilter)
+		testBulkPostDocs(suite, consts.PostureExceptionPolicyPath, posturePolices, commonCmpFilter)
+		testBulkPostDocs(suite, consts.VulnerabilityExceptionPolicyPath, vulnerabilityPolicies, commonCmpFilter)
+		testBulkPostDocs(suite, consts.RepositoryPath, repositories, repoCompareFilter)
+
+		customer := &types.Customer{
+			PortalBase: armotypes.PortalBase{
+				Name: userGUID,
+				GUID: userGUID,
+			},
+		}
+		testPostDoc(suite, consts.TenantPath, customer, customerCompareFilter)
+	}
+
+	verifyUserData := func(userGUID string) {
+		suite.login(userGUID)
+		testGetNameList(suite, consts.ClusterPath, clustersNames)
+		testGetNameList(suite, consts.FrameworkPath, frameworksNames)
+		testGetNameList(suite, consts.PostureExceptionPolicyPath, policiesNames)
+		testGetNameList(suite, consts.VulnerabilityExceptionPolicyPath, vulnerabilityNames)
+		testGetNameList(suite, consts.RepositoryPath, repositoriesNames)
+
+		customer := &types.Customer{
+			PortalBase: armotypes.PortalBase{
+				Name: userGUID,
+				GUID: userGUID,
+			},
+		}
+
+		testGetDoc(suite, "/customer", customer, customerCompareFilter)
+	}
+
+	verifyUserDataDeleted := func(userGUID string) {
+		suite.login(userGUID)
+		testGetNameList(suite, consts.ClusterPath, nil)
+		testGetNameList(suite, consts.FrameworkPath, nil)
+		testGetNameList(suite, consts.PostureExceptionPolicyPath, nil)
+		testGetNameList(suite, consts.VulnerabilityExceptionPolicyPath, nil)
+		testGetNameList(suite, consts.RepositoryPath, nil)
+		testBadRequest(suite, http.MethodGet, consts.CustomerPath, errorDocumentNotFound, nil, http.StatusNotFound)
+
+	}
+
+	for _, userGUID := range users {
+		populateUser(userGUID)
+		verifyUserData(userGUID)
+	}
+	//login as admin
+	suite.loginAsAdmin("a-admin-guid")
+	//delete users2 and users3 data
+	deleteUsersUrls := fmt.Sprintf("%s/customers?%s=%s&%s=%s", consts.AdminPath, consts.CustomersParam, user2, consts.CustomersParam, user3)
+	type deletedResponse struct {
+		Deleted int64 `json:"deleted"`
+	}
+	w := suite.doRequest(http.MethodDelete, deleteUsersUrls, nil)
+	suite.Equal(http.StatusOK, w.Code)
+	response := &deletedResponse{}
+	err := json.Unmarshal(w.Body.Bytes(), response)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	//expect 2 customers doc and all what they have
+	deletedCount := 2 * (1 + len(clusters) + len(frameworks) + len(posturePolices) + len(vulnerabilityPolicies) + len(repositories))
+	suite.Equal(int64(deletedCount), response.Deleted)
+	//verify user1 data is still there
+	verifyUserData(user1)
+	//verify user2 and user3 data is gone
+	for _, userGUID := range users[1:] {
+		verifyUserDataDeleted(userGUID)
+	}
+
+	//make sure regular user can't use admin api
+	suite.login(user1)
+	testBadRequest(suite, http.MethodDelete, deleteUsersUrls, errorNotAdminUser, nil, http.StatusUnauthorized)
+
+	//populate user2 again
+	suite.login(user2)
+	populateUser(user2)
+	verifyUserData(user2)
+	//test customer delete they own data with  DELETE /customer api
+	w = suite.doRequest(http.MethodDelete, consts.CustomerPath, nil)
+	suite.Equal(http.StatusOK, w.Code)
+	response = &deletedResponse{}
+	err = json.Unmarshal(w.Body.Bytes(), response)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	deletedCount = 1 + len(clusters) + len(frameworks) + len(posturePolices) + len(vulnerabilityPolicies) + len(repositories)
+	suite.Equal(int64(deletedCount), response.Deleted)
+	//verify user2 data is gone
+	verifyUserDataDeleted(user2)
+	//verify user1 data is still there
+	verifyUserData(user1)
 }

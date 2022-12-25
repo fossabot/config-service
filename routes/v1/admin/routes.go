@@ -19,22 +19,27 @@ func AddRoutes(g *gin.Engine) {
 	//add middleware to check if user is admin
 	adminUsers := utils.GetConfig().AdminUsers
 	adminAuthMiddleware := func(c *gin.Context) {
-		if slices.Contains(adminUsers, c.GetString(consts.CustomerGUID)) {
+		//check if admin access granted by auth middleware or if user is in the configuration admin users list
+		if c.GetBool(consts.AdminAccess) {
+			c.Next()
+		} else if slices.Contains(adminUsers, c.GetString(consts.CustomerGUID)) {
 			c.Next()
 		} else {
+			//not admin
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - not an admin user"})
 		}
 	}
+
 	admin.Use(adminAuthMiddleware)
 
 	//add delete customers data route
-	admin.DELETE("customers", deleteAllCustomerData)
+	admin.DELETE("/customers", deleteAllCustomerData)
 }
 
 func deleteAllCustomerData(c *gin.Context) {
 	customersGUIDs := c.QueryArray(consts.CustomersParam)
 	if len(customersGUIDs) == 0 {
-		handlers.ResponseBadRequest(c, consts.CustomersParam+" query param is required")
+		handlers.ResponseMissingQueryParam(c, consts.CustomersParam)
 		return
 	}
 	deleted, err := db.AdminDeleteCustomersDocs(c, customersGUIDs...)
@@ -43,6 +48,7 @@ func deleteAllCustomerData(c *gin.Context) {
 		handlers.ResponseInternalServerError(c, fmt.Sprintf("deleted: %d, errors: %v", deleted, err), err)
 		return
 	}
+	log.LogNTrace(fmt.Sprintf("deleteAllCustomerData ended successfully. %d documents of %d users deleted by admin %s ", deleted, len(customersGUIDs), c.GetString(consts.CustomerGUID)), c)
 	c.JSON(http.StatusOK, gin.H{"deleted": deleted})
 
 }
