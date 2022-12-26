@@ -75,10 +75,7 @@ func (suite *MainTestSuite) SetupSuite() {
 	}
 
 	//addGlobal documents to mong db
-	var defaultCustomerConfig interface{}
-	if err := json.Unmarshal(defaultCustomerConfigJson, &defaultCustomerConfig); err != nil {
-		suite.FailNow("failed to unmarshal defaultCustomerConfigJson", err.Error())
-	}
+	defaultCustomerConfig := decode[interface{}](suite, defaultCustomerConfigJson)
 	if _, err := mongo.GetWriteCollection(consts.CustomerConfigCollection).InsertOne(context.Background(), defaultCustomerConfig); err != nil {
 		suite.FailNow("failed to insert defaultCustomerConfigJson", err.Error())
 	}

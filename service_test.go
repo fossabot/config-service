@@ -3,7 +3,6 @@ package main
 import (
 	"config-service/types"
 	"config-service/utils/consts"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/armosec/armoapi-go/armotypes"
 	rndStr "github.com/dchest/uniuri"
+
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -59,7 +59,7 @@ func (suite *MainTestSuite) TestCluster() {
 	delete(cluster.Attributes, "alias")
 	w := suite.doRequest(http.MethodPut, consts.ClusterPath, cluster)
 	suite.Equal(http.StatusOK, w.Code)
-	response, err := decodeArray[*types.Cluster](w)
+	response, err := decodeResponseArray[*types.Cluster](w)
 	if err != nil || len(response) != 2 {
 		panic(err)
 	}
@@ -218,38 +218,15 @@ var cluster2ConfigMergedJson []byte
 
 func (suite *MainTestSuite) TestCustomerConfiguration() {
 	//load test data
-	var defaultCustomerConfig *types.CustomerConfig
-	if err := json.Unmarshal(defaultCustomerConfigJson, &defaultCustomerConfig); err != nil {
-		suite.FailNow("failed to unmarshal defaultCustomerConfigJson", err.Error())
-	}
-	var customerConfig *types.CustomerConfig
-	if err := json.Unmarshal(customerConfigJson, &customerConfig); err != nil {
-		suite.FailNow("failed to unmarshal defaultCustomerConfigJson", err.Error())
-	}
-	var customerConfigMerged *types.CustomerConfig
-	if err := json.Unmarshal(customerConfigMergedJson, &customerConfigMerged); err != nil {
-		suite.FailNow("failed to unmarshal defaultCustomerConfigJson", err.Error())
-	}
-	var cluster1Config *types.CustomerConfig
-	if err := json.Unmarshal(cluster1ConfigJson, &cluster1Config); err != nil {
-		suite.FailNow("failed to unmarshal clustersCustomerConfigJson", err.Error())
-	}
-	var cluster1MergedConfig *types.CustomerConfig
-	if err := json.Unmarshal(cluster1ConfigMergedJson, &cluster1MergedConfig); err != nil {
-		suite.FailNow("failed to unmarshal clustersCustomerConfigJson", err.Error())
-	}
-	var cluster1MergedWithDefaultConfig *types.CustomerConfig
-	if err := json.Unmarshal(cluster1ConfigMergedWithDefaultJson, &cluster1MergedWithDefaultConfig); err != nil {
-		suite.FailNow("failed to unmarshal clustersCustomerConfigJson", err.Error())
-	}
-	var cluster2Config *types.CustomerConfig
-	if err := json.Unmarshal(cluster2ConfigJson, &cluster2Config); err != nil {
-		suite.FailNow("failed to unmarshal clustersCustomerConfigJson", err.Error())
-	}
-	var cluster2MergedConfig *types.CustomerConfig
-	if err := json.Unmarshal(cluster2ConfigMergedJson, &cluster2MergedConfig); err != nil {
-		suite.FailNow("failed to unmarshal clustersCustomerConfigJson", err.Error())
-	}
+	defaultCustomerConfig := decode[*types.CustomerConfig](suite, defaultCustomerConfigJson)
+	customerConfig := decode[*types.CustomerConfig](suite, customerConfigJson)
+	customerConfigMerged := decode[*types.CustomerConfig](suite, customerConfigMergedJson)
+	cluster1Config := decode[*types.CustomerConfig](suite, cluster1ConfigJson)
+	cluster1MergedConfig := decode[*types.CustomerConfig](suite, cluster1ConfigMergedJson)
+	cluster1MergedWithDefaultConfig := decode[*types.CustomerConfig](suite, cluster1ConfigMergedWithDefaultJson)
+	cluster2Config := decode[*types.CustomerConfig](suite, cluster2ConfigJson)
+	cluster2MergedConfig := decode[*types.CustomerConfig](suite, cluster2ConfigMergedJson)
+
 	//create compare options
 	compareFilter := cmp.FilterPath(func(p cmp.Path) bool {
 		return p.String() == "CreationTime" || p.String() == "GUID"
@@ -495,7 +472,7 @@ func (suite *MainTestSuite) TestRepository() {
 	delete(repo.Attributes, "alias")
 	w := suite.doRequest(http.MethodPut, consts.RepositoryPath, repo)
 	suite.Equal(http.StatusOK, w.Code)
-	response, err := decodeArray[*types.Repository](w)
+	response, err := decodeResponseArray[*types.Repository](w)
 	if err != nil || len(response) != 2 {
 		panic(err)
 	}
@@ -517,7 +494,7 @@ func (suite *MainTestSuite) TestRepository() {
 	repo1.Attributes = map[string]interface{}{"new-attribute": "new-value"}
 	w = suite.doRequest(http.MethodPut, consts.RepositoryPath, repo1)
 	suite.Equal(http.StatusOK, w.Code)
-	response, err = decodeArray[*types.Repository](w)
+	response, err = decodeResponseArray[*types.Repository](w)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -606,8 +583,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 	}
 	w := suite.doRequest(http.MethodDelete, deleteUsersUrls, nil)
 	suite.Equal(http.StatusOK, w.Code)
-	response := &deletedResponse{}
-	err := json.Unmarshal(w.Body.Bytes(), response)
+	response, err := decodeResponse[*deletedResponse](w)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -632,8 +608,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 	//test customer delete they own data with  DELETE /customer api
 	w = suite.doRequest(http.MethodDelete, consts.CustomerPath, nil)
 	suite.Equal(http.StatusOK, w.Code)
-	response = &deletedResponse{}
-	err = json.Unmarshal(w.Body.Bytes(), response)
+	response, err = decodeResponse[*deletedResponse](w)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -644,4 +619,24 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 	verifyUserDataDeleted(user2)
 	//verify user1 data is still there
 	verifyUserData(user1)
+
+	//login as admin from the config admins list
+	suite.login(admin)
+	//delete user1 data
+	deleteUsersUrls = fmt.Sprintf("%s/customers?%s=%s", consts.AdminPath, consts.CustomersParam, user1)
+	w = suite.doRequest(http.MethodDelete, deleteUsersUrls, nil)
+	suite.Equal(http.StatusOK, w.Code)
+	response, err = decodeResponse[*deletedResponse](w)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	suite.Equal(int64(deletedCount), response.Deleted)
+	//verify user1 data is gone
+	verifyUserDataDeleted(user1)
+
+	//test bad delete customers request with no users
+	suite.loginAsAdmin("other-admin-guid")
+	deleteUsersUrls = fmt.Sprintf("%s/customers", consts.AdminPath)
+	testBadRequest(suite, http.MethodDelete, deleteUsersUrls, errorMissingQueryParams(consts.CustomersParam), nil, http.StatusBadRequest)
+
 }

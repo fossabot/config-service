@@ -44,11 +44,11 @@ func deleteAllCustomerData(c *gin.Context) {
 	}
 	deleted, err := db.AdminDeleteCustomersDocs(c, customersGUIDs...)
 	if err != nil {
-		log.LogNTraceError(fmt.Sprintf("deleteAllCustomerData ended with errors. %d documents deleted", deleted), err, c)
+		log.LogNTraceError(fmt.Sprintf("deleteAllCustomerData completed with errors. %d documents deleted", deleted), err, c)
 		handlers.ResponseInternalServerError(c, fmt.Sprintf("deleted: %d, errors: %v", deleted, err), err)
 		return
 	}
-	log.LogNTrace(fmt.Sprintf("deleteAllCustomerData ended successfully. %d documents of %d users deleted by admin %s ", deleted, len(customersGUIDs), c.GetString(consts.CustomerGUID)), c)
+	log.LogNTrace(fmt.Sprintf("deleteAllCustomerData completed successfully. %d documents of %d users deleted by admin %s ", deleted, len(customersGUIDs), c.GetString(consts.CustomerGUID)), c)
 	c.JSON(http.StatusOK, gin.H{"deleted": deleted})
 
 }
