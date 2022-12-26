@@ -10,22 +10,22 @@ import (
 
 // router options
 type routerOptions[T types.DocContent] struct {
-	dbCollection              string
-	path                      string
-	nameQueryParam            string
-	queryConfig               *queryParamsConfig
-	serveGet                  bool           //default true, when false, GET will not be served
-	serveGetNamesList         bool           //default true, when true, GET will return all documents names if "list" query param exist
-	servePost                 bool           //default true, when false, POST will not be served
-	servePut                  bool           //default true, when false, PUT will not be served
-	serveDelete               bool           //default true, when false, DELETE will not be served
-	validatePostUniqueName    bool           //default true, when true, POST will validate that the name is unique
-	validatePutGUID           bool           //default true, when true, PUT will validate GUID existence in body or path
-	serveGetIncludeGlobalDocs bool           //default false, when true, in GET all the response will include global documents (with customers[""])
-	serveDeleteByName         bool           //default false, when true, DELETE will check for name param and will delete the document by name
-	uniqueShortName           func(T) string //default nil, when set, POST will create a unique short name attribute from the value returned from the function, Put will validate that the short name is not deleted
-	putValidators             []Validator[T]
-	postValidators            []Validator[T]
+	dbCollection              string                //mandatory db collection name
+	path                      string                //mandatory uri path
+	serveGet                  bool                  //default true, serve GET /<path> to get all documents and GET /<path>/<GUID> to get document by GUID
+	serveGetNamesList         bool                  //default true, GET will return all documents names if "list" query param exist
+	servePost                 bool                  //default true, serve POST
+	servePut                  bool                  //default true, serve PUT /<path> to update document by GUID in body and PUT /<path>/<GUID> to update document by GUID in path
+	serveDelete               bool                  //default true, serve DELETE  /<path>/<GUID> to delete document by GUID in path
+	validatePostUniqueName    bool                  //default true, POST will validate that the name is unique
+	validatePutGUID           bool                  //default true, PUT will validate GUID existence in body or path
+	nameQueryParam            string                //default empty, the param name that indicates query by name (e.g. clusterName) when set GET will check for this param and will return the document by name
+	queryConfig               *queryParamsConfig    //default nil, when set, GET will check for the specified query params and will return the documents by the query params
+	serveGetIncludeGlobalDocs bool                  //default false, when true, in GET all the response will include global documents (with customers[""])
+	serveDeleteByName         bool                  //default false, when true, DELETE will check for name param and will delete the document by name
+	uniqueShortName           func(T) string        //default nil, when set, POST will create a unique short name (aka "alias") attribute from the value returned from the function & Put will validate that the short name is not deleted
+	putValidators             []MutatorValidator[T] //default nil, when set, PUT will call the mutators/validators before updating the document
+	postValidators            []MutatorValidator[T] //default nil, when set, POST will call the mutators/validators before creating the document
 }
 
 func newRouterOptions[T types.DocContent]() *routerOptions[T] {
@@ -39,9 +39,7 @@ func newRouterOptions[T types.DocContent]() *routerOptions[T] {
 		serveGetNamesList:         true,
 		serveGetIncludeGlobalDocs: false,
 		serveDeleteByName:         false,
-		uniqueShortName:           nil,
 	}
-
 }
 
 func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *gin.RouterGroup {
@@ -58,7 +56,7 @@ func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *g
 		routerGroup.GET("/:"+consts.GUIDField, HandleGetDocWithGUIDInPath[T])
 	}
 	if opts.servePost {
-		postValidators := []Validator[T]{}
+		postValidators := []MutatorValidator[T]{}
 		if opts.validatePostUniqueName {
 			postValidators = append(postValidators, ValidateUniqueValues(NameKeyGetter[T]))
 		}
@@ -69,7 +67,7 @@ func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *g
 		routerGroup.POST("", HandlePostDocWithValidation(postValidators...)...)
 	}
 	if opts.servePut {
-		putValidators := []Validator[T]{}
+		putValidators := []MutatorValidator[T]{}
 		if opts.validatePutGUID {
 			putValidators = append(putValidators, ValidateGUIDExistence[T])
 		}
@@ -209,14 +207,14 @@ func (b *RouterOptionsBuilder[T]) WithQueryConfig(queryConfig *queryParamsConfig
 	return b
 }
 
-func (b *RouterOptionsBuilder[T]) WithPutValidators(validators ...Validator[T]) *RouterOptionsBuilder[T] {
+func (b *RouterOptionsBuilder[T]) WithPutValidators(validators ...MutatorValidator[T]) *RouterOptionsBuilder[T] {
 	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.putValidators = validators
 	})
 	return b
 }
 
-func (b *RouterOptionsBuilder[T]) WithPostValidators(validators ...Validator[T]) *RouterOptionsBuilder[T] {
+func (b *RouterOptionsBuilder[T]) WithPostValidators(validators ...MutatorValidator[T]) *RouterOptionsBuilder[T] {
 	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.postValidators = validators
 	})

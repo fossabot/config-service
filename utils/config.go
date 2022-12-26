@@ -13,6 +13,7 @@ type Configuration struct {
 	Telemetry    TelemetryConfig `json:"telemetry"`
 	Mongo        MongoConfig     `json:"mongo"`
 	LoggerConfig LoggerConfig    `json:"logger"`
+	AdminUsers   []string        `json:"admins"`
 }
 
 type TelemetryConfig struct {

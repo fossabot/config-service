@@ -54,7 +54,7 @@ func commonTest[T types.DocContent](suite *MainTestSuite, path string, testDocs 
 	changedNamedDoc.SetName("new_name")
 	w := suite.doRequest(http.MethodPut, path, changedNamedDoc)
 	suite.Equal(http.StatusOK, w.Code)
-	response, err := decodeArray[T](w)
+	response, err := decodeResponseArray[T](w)
 	expectedResponse := []T{doc1, doc1}
 	if err != nil {
 		suite.FailNow(err.Error())
@@ -155,7 +155,17 @@ const (
 	errorMissingGUID      = `{"error":"guid is required"}`
 	errorGUIDExists       = `{"error":"guid already exists"}`
 	errorDocumentNotFound = `{"error":"document not found"}`
+	errorNotAdminUser     = `{"error":"Unauthorized - not an admin user"}`
 )
+
+func errorMissingQueryParams(params ...string) string {
+	if len(params) == 1 {
+		return `{"error":"` + params[0] + ` query param is required"}`
+	} else if len(params) > 1 {
+		return `{"error":"` + strings.Join(params, ",") + ` query params are required"}`
+	}
+	return `{"error":"missing query params"}`
+}
 
 func errorNameExist(name ...string) string {
 	var msg string
@@ -179,7 +189,7 @@ func testBadRequest(suite *MainTestSuite, method, path, expectedResponse string,
 func testGetDoc[T types.DocContent](suite *MainTestSuite, path string, expectedDoc T, compareOpts ...cmp.Option) T {
 	w := suite.doRequest(http.MethodGet, path, nil)
 	suite.Equal(http.StatusOK, w.Code)
-	doc, err := decode[T](w)
+	doc, err := decodeResponse[T](w)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -191,7 +201,7 @@ func testGetDoc[T types.DocContent](suite *MainTestSuite, path string, expectedD
 func testGetDocs[T types.DocContent](suite *MainTestSuite, path string, expectedDocs []T, compareOpts ...cmp.Option) (actualDocs []T) {
 	w := suite.doRequest(http.MethodGet, path, nil)
 	suite.Equal(http.StatusOK, w.Code)
-	docs, err := decodeArray[T](w)
+	docs, err := decodeResponseArray[T](w)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -210,10 +220,8 @@ func testGetNameList(suite *MainTestSuite, path string, expectedNames []string) 
 	path = fmt.Sprintf("%s?list", path)
 	w := suite.doRequest(http.MethodGet, path, nil)
 	suite.Equal(http.StatusOK, w.Code)
-	var names []string
-	if err := json.Unmarshal(w.Body.Bytes(), &names); err != nil {
-		suite.FailNow(err.Error())
-	}
+
+	names := decodeArray[string](suite, w.Body.Bytes())
 	sort.Strings(expectedNames)
 	sort.Strings(names)
 	diff := cmp.Diff(names, expectedNames)
@@ -224,7 +232,7 @@ func testGetNameList(suite *MainTestSuite, path string, expectedNames []string) 
 func testPostDoc[T types.DocContent](suite *MainTestSuite, path string, doc T, compareOpts ...cmp.Option) (newDoc T) {
 	w := suite.doRequest(http.MethodPost, path, doc)
 	suite.Equal(http.StatusCreated, w.Code)
-	newDoc, err := decode[T](w)
+	newDoc, err := decodeResponse[T](w)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -236,7 +244,7 @@ func testPostDoc[T types.DocContent](suite *MainTestSuite, path string, doc T, c
 func testBulkPostDocs[T types.DocContent](suite *MainTestSuite, path string, docs []T, compareOpts ...cmp.Option) (newDocs []T) {
 	w := suite.doRequest(http.MethodPost, path, docs)
 	suite.Equal(http.StatusCreated, w.Code)
-	newDocs, err := decodeArray[T](w)
+	newDocs, err := decodeResponseArray[T](w)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -255,7 +263,7 @@ func testBulkPostDocs[T types.DocContent](suite *MainTestSuite, path string, doc
 func testPutDoc[T types.DocContent](suite *MainTestSuite, path string, oldDoc, newDoc T, compareNewOpts ...cmp.Option) {
 	w := suite.doRequest(http.MethodPut, path, newDoc)
 	suite.Equal(http.StatusOK, w.Code)
-	response, err := decodeArray[T](w)
+	response, err := decodeResponseArray[T](w)
 	expectedResponse := []T{oldDoc, newDoc}
 	if err != nil {
 		suite.FailNow(err.Error())
@@ -276,7 +284,7 @@ func testPutDocWGuid[T types.DocContent](suite *MainTestSuite, path string, oldD
 	newDoc.SetGUID("")
 	w := suite.doRequest(http.MethodPut, path, newDoc)
 	suite.Equal(http.StatusOK, w.Code)
-	response, err := decodeArray[T](w)
+	response, err := decodeResponseArray[T](w)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -297,7 +305,7 @@ func testDeleteDocByGUID[T types.DocContent](suite *MainTestSuite, path string, 
 	path = fmt.Sprintf("%s/%s", path, doc2Delete.GetGUID())
 	w := suite.doRequest(http.MethodDelete, path, nil)
 	suite.Equal(http.StatusOK, w.Code)
-	deleteDoc, err := decode[T](w)
+	deleteDoc, err := decodeResponse[T](w)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -309,7 +317,7 @@ func testDeleteDocByName[T types.DocContent](suite *MainTestSuite, path string, 
 	path = fmt.Sprintf("%s?%s=%s", path, nameParam, doc2Delete.GetName())
 	w := suite.doRequest(http.MethodDelete, path, nil)
 	suite.Equal(http.StatusOK, w.Code)
-	deleteDoc, err := decode[T](w)
+	deleteDoc, err := decodeResponse[T](w)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -333,16 +341,32 @@ func testBulkDeleteByName(suite *MainTestSuite, path string, nameParam string, n
 
 //helpers
 
-func decode[T types.DocContent](w *httptest.ResponseRecorder) (T, error) {
+func decodeResponse[T any](w *httptest.ResponseRecorder) (T, error) {
 	var content T
 	err := json.Unmarshal(w.Body.Bytes(), &content)
 	return content, err
 }
 
-func decodeArray[T types.DocContent](w *httptest.ResponseRecorder) ([]T, error) {
+func decodeResponseArray[T any](w *httptest.ResponseRecorder) ([]T, error) {
 	var content []T
 	err := json.Unmarshal(w.Body.Bytes(), &content)
 	return content, err
+}
+
+func decode[T any](suite *MainTestSuite, bytes []byte) T {
+	var content T
+	if err := json.Unmarshal(bytes, &content); err != nil {
+		suite.FailNow("failed to decode", err.Error())
+	}
+	return content
+}
+
+func decodeArray[T any](suite *MainTestSuite, bytes []byte) []T {
+	var content []T
+	if err := json.Unmarshal(bytes, &content); err != nil {
+		suite.FailNow("failed to decode", err.Error())
+	}
+	return content
 }
 
 func clone[T types.DocContent](orig T) T {

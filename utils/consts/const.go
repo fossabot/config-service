@@ -7,6 +7,7 @@ const (
 	CustomerGUID  = "customerGUID"
 	Collection    = "collection"
 	ReqLogger     = "reqLogger"
+	AdminAccess   = "adminAccess"
 
 	//PATHS
 	ClusterPath                      = "/cluster"
@@ -15,6 +16,9 @@ const (
 	CustomerConfigPath               = "/v1_customer_configuration"
 	FrameworkPath                    = "/v1_opa_framework"
 	RepositoryPath                   = "/v1_repository"
+	AdminPath                        = "/v1_admin"
+	CustomerPath                     = "/customer"
+	TenantPath                       = "/customer_tenant"
 
 	//DB collections
 	ClustersCollection                     = "clusters"
@@ -40,6 +44,7 @@ const (
 	ListParam          = "list"
 	PolicyNameParam    = "policyName"
 	FrameworkNameParam = "frameworkName"
+	CustomersParam     = "customers"
 
 	//Cached documents keys
 	DefaultCustomerConfigKey = "defaultCustomerConfig"

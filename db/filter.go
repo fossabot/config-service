@@ -50,6 +50,10 @@ func (f *FilterBuilder) WithID(id string) *FilterBuilder {
 	return f.WithValue(consts.IdField, id)
 }
 
+func (f *FilterBuilder) WithIDs(ids []string) *FilterBuilder {
+	return f.WithIn(consts.IdField, ids)
+}
+
 func (f *FilterBuilder) WithName(name string) *FilterBuilder {
 	return f.WithValue(consts.NameField, name)
 }
@@ -62,6 +66,10 @@ func (f *FilterBuilder) WithCustomer(c context.Context) *FilterBuilder {
 func (f *FilterBuilder) WithCustomerAndGlobal(c context.Context) *FilterBuilder {
 	customerGUID, _ := c.Value(consts.CustomerGUID).(string)
 	return f.WithIn(consts.CustomersField, []string{customerGUID, ""})
+}
+
+func (f *FilterBuilder) WithCustomers(customers []string) *FilterBuilder {
+	return f.WithIn(consts.CustomersField, customers)
 }
 
 func (f *FilterBuilder) WithNotDeleted() *FilterBuilder {

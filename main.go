@@ -3,6 +3,7 @@ package main
 import (
 	"config-service/routes/login"
 	"config-service/routes/prob"
+	"config-service/routes/v1/admin"
 	"config-service/routes/v1/cluster"
 	"config-service/routes/v1/customer"
 	"config-service/routes/v1/customer_config"
@@ -64,6 +65,7 @@ func setupRouter() *gin.Engine {
 	router.Use(authenticate)
 
 	//add protected routes
+	admin.AddRoutes(router)
 	cluster.AddRoutes(router)
 	posture_exception.AddRoutes(router)
 	vulnerability_exception.AddRoutes(router)

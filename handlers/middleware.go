@@ -19,7 +19,7 @@ func DBContextMiddleware(collectionName string) gin.HandlerFunc {
 }
 
 // PostValidationMiddleware validate post request and if valid sets one or many DocContents in context for next handler, otherwise abort request
-func PostValidationMiddleware[T types.DocContent](validators ...Validator[T]) func(c *gin.Context) {
+func PostValidationMiddleware[T types.DocContent](validators ...MutatorValidator[T]) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		defer log.LogNTraceEnterExit("HandlePostValidation", c)()
 		var doc T
@@ -53,7 +53,7 @@ func PostValidationMiddleware[T types.DocContent](validators ...Validator[T]) fu
 }
 
 // PutValidationMiddleware validate put request and if valid set DocContent in context for next handler, otherwise abort request
-func PutValidationMiddleware[T types.DocContent](validators ...Validator[T]) func(c *gin.Context) {
+func PutValidationMiddleware[T types.DocContent](validators ...MutatorValidator[T]) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		defer log.LogNTraceEnterExit("HandlePutValidation", c)()
 		var doc T

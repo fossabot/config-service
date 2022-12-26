@@ -7,6 +7,8 @@ import (
 	"config-service/utils/log"
 	"context"
 	"fmt"
+	"sync"
+	"sync/atomic"
 
 	"github.com/hashicorp/go-multierror"
 	"go.mongodb.org/mongo-driver/bson"
@@ -310,6 +312,80 @@ func BulkDeleteByName[T types.DocContent](c context.Context, names []string) (de
 	} else {
 		return res.DeletedCount, nil
 	}
+}
+
+func DeleteCustomerDocs(c context.Context) (deletedCount int64, err error) {
+	defer log.LogNTraceEnterExit("DeleteAllCustomerDocs", c)()
+	customerGUID, err := readCustomerGUID(c)
+	if err != nil {
+		return 0, err
+	}
+	return AdminDeleteCustomersDocs(c, customerGUID)
+}
+
+func AdminDeleteCustomersDocs(c context.Context, customerGUIDs ...string) (deletedCount int64, err error) {
+	defer log.LogNTraceEnterExit("AdminDeleteAllCustomerDocs", c)()
+	if len(customerGUIDs) == 0 {
+		return 0, nil
+	}
+	collections, err := mongo.ListCollectionNames(c)
+	if err != nil {
+		return 0, err
+	}
+
+	var deletionErrs error
+	errChanel := make(chan error, len(collections))
+	errWg := sync.WaitGroup{}
+	errWg.Add(1)
+	go func() {
+		defer errWg.Done()
+		for err := range errChanel {
+			deletionErrs = multierror.Append(deletionErrs, err)
+		}
+	}()
+
+	//delete the customers themselves
+	wg := sync.WaitGroup{}
+	deletedCountAtom := atomic.Int64{}
+	wg.Add(1)
+	go func(customerGUIDs []string) {
+		defer wg.Done()
+		idsFilter := NewFilterBuilder().WithIDs(customerGUIDs)
+		res, err := mongo.GetWriteCollection(consts.CustomersCollection).DeleteMany(c, idsFilter.Get())
+		if err != nil {
+			errChanel <- err
+		}
+		if res != nil {
+			deletedCountAtom.Add(res.DeletedCount)
+		}
+	}(customerGUIDs)
+
+	//delete all the customers docs in all collections
+	ownersFilter := NewFilterBuilder().WithCustomers(customerGUIDs)
+	for _, collection := range collections {
+		if collection == consts.CustomersCollection {
+			continue
+		}
+		wg.Add(1)
+		go func(collection string, customerGUIDs []string) {
+			defer wg.Done()
+			res, err := mongo.GetWriteCollection(collection).DeleteMany(c, ownersFilter.Get())
+			if err != nil {
+				log.LogNTraceError(fmt.Sprintf("AdminDeleteAllCustomerDocs errors when deleting documents in collection:%s", collection), err, c)
+				errChanel <- err
+			}
+			if res != nil {
+				deletedCountAtom.Add(res.DeletedCount)
+				log.LogNTrace(fmt.Sprintf("AdminDeleteAllCustomerDocs deleted %d documents in collection:%s", res.DeletedCount, collection), c)
+			}
+		}(collection, customerGUIDs)
+
+	}
+	wg.Wait()
+	close(errChanel)
+	errWg.Wait()
+	return deletedCountAtom.Load(), deletionErrs
+
 }
 
 // helpers

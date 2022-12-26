@@ -204,7 +204,7 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *queryPara
 
 // ////////////////////////////////////////POST///////////////////////////////////////////////
 // HandlePostDocWithValidation - chains validation and post document handlers
-func HandlePostDocWithValidation[T types.DocContent](validators ...Validator[T]) []gin.HandlerFunc {
+func HandlePostDocWithValidation[T types.DocContent](validators ...MutatorValidator[T]) []gin.HandlerFunc {
 	return []gin.HandlerFunc{PostValidationMiddleware(validators...), HandlePostDocFromContext[T]}
 }
 
@@ -259,7 +259,7 @@ func PostDBDocumentHandler[T types.DocContent](c *gin.Context, dbDoc types.Docum
 // ////////////////////////////////////////PUT///////////////////////////////////////////////
 
 // HandlePutDocWithValidation - chains validation and put document handlers
-func HandlePutDocWithValidation[T types.DocContent](validators ...Validator[T]) []gin.HandlerFunc {
+func HandlePutDocWithValidation[T types.DocContent](validators ...MutatorValidator[T]) []gin.HandlerFunc {
 	return []gin.HandlerFunc{PutValidationMiddleware(validators...), HandlePutDocFromContext[T]}
 }
 
@@ -341,7 +341,7 @@ func BulkDeleteDocByNameHandler[T types.DocContent](c *gin.Context, names []stri
 func DeleteDocByGUIDHandler[T types.DocContent](c *gin.Context, guid string) {
 	defer log.LogNTraceEnterExit("DeleteDocByGUIDHandler", c)()
 	if deletedDoc, err := db.DeleteByGUID[T](c, guid); err != nil {
-		ResponseInternalServerError(c, "failed to read collection from context", err)
+		ResponseInternalServerError(c, "failed to delete document", err)
 	} else if deletedDoc == nil {
 		ResponseDocumentNotFound(c)
 	} else {
