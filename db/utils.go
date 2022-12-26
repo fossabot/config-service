@@ -346,7 +346,6 @@ func AdminDeleteCustomersDocs(c context.Context, customerGUIDs ...string) (delet
 
 	//delete the customers themselves
 	wg := sync.WaitGroup{}
-	deletedCountAtom := atomic.Int64{}
 	wg.Add(1)
 	go func(customerGUIDs []string) {
 		defer wg.Done()
@@ -356,7 +355,7 @@ func AdminDeleteCustomersDocs(c context.Context, customerGUIDs ...string) (delet
 			errChanel <- err
 		}
 		if res != nil {
-			deletedCountAtom.Add(res.DeletedCount)
+			atomic.AddInt64(&deletedCount, res.DeletedCount)
 		}
 	}(customerGUIDs)
 
@@ -375,7 +374,7 @@ func AdminDeleteCustomersDocs(c context.Context, customerGUIDs ...string) (delet
 				errChanel <- err
 			}
 			if res != nil {
-				deletedCountAtom.Add(res.DeletedCount)
+				atomic.AddInt64(&deletedCount, res.DeletedCount)
 				log.LogNTrace(fmt.Sprintf("AdminDeleteAllCustomerDocs deleted %d documents in collection:%s", res.DeletedCount, collection), c)
 			}
 		}(collection, customerGUIDs)
@@ -384,8 +383,7 @@ func AdminDeleteCustomersDocs(c context.Context, customerGUIDs ...string) (delet
 	wg.Wait()
 	close(errChanel)
 	errWg.Wait()
-	return deletedCountAtom.Load(), deletionErrs
-
+	return atomic.LoadInt64(&deletedCount), deletionErrs
 }
 
 // helpers
