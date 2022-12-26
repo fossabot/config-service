@@ -220,8 +220,8 @@ func testGetNameList(suite *MainTestSuite, path string, expectedNames []string) 
 	path = fmt.Sprintf("%s?list", path)
 	w := suite.doRequest(http.MethodGet, path, nil)
 	suite.Equal(http.StatusOK, w.Code)
-	
-	names := decodeArray[string](suite,w.Body.Bytes())	
+
+	names := decodeArray[string](suite, w.Body.Bytes())
 	sort.Strings(expectedNames)
 	sort.Strings(names)
 	diff := cmp.Diff(names, expectedNames)

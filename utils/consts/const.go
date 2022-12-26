@@ -57,6 +57,4 @@ const (
 	ScopeParam         = "scope"
 	CustomerScope      = "customer"
 	DefaultScope       = "default"
-
-	
 )

@@ -69,7 +69,7 @@ The `handlers` package provides:
 2. [Handlers helpers](handlers/handlers.go) for handling different parts of the request lifecycle.These functions are the building blocks of the request handlers and can also be reused when implementing customized handlers. The naming convention for the handlers helpers is `<method><operation>Handler` e.g. `PostDocHandler` or  `GetByNameParamHandler`.
 3. Common [middleware](handlers/middleware.go) functions. The middleware name convention is  `<method><operation>Middleware` e.g. `PostValidationMiddleware`.
 4. Handlers for common [responses](handlers/response.go).
-5. Predefined [validators](handlers/validate.go) to customized Put and Post validation.
+5. Predefined [mutators-validators](handlers/validate.go) to customized Put and Post validation and/or initialize or set required data.
 6. [Routes configuration](handlers/routes.go) to easily use all the above as described in [Using the generic handlers](#using-the-generic-handlers) section.
 
 
@@ -135,7 +135,7 @@ function AddRoutes(g *gin.Engine) {
 |GET by name  | get a document by name using query param (e.g. GET /myType?typeName="x") |  routerOptions.WithNameQuery("typeName") | Off
 |GET by query  | get a document by query params according to given [query config](handlers/scopequery.go) (e.g. GET /myType?scope.cluster="nginx") |  routerOptions.WithQueryConfig(&queryConfig) | Off |
 |POST with guid in path or body | create a new document, the post operation can be configured with additional customized or predefined [validators](handlers/validate.go) like unique name, unique short name attribute   |  routerOptions.WithServePost(true).WithValidatePostUniqueName(true).WithPostValidator(myValidator) | On with unique name validator
-|PUT  | update a document or a list of documents, the put operation can be configured with additional customized or predefined [validators](handlers/validate.go) like GUID existence in body or path  |  routerOptions.WithServePut(true).WithValidatePutGUID(true).WithPutValidator(myValidator) | On with guid existence validator
+|PUT  | update a document or a list of documents, the put operation can be configured with additional customized or predefined [mutators/validators](handlers/validate.go) like GUID existence in body or path  |  routerOptions.WithServePut(true).WithValidatePutGUID(true).WithPutValidator(myValidator) | On with guid existence validator
 |DELETE with guid in path | delete a document   |  routerOptions.WithServeDelete(true) | On
 |DELETE by name  | delete a document or a list of documents by name   |  routerOptions.WithDeleteByName(true) | Off
 

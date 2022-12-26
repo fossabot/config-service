@@ -204,7 +204,7 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *queryPara
 
 // ////////////////////////////////////////POST///////////////////////////////////////////////
 // HandlePostDocWithValidation - chains validation and post document handlers
-func HandlePostDocWithValidation[T types.DocContent](validators ...Validator[T]) []gin.HandlerFunc {
+func HandlePostDocWithValidation[T types.DocContent](validators ...MutatorValidator[T]) []gin.HandlerFunc {
 	return []gin.HandlerFunc{PostValidationMiddleware(validators...), HandlePostDocFromContext[T]}
 }
 
@@ -259,7 +259,7 @@ func PostDBDocumentHandler[T types.DocContent](c *gin.Context, dbDoc types.Docum
 // ////////////////////////////////////////PUT///////////////////////////////////////////////
 
 // HandlePutDocWithValidation - chains validation and put document handlers
-func HandlePutDocWithValidation[T types.DocContent](validators ...Validator[T]) []gin.HandlerFunc {
+func HandlePutDocWithValidation[T types.DocContent](validators ...MutatorValidator[T]) []gin.HandlerFunc {
 	return []gin.HandlerFunc{PutValidationMiddleware(validators...), HandlePutDocFromContext[T]}
 }
 
