@@ -20,7 +20,7 @@ type routerOptions[T types.DocContent] struct {
 	validatePostUniqueName    bool                  //default true, POST will validate that the name is unique
 	validatePutGUID           bool                  //default true, PUT will validate GUID existence in body or path
 	nameQueryParam            string                //default empty, the param name that indicates query by name (e.g. clusterName) when set GET will check for this param and will return the document by name
-	queryConfig               *queryParamsConfig    //default nil, when set, GET will check for the specified query params and will return the documents by the query params
+	QueryConfig               *QueryParamsConfig    //default nil, when set, GET will check for the specified query params and will return the documents by the query params
 	serveGetIncludeGlobalDocs bool                  //default false, when true, in GET all the response will include global documents (with customers[""])
 	serveDeleteByName         bool                  //default false, when true, DELETE will check for name param and will delete the document by name
 	uniqueShortName           func(T) string        //default nil, when set, POST will create a unique short name (aka "alias") attribute from the value returned from the function & Put will validate that the short name is not deleted
@@ -52,7 +52,7 @@ func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *g
 	routerGroup.Use(DBContextMiddleware(opts.dbCollection))
 
 	if opts.serveGet {
-		routerGroup.GET("", HandleGetByQueryOrAll[T](opts.nameQueryParam, opts.queryConfig, opts.serveGetIncludeGlobalDocs, opts.serveGetNamesList))
+		routerGroup.GET("", HandleGetByQueryOrAll[T](opts.nameQueryParam, opts.QueryConfig, opts.serveGetIncludeGlobalDocs, opts.serveGetNamesList))
 		routerGroup.GET("/:"+consts.GUIDField, HandleGetDocWithGUIDInPath[T])
 	}
 	if opts.servePost {
@@ -88,7 +88,7 @@ func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *g
 }
 
 // Common router config for policies
-func AddPolicyRoutes[T types.DocContent](g *gin.Engine, path, dbCollection string, paramConf *queryParamsConfig) *gin.RouterGroup {
+func AddPolicyRoutes[T types.DocContent](g *gin.Engine, path, dbCollection string, paramConf *QueryParamsConfig) *gin.RouterGroup {
 	return AddRoutes(g, NewRouterOptionsBuilder[T]().
 		WithPath(path).
 		WithDBCollection(dbCollection).
@@ -200,9 +200,9 @@ func (b *RouterOptionsBuilder[T]) WithNameQuery(nameQueryParam string) *RouterOp
 	return b
 }
 
-func (b *RouterOptionsBuilder[T]) WithQueryConfig(queryConfig *queryParamsConfig) *RouterOptionsBuilder[T] {
+func (b *RouterOptionsBuilder[T]) WithQueryConfig(QueryConfig *QueryParamsConfig) *RouterOptionsBuilder[T] {
 	b.options = append(b.options, func(opts *routerOptions[T]) {
-		opts.queryConfig = queryConfig
+		opts.QueryConfig = QueryConfig
 	})
 	return b
 }

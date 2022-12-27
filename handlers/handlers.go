@@ -38,7 +38,7 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 }
 
 // HandleGetListByNameOrAll - chains HandleGetNamesList->HandleGetByName-> HandleGetAll
-func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *queryParamsConfig, listGlobals bool, listNames bool) gin.HandlerFunc {
+func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *QueryParamsConfig, listGlobals bool, listNames bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer log.LogNTraceEnterExit("HandleGetByQueryOrAll", c)()
 		if (!listNames || !GetNamesListHandler[T](c, listGlobals)) &&
@@ -114,7 +114,7 @@ func GetByNameParamHandler[T types.DocContent](c *gin.Context, nameParam string)
 }
 
 // GetByScopeParams parse scope params and return elements with this scope, returns false if not served by this handler
-func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *queryParamsConfig) bool {
+func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *QueryParamsConfig) bool {
 	if conf == nil {
 		return false // not served by this handler
 	}
@@ -140,7 +140,7 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *queryPara
 			continue
 		}
 		if len(keys) < 2 {
-			keys = []string{conf.defaultContext, keys[0]}
+			keys = []string{conf.DefaultContext, keys[0]}
 		} else if len(keys) > 2 {
 			keys = []string{keys[0], strings.Join(keys[1:], ".")}
 		}
@@ -154,19 +154,19 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *queryPara
 		}
 		//calculate field name
 		var field, key = keys[0], keys[1]
-		queryConfig, ok := conf.params2Query[field]
+		QueryConfig, ok := conf.Params2Query[field]
 		if !ok {
 			continue
-		} else if queryConfig.isArray {
-			if queryConfig.pathInArray != "" {
-				key = queryConfig.pathInArray + "." + key
+		} else if QueryConfig.IsArray {
+			if QueryConfig.PathInArray != "" {
+				key = QueryConfig.PathInArray + "." + key
 
 			}
 		} else {
-			key = queryConfig.fieldName + "." + key
+			key = QueryConfig.FieldName + "." + key
 		}
 		//get the field filter builder
-		filterBuilder := getFilterBuilder(queryConfig.fieldName)
+		filterBuilder := getFilterBuilder(QueryConfig.FieldName)
 		//case of single value
 		if len(values) == 1 {
 			filterBuilder.WithValue(key, values[0])
@@ -181,10 +181,10 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *queryPara
 	//aggregate all filters
 	allQueriesFilter := db.NewFilterBuilder()
 	for key, filterBuilder := range filterBuilders {
-		queryConfig := conf.params2Query[key]
+		QueryConfig := conf.Params2Query[key]
 		filterBuilder.WrapDupKeysWithOr()
-		if queryConfig.isArray {
-			filterBuilder.WarpElementMatch().WarpWithField(queryConfig.fieldName)
+		if QueryConfig.IsArray {
+			filterBuilder.WarpElementMatch().WarpWithField(QueryConfig.FieldName)
 		}
 		allQueriesFilter.WithFilter(filterBuilder.Get())
 	}
