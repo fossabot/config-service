@@ -23,3 +23,17 @@ func DefaultQueryConfig() *QueryParamsConfig {
 		},
 	}
 }
+
+// flat query config - for query params that are not nested
+func FlatQueryConfig() *QueryParamsConfig {
+	return &QueryParamsConfig{
+		Params2Query: map[string]QueryConfig{
+			"": {
+				FieldName:   "",
+				PathInArray: "",
+				IsArray:     false,
+			},
+		},
+		DefaultContext: "",
+	}
+}

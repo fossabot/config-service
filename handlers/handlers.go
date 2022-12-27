@@ -160,9 +160,8 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *QueryPara
 		} else if QueryConfig.IsArray {
 			if QueryConfig.PathInArray != "" {
 				key = QueryConfig.PathInArray + "." + key
-
 			}
-		} else {
+		} else if QueryConfig.FieldName != "" {
 			key = QueryConfig.FieldName + "." + key
 		}
 		//get the field filter builder
