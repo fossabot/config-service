@@ -452,8 +452,8 @@ func (suite *MainTestSuite) TestRegistryCronJobs() {
 			expectedIndexes: []int{0,2},
 		},
 		{
-			query:           "registryName=registryA",
-			expectedIndexes: []int{0},
+			query:           "registryName=registryA&registryName=registryB",
+			expectedIndexes: []int{0,1,2},
 		},
 		{
 			query:           "registryName=registryB",
