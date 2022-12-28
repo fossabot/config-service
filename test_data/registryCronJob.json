@@ -1,0 +1,47 @@
+[
+    {
+        "guid": "1c73d160-84fe-4f41-a89b-d7d54bb1b684",
+        "name": "minikube2",
+        "clusterName": "minikube2",
+        "registryName": "gc",
+        "registryProvider": "public-registry.systest-ns-bo9w",
+        "registryType": "public",
+        "depth": 3,
+        "IsHTTPs": true,
+        "SkipTLS": true,
+        "authMethod": {
+            "type": ""
+        }
+    },
+    {
+        "guid": "1c73d160-84fe-4f41-a89b-d7d54bb1b685",
+        "name": "minikube3",
+        "clusterName": "minikube3",
+        "registryName": "public-registry.systest-ns-bo9w:5000",
+        "registryProvider": "public-registry.systest-ns-bo9w",
+        "registryType": "public",
+        "depth": 3,
+        "IsHTTPs": false,
+        "SkipTLS": true,
+        "authMethod": {
+            "type": ""
+        }
+    },
+    {
+        "guid": "1c73d160-84fe-4f41-a89b-d7d54bb1b685",
+        "name": "moshe-super-cluster",
+        "clusterName": "minikube",
+        "registryName": "gc",
+        "registryProvider": "public-registry.systest-ns-bo9w",
+        "registryType": "public",
+        "depth": 3,
+        "IsHTTPs": false,
+        "SkipTLS": true,
+        "authMethod": {
+            "type": "public"
+        },
+        "repositories":[
+            {"repositoryName":"repo1"},
+            {"repositoryName":"repo2"}]
+    }
+]

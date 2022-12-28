@@ -279,6 +279,7 @@ func HandlePutDocFromContext[T types.DocContent](c *gin.Context) {
 // PutDoc - helper to put document of type T, custom handler should use this function to do the final PUT handling
 func PutDocHandler[T types.DocContent](c *gin.Context, doc T) {
 	defer log.LogNTraceEnterExit("PutDocHandler", c)()
+	doc.SetUpdatedTime(nil)
 	update, err := db.GetUpdateDocCommand(doc, doc.GetReadOnlyFields()...)
 	if err != nil {
 		ResponseInternalServerError(c, "failed to generate update command", err)

@@ -20,7 +20,7 @@ var clustersJson []byte
 
 var newClusterCompareFilter = cmp.FilterPath(func(p cmp.Path) bool {
 	switch p.String() {
-	case "PortalBase.GUID", "SubscriptionDate", "LastLoginDate":
+	case "PortalBase.GUID", "SubscriptionDate", "LastLoginDate", "PortalBase.UpdatedTime":
 		return true
 	case "PortalBase.Attributes":
 		if p.Last().String() == `["alias"]` {
@@ -75,7 +75,7 @@ func (suite *MainTestSuite) TestCluster() {
 var posturePoliciesJson []byte
 
 var commonCmpFilter = cmp.FilterPath(func(p cmp.Path) bool {
-	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime"
+	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "PortalBase.UpdatedTime"
 }, cmp.Ignore())
 
 func (suite *MainTestSuite) TestPostureException() {
@@ -229,7 +229,7 @@ func (suite *MainTestSuite) TestCustomerConfiguration() {
 
 	//create compare options
 	compareFilter := cmp.FilterPath(func(p cmp.Path) bool {
-		return p.String() == "CreationTime" || p.String() == "GUID"
+		return p.String() == "CreationTime" || p.String() == "GUID" || p.String() == "UpdatedTime" || p.String() == "PortalBase.UpdatedTime"
 	}, cmp.Ignore())
 
 	//TESTS
@@ -396,7 +396,7 @@ func (suite *MainTestSuite) TestCustomer() {
 //go:embed test_data/frameworks.json
 var frameworksJson []byte
 var fwCmpFilter = cmp.FilterPath(func(p cmp.Path) bool {
-	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "Controls"
+	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "Controls" || p.String() == "PortalBase.UpdatedTime"
 }, cmp.Ignore())
 
 func (suite *MainTestSuite) TestFrameworks() {
@@ -420,8 +420,52 @@ func (suite *MainTestSuite) TestFrameworks() {
 
 	fw1 := testPostDoc(suite, consts.FrameworkPath, frameworks[0], fwCmpFilter)
 	creationTime, err := time.Parse(time.RFC3339, fw1.CreationTime)
+	updateTime, err := time.Parse(time.RFC3339, fw1.UpdatedTime)
 	suite.NoError(err, "failed to parse creation time")
 	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
+	suite.True(time.Since(updateTime) < time.Second, "updateTime time is not recent")
+}
+
+//go:embed test_data/registryCronJob.json
+var registryCronJobJson []byte
+
+var rCmpFilter = cmp.FilterPath(func(p cmp.Path) bool {
+	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "PortalBase.UpdatedTime"
+}, cmp.Ignore())
+
+func (suite *MainTestSuite) TestRegistryCronJobs() {
+	registryCronJobs, _ := loadJson[*types.RegistryCronJob](registryCronJobJson)
+
+	modifyFunc := func(r *types.RegistryCronJob) *types.RegistryCronJob {
+		if r.Include == nil {
+			r.Include = []string{}
+		}
+		r.Include = append(r.Include, "new-registry"+rndStr.NewLen(5))
+		return r
+	}
+	commonTest(suite, consts.RegistryCronJobPath, registryCronJobs, modifyFunc, rCmpFilter)
+
+	getQueries := []queryTest[*types.RegistryCronJob]{
+		{
+			query:           "clusterName=minikube",
+			expectedIndexes: []int{2},
+		},
+		{
+			query:           "registryName=gc",
+			expectedIndexes: []int{ 0,2},
+		},
+		{
+			query:           "clusterName=minikube&registryName=gc",
+			expectedIndexes: []int{2},
+		},
+	}
+
+	testGetDeleteByNameAndQuery(suite, consts.RegistryCronJobPath, consts.NameField, registryCronJobs, getQueries)
+
+	r1 := testPostDoc(suite, consts.RegistryCronJobPath, registryCronJobs[0], rCmpFilter)
+	updateTime, err := time.Parse(time.RFC3339, r1.UpdatedTime)
+	suite.NoError(err, "failed to parse creation time")
+	suite.True(time.Since(updateTime) < time.Second, "updateTime time is not recent")
 }
 
 func modifyAttribute[T types.DocContent](repo T) T {
@@ -443,7 +487,7 @@ var repositoriesJson []byte
 
 var repoCompareFilter = cmp.FilterPath(func(p cmp.Path) bool {
 	switch p.String() {
-	case "PortalBase.GUID", "CreationDate", "LastLoginDate":
+	case "PortalBase.GUID", "CreationDate", "LastLoginDate", "PortalBase.UpdatedTime":
 		return true
 	case "PortalBase.Attributes":
 		if p.Last().String() == `["alias"]` {
