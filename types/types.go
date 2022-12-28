@@ -20,6 +20,7 @@ type Document[T DocContent] struct {
 func NewDocument[T DocContent](content T, customerGUID string) Document[T] {
 	content.InitNew()
 	content.SetGUID(uuid.NewV4().String())
+	content.SetUpdatedTime(nil)
 	doc := Document[T]{
 		ID:      content.GetGUID(),
 		Content: content,
@@ -33,7 +34,7 @@ func NewDocument[T DocContent](content T, customerGUID string) Document[T] {
 // Doc Content interface for data types embedded in DB documents
 type DocContent interface {
 	*CustomerConfig | *Cluster | *PostureExceptionPolicy | *VulnerabilityExceptionPolicy | *Customer |
-		*PolicyRule | *Control | *Framework | *Repository
+		*PolicyRule | *Control | *Framework | *Repository | *RegistryCronJob
 	InitNew()
 	GetReadOnlyFields() []string
 	//default implementation exist in portal base
@@ -43,6 +44,7 @@ type DocContent interface {
 	SetGUID(guid string)
 	GetAttributes() map[string]interface{}
 	SetAttributes(attributes map[string]interface{})
+	SetUpdatedTime(updatedTime *time.Time)
 }
 
 // redefine types for Doc Content implementations
@@ -52,6 +54,7 @@ type CustomerConfig struct {
 	armotypes.CustomerConfig `json:",inline" bson:"inline"`
 	GUID                     string `json:"guid" bson:"guid"`
 	CreationTime             string `json:"creationTime" bson:"creationTime"`
+	UpdatedTime             string `json:"updatedTime" bson:"updatedTime"`
 }
 
 func (c *CustomerConfig) GetGUID() string {
@@ -88,6 +91,13 @@ func (c *CustomerConfig) SetAttributes(attributes map[string]interface{}) {
 	c.Attributes = attributes
 }
 
+func (c *CustomerConfig) SetUpdatedTime(updatedTime *time.Time) {
+	if updatedTime == nil {
+		c.UpdatedTime = time.Now().UTC().Format(time.RFC3339)
+		return
+	}
+	c.UpdatedTime = updatedTime.UTC().Format(time.RFC3339)
+}
 // DocContent implementations
 
 type PolicyRule opapolicy.PolicyRule
@@ -168,8 +178,21 @@ func (r *Repository) InitNew() {
 	}
 }
 
-var commonReadOnlyFields = []string{consts.IdField, consts.NameField, consts.GUIDField}
+type RegistryCronJob armotypes.PortalRegistryCronJob
+
+func (*RegistryCronJob) GetReadOnlyFields() []string {
+	return croneJobReadOnlyFields
+}
+
+func (r *RegistryCronJob) InitNew() {
+	if r.Attributes == nil {
+		r.Attributes = make(map[string]interface{})
+	}
+}
+
+var commonReadOnlyFields = []string{consts.IdField, consts.NameField, consts.GUIDField, consts.UpdatedTimeField}
 var clusterReadOnlyFields = append([]string{"subscription_date"}, commonReadOnlyFields...)
 var exceptionPolicyReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
 var customerConfigReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
 var repositoryReadOnlyFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, commonReadOnlyFields...)
+var croneJobReadOnlyFields = append([]string{"creationTime","clusterName", "registryName"}, commonReadOnlyFields...)

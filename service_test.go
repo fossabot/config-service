@@ -20,7 +20,7 @@ var clustersJson []byte
 
 var newClusterCompareFilter = cmp.FilterPath(func(p cmp.Path) bool {
 	switch p.String() {
-	case "PortalBase.GUID", "SubscriptionDate", "LastLoginDate":
+	case "PortalBase.GUID", "SubscriptionDate", "LastLoginDate", "PortalBase.UpdatedTime":
 		return true
 	case "PortalBase.Attributes":
 		if p.Last().String() == `["alias"]` {
@@ -75,7 +75,7 @@ func (suite *MainTestSuite) TestCluster() {
 var posturePoliciesJson []byte
 
 var commonCmpFilter = cmp.FilterPath(func(p cmp.Path) bool {
-	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime"
+	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "PortalBase.UpdatedTime"
 }, cmp.Ignore())
 
 func (suite *MainTestSuite) TestPostureException() {
@@ -229,7 +229,7 @@ func (suite *MainTestSuite) TestCustomerConfiguration() {
 
 	//create compare options
 	compareFilter := cmp.FilterPath(func(p cmp.Path) bool {
-		return p.String() == "CreationTime" || p.String() == "GUID"
+		return p.String() == "CreationTime" || p.String() == "GUID" || p.String() == "UpdatedTime" || p.String() == "PortalBase.UpdatedTime"
 	}, cmp.Ignore())
 
 	//TESTS
@@ -396,7 +396,7 @@ func (suite *MainTestSuite) TestCustomer() {
 //go:embed test_data/frameworks.json
 var frameworksJson []byte
 var fwCmpFilter = cmp.FilterPath(func(p cmp.Path) bool {
-	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "Controls"
+	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "Controls" || p.String() == "PortalBase.UpdatedTime"
 }, cmp.Ignore())
 
 func (suite *MainTestSuite) TestFrameworks() {
@@ -420,8 +420,61 @@ func (suite *MainTestSuite) TestFrameworks() {
 
 	fw1 := testPostDoc(suite, consts.FrameworkPath, frameworks[0], fwCmpFilter)
 	creationTime, err := time.Parse(time.RFC3339, fw1.CreationTime)
+	updateTime, err := time.Parse(time.RFC3339, fw1.UpdatedTime)
 	suite.NoError(err, "failed to parse creation time")
 	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
+	suite.True(time.Since(updateTime) < time.Second, "updateTime time is not recent")
+}
+
+//go:embed test_data/registryCronJob.json
+var registryCronJobJson []byte
+
+var rCmpFilter = cmp.FilterPath(func(p cmp.Path) bool {
+	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "PortalBase.UpdatedTime"
+}, cmp.Ignore())
+
+func (suite *MainTestSuite) TestRegistryCronJobs() {
+	registryCronJobs, _ := loadJson[*types.RegistryCronJob](registryCronJobJson)
+
+	modifyFunc := func(r *types.RegistryCronJob) *types.RegistryCronJob {
+		if r.Include == nil {
+			r.Include = []string{}
+		}
+		r.Include = append(r.Include, "new-registry"+rndStr.NewLen(5))
+		return r
+	}
+	commonTest(suite, consts.RegistryCronJobPath, registryCronJobs, modifyFunc, rCmpFilter)
+
+	
+	getQueries := []queryTest[*types.RegistryCronJob]{
+		{
+			query:           "clusterName=clusterA",
+			expectedIndexes: []int{0,2},
+		},
+		{
+			query:           "registryName=registryA&registryName=registryB",
+			expectedIndexes: []int{0,1,2},
+		},
+		{
+			query:           "registryName=registryB",
+			expectedIndexes: []int{1,2},
+		},
+		{
+			query:           "registryName=registryA",
+			expectedIndexes: []int{0},
+		},
+		{
+			query:           "clusterName=clusterA&registryName=registryB",
+			expectedIndexes: []int{2},
+		},
+	}
+
+	testGetDeleteByNameAndQuery(suite, consts.RegistryCronJobPath, consts.NameField, registryCronJobs, getQueries)
+
+	r1 := testPostDoc(suite, consts.RegistryCronJobPath, registryCronJobs[0], rCmpFilter)
+	updateTime, err := time.Parse(time.RFC3339, r1.UpdatedTime)
+	suite.NoError(err, "failed to parse creation time")
+	suite.True(time.Since(updateTime) < time.Second, "updateTime time is not recent")
 }
 
 func modifyAttribute[T types.DocContent](repo T) T {
@@ -443,7 +496,7 @@ var repositoriesJson []byte
 
 var repoCompareFilter = cmp.FilterPath(func(p cmp.Path) bool {
 	switch p.String() {
-	case "PortalBase.GUID", "CreationDate", "LastLoginDate":
+	case "PortalBase.GUID", "CreationDate", "LastLoginDate", "PortalBase.UpdatedTime":
 		return true
 	case "PortalBase.Attributes":
 		if p.Last().String() == `["alias"]` {
@@ -523,6 +576,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 	posturePolices, policiesNames := loadJson[*types.PostureExceptionPolicy](posturePoliciesJson)
 	vulnerabilityPolicies, vulnerabilityNames := loadJson[*types.VulnerabilityExceptionPolicy](vulnerabilityPoliciesJson)
 	repositories, repositoriesNames := loadJson[*types.Repository](repositoriesJson)
+	registryCronJobs, registryCronJobNames := loadJson[*types.RegistryCronJob](registryCronJobJson)
 
 	populateUser := func(userGUID string) {
 		suite.login(userGUID)
@@ -531,6 +585,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 		testBulkPostDocs(suite, consts.PostureExceptionPolicyPath, posturePolices, commonCmpFilter)
 		testBulkPostDocs(suite, consts.VulnerabilityExceptionPolicyPath, vulnerabilityPolicies, commonCmpFilter)
 		testBulkPostDocs(suite, consts.RepositoryPath, repositories, repoCompareFilter)
+		testBulkPostDocs(suite, consts.RegistryCronJobPath, registryCronJobs, rCmpFilter)
 
 		customer := &types.Customer{
 			PortalBase: armotypes.PortalBase{
@@ -548,6 +603,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 		testGetNameList(suite, consts.PostureExceptionPolicyPath, policiesNames)
 		testGetNameList(suite, consts.VulnerabilityExceptionPolicyPath, vulnerabilityNames)
 		testGetNameList(suite, consts.RepositoryPath, repositoriesNames)
+		testGetNameList(suite, consts.RegistryCronJobPath, registryCronJobNames)
 
 		customer := &types.Customer{
 			PortalBase: armotypes.PortalBase{
@@ -566,6 +622,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 		testGetNameList(suite, consts.PostureExceptionPolicyPath, nil)
 		testGetNameList(suite, consts.VulnerabilityExceptionPolicyPath, nil)
 		testGetNameList(suite, consts.RepositoryPath, nil)
+		testGetNameList(suite, consts.RegistryCronJobPath, nil)
 		testBadRequest(suite, http.MethodGet, consts.CustomerPath, errorDocumentNotFound, nil, http.StatusNotFound)
 
 	}
@@ -588,7 +645,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 		suite.FailNow(err.Error())
 	}
 	//expect 2 customers doc and all what they have
-	deletedCount := 2 * (1 + len(clusters) + len(frameworks) + len(posturePolices) + len(vulnerabilityPolicies) + len(repositories))
+	deletedCount := 2 * (1 + len(clusters) + len(frameworks) + len(posturePolices) + len(vulnerabilityPolicies) + len(repositories) + len(registryCronJobs))
 	suite.Equal(int64(deletedCount), response.Deleted)
 	//verify user1 data is still there
 	verifyUserData(user1)
@@ -613,7 +670,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 		suite.FailNow(err.Error())
 	}
 
-	deletedCount = 1 + len(clusters) + len(frameworks) + len(posturePolices) + len(vulnerabilityPolicies) + len(repositories)
+	deletedCount = 1 + len(clusters) + len(frameworks) + len(posturePolices) + len(vulnerabilityPolicies) + len(repositories) + len(registryCronJobs)
 	suite.Equal(int64(deletedCount), response.Deleted)
 	//verify user2 data is gone
 	verifyUserDataDeleted(user2)
@@ -630,6 +687,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
+
 	suite.Equal(int64(deletedCount), response.Deleted)
 	//verify user1 data is gone
 	verifyUserDataDeleted(user1)

@@ -19,6 +19,7 @@ const (
 	AdminPath                        = "/v1_admin"
 	CustomerPath                     = "/customer"
 	TenantPath                       = "/customer_tenant"
+	RegistryCronJobPath              = "/v1_registry_cron_job"
 
 	//DB collections
 	ClustersCollection                     = "clusters"
@@ -28,14 +29,16 @@ const (
 	CustomersCollection                    = "customers"
 	FrameworkCollection                    = "v1_opa_frameworks"
 	RepositoryCollection                   = "v1_repositories"
+	RegistryCronJobCollection              = "v1_registry_cron_jobs"
 
 	//Common document fields
-	IdField         = "_id"
-	GUIDField       = "guid"
-	NameField       = "name"
-	DeletedField    = "is_deleted"
-	AttributesField = "attributes"
-	CustomersField  = "customers"
+	IdField          = "_id"
+	GUIDField        = "guid"
+	NameField        = "name"
+	DeletedField     = "is_deleted"
+	AttributesField  = "attributes"
+	CustomersField   = "customers"
+	UpdatedTimeField = "updatedTime"
 	//cluster fields
 	ShortNameAttribute = "alias"
 	ShortNameField     = AttributesField + "." + ShortNameAttribute

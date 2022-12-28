@@ -1,0 +1,20 @@
+[
+    {
+        "name": "a",
+        "clusterName": "clusterA",
+        "registryName": "registryA",
+        "creationTime": "2022-01-19T11:56:06.740591"
+    },
+    {
+        "name": "b",
+        "clusterName": "clusterB",
+        "registryName": "registryB",
+        "creationTime": "2022-01-19T11:56:06.740591"
+    },
+    {
+        "name": "c",
+        "clusterName": "clusterA",
+        "registryName": "registryB",
+        "creationTime": "2022-01-19T11:56:06.740591"
+    }
+]
