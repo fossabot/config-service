@@ -445,17 +445,26 @@ func (suite *MainTestSuite) TestRegistryCronJobs() {
 	}
 	commonTest(suite, consts.RegistryCronJobPath, registryCronJobs, modifyFunc, rCmpFilter)
 
+	
 	getQueries := []queryTest[*types.RegistryCronJob]{
 		{
-			query:           "clusterName=minikube",
-			expectedIndexes: []int{2},
+			query:           "clusterName=clusterA",
+			expectedIndexes: []int{0,2},
 		},
 		{
-			query:           "registryName=gc",
-			expectedIndexes: []int{ 0,2},
+			query:           "registryName=registryA",
+			expectedIndexes: []int{0},
 		},
 		{
-			query:           "clusterName=minikube&registryName=gc",
+			query:           "registryName=registryB",
+			expectedIndexes: []int{1,2},
+		},
+		{
+			query:           "registryName=registryA",
+			expectedIndexes: []int{0},
+		},
+		{
+			query:           "clusterName=clusterA&registryName=registryB",
 			expectedIndexes: []int{2},
 		},
 	}
@@ -567,6 +576,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 	posturePolices, policiesNames := loadJson[*types.PostureExceptionPolicy](posturePoliciesJson)
 	vulnerabilityPolicies, vulnerabilityNames := loadJson[*types.VulnerabilityExceptionPolicy](vulnerabilityPoliciesJson)
 	repositories, repositoriesNames := loadJson[*types.Repository](repositoriesJson)
+	registryCronJobs, registryCronJobNames := loadJson[*types.RegistryCronJob](registryCronJobJson)
 
 	populateUser := func(userGUID string) {
 		suite.login(userGUID)
@@ -575,6 +585,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 		testBulkPostDocs(suite, consts.PostureExceptionPolicyPath, posturePolices, commonCmpFilter)
 		testBulkPostDocs(suite, consts.VulnerabilityExceptionPolicyPath, vulnerabilityPolicies, commonCmpFilter)
 		testBulkPostDocs(suite, consts.RepositoryPath, repositories, repoCompareFilter)
+		testBulkPostDocs(suite, consts.RegistryCronJobPath, registryCronJobs, rCmpFilter)
 
 		customer := &types.Customer{
 			PortalBase: armotypes.PortalBase{
@@ -592,6 +603,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 		testGetNameList(suite, consts.PostureExceptionPolicyPath, policiesNames)
 		testGetNameList(suite, consts.VulnerabilityExceptionPolicyPath, vulnerabilityNames)
 		testGetNameList(suite, consts.RepositoryPath, repositoriesNames)
+		testGetNameList(suite, consts.RegistryCronJobPath, registryCronJobNames)
 
 		customer := &types.Customer{
 			PortalBase: armotypes.PortalBase{
@@ -610,6 +622,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 		testGetNameList(suite, consts.PostureExceptionPolicyPath, nil)
 		testGetNameList(suite, consts.VulnerabilityExceptionPolicyPath, nil)
 		testGetNameList(suite, consts.RepositoryPath, nil)
+		testGetNameList(suite, consts.RegistryCronJobPath, nil)
 		testBadRequest(suite, http.MethodGet, consts.CustomerPath, errorDocumentNotFound, nil, http.StatusNotFound)
 
 	}
@@ -632,7 +645,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 		suite.FailNow(err.Error())
 	}
 	//expect 2 customers doc and all what they have
-	deletedCount := 2 * (1 + len(clusters) + len(frameworks) + len(posturePolices) + len(vulnerabilityPolicies) + len(repositories))
+	deletedCount := 2 * (1 + len(clusters) + len(frameworks) + len(posturePolices) + len(vulnerabilityPolicies) + len(repositories) + len(registryCronJobs))
 	suite.Equal(int64(deletedCount), response.Deleted)
 	//verify user1 data is still there
 	verifyUserData(user1)
@@ -657,7 +670,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 		suite.FailNow(err.Error())
 	}
 
-	deletedCount = 1 + len(clusters) + len(frameworks) + len(posturePolices) + len(vulnerabilityPolicies) + len(repositories)
+	deletedCount = 1 + len(clusters) + len(frameworks) + len(posturePolices) + len(vulnerabilityPolicies) + len(repositories) + len(registryCronJobs)
 	suite.Equal(int64(deletedCount), response.Deleted)
 	//verify user2 data is gone
 	verifyUserDataDeleted(user2)
@@ -674,6 +687,7 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
+
 	suite.Equal(int64(deletedCount), response.Deleted)
 	//verify user1 data is gone
 	verifyUserDataDeleted(user1)
