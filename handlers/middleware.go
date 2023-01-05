@@ -18,6 +18,13 @@ func DBContextMiddleware(collectionName string) gin.HandlerFunc {
 	}
 }
 
+func PutFieldsContextMiddleware(fields []string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set(consts.PutDocFields, fields)
+		c.Next()
+	}
+}
+
 func BodyDecoderContextMiddleware[T types.DocContent](decoder *BodyDecoder[T]) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Set(consts.BodyDecoder, decoder)

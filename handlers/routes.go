@@ -60,6 +60,9 @@ func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *g
 	if opts.bodyDecoder != nil {
 		routerGroup.Use(BodyDecoderContextMiddleware(&opts.bodyDecoder))
 	}
+	if opts.putFields != nil {
+		routerGroup.Use(PutFieldsContextMiddleware(opts.putFields))
+	}
 
 	//add routes
 	if opts.serveGet {
