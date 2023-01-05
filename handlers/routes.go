@@ -26,6 +26,9 @@ type routerOptions[T types.DocContent] struct {
 	uniqueShortName           func(T) string        //default nil, when set, POST will create a unique short name (aka "alias") attribute from the value returned from the function & Put will validate that the short name is not deleted
 	putValidators             []MutatorValidator[T] //default nil, when set, PUT will call the mutators/validators before updating the document
 	postValidators            []MutatorValidator[T] //default nil, when set, POST will call the mutators/validators before creating the document
+	bodyDecoder               BodyDecoder[T]        //default nil, when set, replace the default body decoder
+	responseSender            ResponseSender[T]     //default nil, when set, replace the default response sender
+	putFields                 []string              //default nil, when set, PUT will update only the specified fields
 }
 
 func newRouterOptions[T types.DocContent]() *routerOptions[T] {
@@ -49,10 +52,18 @@ func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *g
 		panic(err)
 	}
 	routerGroup := g.Group(opts.path)
+	//add middleware
 	routerGroup.Use(DBContextMiddleware(opts.dbCollection))
+	if opts.responseSender != nil {
+		routerGroup.Use(ResponseSenderContextMiddleware(&opts.responseSender))
+	}
+	if opts.bodyDecoder != nil {
+		routerGroup.Use(BodyDecoderContextMiddleware(&opts.bodyDecoder))
+	}
 
+	//add routes
 	if opts.serveGet {
-		routerGroup.GET("", HandleGetByQueryOrAll[T](opts.nameQueryParam, opts.QueryConfig, opts.serveGetIncludeGlobalDocs, opts.serveGetNamesList))
+		routerGroup.GET("", HandleGet(opts))
 		routerGroup.GET("/:"+consts.GUIDField, HandleGetDocWithGUIDInPath[T])
 	}
 	if opts.servePost {
@@ -135,6 +146,27 @@ func NewRouterOptionsBuilder[T types.DocContent]() *RouterOptionsBuilder[T] {
 
 func (b *RouterOptionsBuilder[T]) Get() []RouterOption[T] {
 	return b.options
+}
+
+func (b *RouterOptionsBuilder[T]) WithPutFields(fields []string) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
+		opts.putFields = fields
+	})
+	return b
+}
+
+func (b *RouterOptionsBuilder[T]) WithBodyDecoder(decoder BodyDecoder[T]) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
+		opts.bodyDecoder = decoder
+	})
+	return b
+}
+
+func (b *RouterOptionsBuilder[T]) WithResponseSender(sender ResponseSender[T]) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
+		opts.responseSender = sender
+	})
+	return b
 }
 
 func (b *RouterOptionsBuilder[T]) WithDBCollection(dbCollection string) *RouterOptionsBuilder[T] {

@@ -29,21 +29,17 @@ func HandleGetDocWithGUIDInPath[T types.DocContent](c *gin.Context) {
 	if doc, err := db.GetDocByGUID[T](c, guid); err != nil {
 		ResponseInternalServerError(c, "failed to read document", err)
 		return
-	} else if doc == nil {
-		ResponseDocumentNotFound(c)
-		return
 	} else {
-		c.JSON(http.StatusOK, doc)
+		docResponse(c, doc)
 	}
+
 }
 
-// HandleGetListByNameOrAll - chains HandleGetNamesList->HandleGetByName-> HandleGetAll
-func HandleGetByQueryOrAll[T types.DocContent](nameParam string, paramConf *QueryParamsConfig, listGlobals bool, listNames bool) gin.HandlerFunc {
+func HandleGet[T types.DocContent](opts *routerOptions[T]) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		defer log.LogNTraceEnterExit("HandleGetByQueryOrAll", c)()
-		if (!listNames || !GetNamesListHandler[T](c, listGlobals)) &&
-			!GetByNameParamHandler[T](c, nameParam) &&
-			!GetByScopeParamsHandler[T](c, paramConf) {
+		if (!opts.serveGetNamesList || !GetNamesListHandler[T](c, opts.serveGetIncludeGlobalDocs)) &&
+			!GetByNameParamHandler[T](c, opts.nameQueryParam) &&
+			!GetByScopeParamsHandler[T](c, opts.QueryConfig) {
 			HandleGetAll[T](c)
 		}
 	}
@@ -56,7 +52,7 @@ func HandleGetAll[T types.DocContent](c *gin.Context) {
 		ResponseInternalServerError(c, "failed to read all documents for customer", err)
 		return
 	} else {
-		c.JSON(http.StatusOK, docs)
+		docsResponse(c, docs)
 	}
 }
 
@@ -67,7 +63,7 @@ func HandleGetAllWithGlobals[T types.DocContent](c *gin.Context) {
 		ResponseInternalServerError(c, "failed to read all documents for customer", err)
 		return
 	} else {
-		c.JSON(http.StatusOK, docs)
+		docsResponse(c, docs)
 	}
 }
 
@@ -102,11 +98,8 @@ func GetByNameParamHandler[T types.DocContent](c *gin.Context, nameParam string)
 		if doc, err := db.GetDocByName[T](c, name); err != nil {
 			ResponseInternalServerError(c, "failed to read document", err)
 			return true
-		} else if doc == nil {
-			ResponseDocumentNotFound(c)
-			return true
 		} else {
-			c.JSON(http.StatusOK, doc)
+			docResponse(c, doc)
 			return true
 		}
 	}
@@ -196,7 +189,7 @@ func GetByScopeParamsHandler[T types.DocContent](c *gin.Context, conf *QueryPara
 		return true
 	} else {
 		log.LogNTrace(fmt.Sprintf("scope query found %d documents", len(docs)), c)
-		c.JSON(http.StatusOK, docs)
+		docsResponse(c, docs)
 		return true
 	}
 }
@@ -280,8 +273,12 @@ func HandlePutDocFromContext[T types.DocContent](c *gin.Context) {
 func PutDocHandler[T types.DocContent](c *gin.Context, doc T) {
 	defer log.LogNTraceEnterExit("PutDocHandler", c)()
 	doc.SetUpdatedTime(nil)
-	update, err := db.GetUpdateDocCommand(doc, doc.GetReadOnlyFields()...)
+	update, err := db.GetUpdateDocCommand(doc, GetCustomPutFields(c), doc.GetReadOnlyFields()...)
 	if err != nil {
+		if db.IsNoFieldsToUpdateError(err) {
+			ResponseBadRequest(c, "no fields to update")
+			return
+		}
 		ResponseInternalServerError(c, "failed to generate update command", err)
 		return
 	}
@@ -291,7 +288,7 @@ func PutDocHandler[T types.DocContent](c *gin.Context, doc T) {
 		ResponseDocumentNotFound(c)
 		return
 	} else {
-		c.JSON(http.StatusOK, res)
+		docsResponse(c, res)
 	}
 }
 

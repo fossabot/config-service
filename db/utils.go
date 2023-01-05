@@ -6,6 +6,7 @@ import (
 	"config-service/utils/consts"
 	"config-service/utils/log"
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -423,4 +424,15 @@ func readCollection(c context.Context) (collection string, err error) {
 
 func IsDuplicateKeyError(err error) bool {
 	return mongoDB.IsDuplicateKeyError(err)
+}
+
+func IsNoFieldsToUpdateError(err error) bool {
+	return errors.Is(err, NoFieldsToUpdateError{})
+}
+
+type NoFieldsToUpdateError struct {
+}
+
+func (e NoFieldsToUpdateError) Error() string {
+	return "no fields to update"
 }

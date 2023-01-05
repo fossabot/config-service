@@ -18,6 +18,7 @@ func AddRoutes(g *gin.Engine) {
 	customer.Use(handlers.DBContextMiddleware(consts.CustomersCollection))
 	customer.GET("", getCustomer)
 	customer.DELETE("", deleteCustomer)
+	customer.PUT("", handlers.HandlePutDocWithGUIDValidation[*types.Customer]()...)
 }
 
 func AddPublicRoutes(g *gin.Engine) {

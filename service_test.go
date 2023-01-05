@@ -420,8 +420,9 @@ func (suite *MainTestSuite) TestFrameworks() {
 
 	fw1 := testPostDoc(suite, consts.FrameworkPath, frameworks[0], fwCmpFilter)
 	creationTime, err := time.Parse(time.RFC3339, fw1.CreationTime)
-	updateTime, err := time.Parse(time.RFC3339, fw1.UpdatedTime)
 	suite.NoError(err, "failed to parse creation time")
+	updateTime, err := time.Parse(time.RFC3339, fw1.UpdatedTime)
+	suite.NoError(err, "failed to parse UpdatedTime")
 	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
 	suite.True(time.Since(updateTime) < time.Second, "updateTime time is not recent")
 }
@@ -445,19 +446,18 @@ func (suite *MainTestSuite) TestRegistryCronJobs() {
 	}
 	commonTest(suite, consts.RegistryCronJobPath, registryCronJobs, modifyFunc, rCmpFilter)
 
-	
 	getQueries := []queryTest[*types.RegistryCronJob]{
 		{
 			query:           "clusterName=clusterA",
-			expectedIndexes: []int{0,2},
+			expectedIndexes: []int{0, 2},
 		},
 		{
 			query:           "registryName=registryA&registryName=registryB",
-			expectedIndexes: []int{0,1,2},
+			expectedIndexes: []int{0, 1, 2},
 		},
 		{
 			query:           "registryName=registryB",
-			expectedIndexes: []int{1,2},
+			expectedIndexes: []int{1, 2},
 		},
 		{
 			query:           "registryName=registryA",

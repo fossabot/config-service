@@ -54,7 +54,7 @@ type CustomerConfig struct {
 	armotypes.CustomerConfig `json:",inline" bson:"inline"`
 	GUID                     string `json:"guid" bson:"guid"`
 	CreationTime             string `json:"creationTime" bson:"creationTime"`
-	UpdatedTime             string `json:"updatedTime" bson:"updatedTime"`
+	UpdatedTime              string `json:"updatedTime" bson:"updatedTime"`
 }
 
 func (c *CustomerConfig) GetGUID() string {
@@ -98,6 +98,7 @@ func (c *CustomerConfig) SetUpdatedTime(updatedTime *time.Time) {
 	}
 	c.UpdatedTime = updatedTime.UTC().Format(time.RFC3339)
 }
+
 // DocContent implementations
 
 type PolicyRule opapolicy.PolicyRule
@@ -195,4 +196,4 @@ var clusterReadOnlyFields = append([]string{"subscription_date"}, commonReadOnly
 var exceptionPolicyReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
 var customerConfigReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
 var repositoryReadOnlyFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, commonReadOnlyFields...)
-var croneJobReadOnlyFields = append([]string{"creationTime","clusterName", "registryName"}, commonReadOnlyFields...)
+var croneJobReadOnlyFields = append([]string{"creationTime", "clusterName", "registryName"}, commonReadOnlyFields...)

@@ -18,13 +18,33 @@ func DBContextMiddleware(collectionName string) gin.HandlerFunc {
 	}
 }
 
+func BodyDecoderContextMiddleware[T types.DocContent](decoder *BodyDecoder[T]) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set(consts.BodyDecoder, decoder)
+		c.Next()
+	}
+}
+
+func ResponseSenderContextMiddleware[T types.DocContent](sender *ResponseSender[T]) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set(consts.ResponseSender, sender)
+		c.Next()
+	}
+}
+
 // PostValidationMiddleware validate post request and if valid sets one or many DocContents in context for next handler, otherwise abort request
 func PostValidationMiddleware[T types.DocContent](validators ...MutatorValidator[T]) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		defer log.LogNTraceEnterExit("HandlePostValidation", c)()
 		var doc T
 		var docs []T
-		if err := c.ShouldBindBodyWith(&doc, binding.JSON); err != nil || doc == nil {
+		if customDecoder, _ := GetCustomBodyDecoder[T](c); customDecoder != nil {
+			var err error
+			if docs, err = customDecoder(c); err != nil {
+				ResponseFailedToBindJson(c, err)
+				return
+			}
+		} else if err := c.ShouldBindBodyWith(&doc, binding.JSON); err != nil || doc == nil {
 			//check if bulk request
 			if err := c.ShouldBindBodyWith(&docs, binding.JSON); err != nil || docs == nil {
 				ResponseFailedToBindJson(c, err)
@@ -57,7 +77,14 @@ func PutValidationMiddleware[T types.DocContent](validators ...MutatorValidator[
 	return func(c *gin.Context) {
 		defer log.LogNTraceEnterExit("HandlePutValidation", c)()
 		var doc T
-		if err := c.ShouldBindJSON(&doc); err != nil {
+		if customDecoder, _ := GetCustomBodyDecoder[T](c); customDecoder != nil {
+			if docs, err := customDecoder(c); err != nil {
+				ResponseFailedToBindJson(c, err)
+				return
+			} else {
+				doc = docs[0]
+			}
+		} else if err := c.ShouldBindJSON(&doc); err != nil {
 			ResponseFailedToBindJson(c, err)
 			return
 		}

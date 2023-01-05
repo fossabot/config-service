@@ -2,12 +2,15 @@ package consts
 
 const (
 
-	//Context keys
-	DocContentKey = "docContent"
-	CustomerGUID  = "customerGUID"
-	Collection    = "collection"
-	ReqLogger     = "reqLogger"
-	AdminAccess   = "adminAccess"
+	//Context keys for stored values
+	DocContentKey  = "docContent"           //key for doc content from request body
+	CustomerGUID   = "customerGUID"         //key for customer GUID from request login details
+	Collection     = "collection"           //key for db collection name of the request
+	ReqLogger      = "reqLogger"            //key for request logger
+	AdminAccess    = "adminAccess"          //key for admin access flag
+	BodyDecoder    = "customBodyDecoder"    //key for custom body decoder
+	ResponseSender = "customResponseSender" //key for custom response sender
+	PutDocFields   = "customPutDocFields"   //key for string list of fields name to update in PUT requests, only these fields will be updated
 
 	//PATHS
 	ClusterPath                      = "/cluster"
