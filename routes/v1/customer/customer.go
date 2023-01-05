@@ -13,18 +13,26 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
+func AddPublicRoutes(g *gin.Engine) {
+	tenant := g.Group(consts.TenantPath)
+	tenant.Use(handlers.DBContextMiddleware(consts.CustomersCollection))
+	tenant.POST("", postCustomerTenant)
+}
+
 func AddRoutes(g *gin.Engine) {
 	customer := g.Group(consts.CustomerPath)
 	customer.Use(handlers.DBContextMiddleware(consts.CustomersCollection))
 	customer.GET("", getCustomer)
 	customer.DELETE("", deleteCustomer)
 	customer.PUT("", handlers.HandlePutDocWithGUIDValidation[*types.Customer]()...)
+
+	//add customer's inner files routes
+	addInnerFieldsRoutes(g)
 }
 
-func AddPublicRoutes(g *gin.Engine) {
-	tenant := g.Group(consts.TenantPath)
-	tenant.Use(handlers.DBContextMiddleware(consts.CustomersCollection))
-	tenant.POST("", postCustomerTenant)
+func addInnerFieldsRoutes(g *gin.Engine) {
+	//add customer embedded objects routes
+	addNotificationConfigRoutes(g)
 }
 
 func getCustomer(c *gin.Context) {

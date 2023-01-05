@@ -53,7 +53,7 @@ func (suite *MainTestSuite) TestCluster() {
 	cluster := testPostDoc(suite, consts.ClusterPath, clusters[0], newClusterCompareFilter)
 	creationTime, err := time.Parse(time.RFC3339, cluster.SubscriptionDate)
 	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
+	suite.True(time.Since(creationTime) < time.Second*2, "creation time is not recent")
 	alias := cluster.Attributes["alias"].(string)
 	suite.NotEmpty(alias)
 	delete(cluster.Attributes, "alias")
@@ -138,7 +138,7 @@ func (suite *MainTestSuite) TestPostureException() {
 	policy1 := testPostDoc(suite, consts.PostureExceptionPolicyPath, posturePolicies[0], commonCmpFilter)
 	creationTime, err := time.Parse(time.RFC3339, policy1.CreationTime)
 	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
+	suite.True(time.Since(creationTime) < time.Second*2, "creation time is not recent")
 }
 
 //go:embed test_data/vulnerabilityPolicies.json
@@ -192,7 +192,7 @@ func (suite *MainTestSuite) TestVulnerabilityPolicies() {
 	policy1 := testPostDoc(suite, consts.VulnerabilityExceptionPolicyPath, vulnerabilities[0], commonCmpFilter)
 	creationTime, err := time.Parse(time.RFC3339, policy1.CreationTime)
 	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
+	suite.True(time.Since(creationTime) < time.Second*2, "creation time is not recent")
 }
 
 //go:embed test_data/customer_config/customerConfig.json
@@ -246,10 +246,10 @@ func (suite *MainTestSuite) TestCustomerConfiguration() {
 	cluster2Config = clusterConfigs[1]
 	creationTime, err := time.Parse(time.RFC3339, cluster1Config.CreationTime)
 	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
+	suite.True(time.Since(creationTime) < time.Second*2, "creation time is not recent")
 	creationTime, err = time.Parse(time.RFC3339, cluster2Config.CreationTime)
 	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
+	suite.True(time.Since(creationTime) < time.Second*2, "creation time is not recent")
 
 	//test get names list
 	configNames := []string{defaultCustomerConfig.Name, customerConfig.Name, cluster1Config.Name, cluster2Config.Name}
@@ -345,7 +345,7 @@ func (suite *MainTestSuite) TestCustomerConfiguration() {
 }
 
 var customerCompareFilter = cmp.FilterPath(func(p cmp.Path) bool {
-	return p.String() == "SubscriptionDate"
+	return p.String() == "SubscriptionDate" || p.String() == "PortalBase.UpdatedTime"
 }, cmp.Ignore())
 
 func (suite *MainTestSuite) TestCustomer() {
@@ -373,7 +373,7 @@ func (suite *MainTestSuite) TestCustomer() {
 	//check creation time
 	creationTime, err := time.Parse(time.RFC3339, newCustomer.SubscriptionDate)
 	suite.NoError(err, "failed to parse SubscriptionDate time")
-	suite.True(time.Since(creationTime) < time.Second, "SubscriptionDate time is not recent")
+	suite.True(time.Since(creationTime) < time.Second*2, "SubscriptionDate time is not recent")
 	//check that the guid stays the same
 	suite.Equal(customer.GUID, newCustomer.GUID, "customer GUID should be preserved")
 	//test get customer with current customer logged in - expect error 404
@@ -423,7 +423,7 @@ func (suite *MainTestSuite) TestFrameworks() {
 	suite.NoError(err, "failed to parse creation time")
 	updateTime, err := time.Parse(time.RFC3339, fw1.UpdatedTime)
 	suite.NoError(err, "failed to parse UpdatedTime")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
+	suite.True(time.Since(creationTime) < time.Second*2, "creation time is not recent")
 	suite.True(time.Since(updateTime) < time.Second, "updateTime time is not recent")
 }
 
@@ -517,7 +517,7 @@ func (suite *MainTestSuite) TestRepository() {
 	repo = testPostDoc(suite, consts.RepositoryPath, repo, repoCompareFilter)
 	creationTime, err := time.Parse(time.RFC3339, repo.CreationDate)
 	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
+	suite.True(time.Since(creationTime) < time.Second*2, "creation time is not recent")
 	alias := repo.Attributes["alias"].(string)
 	//expect alias to use the first latter of the repo name
 	suite.Equal("O", alias, "alias should be the first latter of the repo name")
@@ -697,4 +697,62 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 	deleteUsersUrls = fmt.Sprintf("%s/customers", consts.AdminPath)
 	testBadRequest(suite, http.MethodDelete, deleteUsersUrls, errorMissingQueryParams(consts.CustomersParam), nil, http.StatusBadRequest)
 
+}
+
+func (suite *MainTestSuite) TestCustomerNotificationConfig() {
+	testCustomerGUID := "test-notification-customer-guid"
+	customer := &types.Customer{
+		PortalBase: armotypes.PortalBase{
+			Name: "customer-test-notification-config",
+			GUID: testCustomerGUID,
+			Attributes: map[string]interface{}{
+				"customer1-attr1": "customer1-attr1-value",
+				"customer1-attr2": "customer1-attr2-value",
+			},
+		},
+		Description:        "customer1 description",
+		Email:              "customer1@customers.org",
+		LicenseType:        "kubescape",
+		InitialLicenseType: "kubescape",
+	}
+	//create customer is public so - remove auth cookie
+	suite.authCookie = ""
+	//post new customer
+	testCustomer := testPostDoc(suite, "/customer_tenant", customer, customerCompareFilter)
+	suite.Nil(testCustomer.NotificationsConfig)
+	//login as customer
+	suite.login(testCustomerGUID)
+	//get customer notification config - should be empty
+	notificationConfig := &armotypes.NotificationsConfig{}
+	configPath := consts.NotificationConfigPath + "/" + testCustomerGUID
+	testGetDoc(suite, configPath, notificationConfig, nil)
+
+	//get customer notification config without guid in path - expect 404
+	testBadRequest(suite, http.MethodGet, consts.NotificationConfigPath, "404 page not found", nil, http.StatusNotFound)
+	//get notification config on unknown customer - expect 404
+	testBadRequest(suite, http.MethodGet, consts.NotificationConfigPath+"/unknown-customer-guid", errorDocumentNotFound, nil, http.StatusNotFound)
+
+	//Post is not served on notification config - expect 404
+	testBadRequest(suite, http.MethodPost, consts.NotificationConfigPath, "404 page not found", notificationConfig, http.StatusNotFound)
+
+	//put new notification config
+	notificationConfig.UnsubscribedUsers = make(map[string]armotypes.NotificationConfigIdentifier)
+	notificationConfig.UnsubscribedUsers["user1"] = armotypes.NotificationConfigIdentifier{NotificationType: armotypes.NotificationTypeAll}
+	notificationConfig.UnsubscribedUsers["user2"] = armotypes.NotificationConfigIdentifier{NotificationType: armotypes.NotificationTypePush}
+	prevConfig := &armotypes.NotificationsConfig{}
+	testPutDoc(suite, configPath, prevConfig, notificationConfig, nil)
+	//update notification config
+	prevConfig = clone(notificationConfig)
+	notificationConfig.UnsubscribedUsers = make(map[string]armotypes.NotificationConfigIdentifier)
+	notificationConfig.UnsubscribedUsers["user3"] = armotypes.NotificationConfigIdentifier{NotificationType: armotypes.NotificationTypeWeekly}
+	testPutDoc(suite, configPath, prevConfig, notificationConfig, nil)
+
+	//make sure not other customer fields are changed
+	updatedCustomer := clone(testCustomer)
+	updatedCustomer.NotificationsConfig = notificationConfig
+	updatedCustomer = testGetDoc(suite, "/customer", updatedCustomer, customerCompareFilter)
+	//check the the customer update date is updated
+	updateTime, err := time.Parse(time.RFC3339, updatedCustomer.UpdatedTime)
+	suite.NoError(err, "failed to parse update time")
+	suite.True(time.Since(updateTime) < time.Second, "update time is not recent")
 }

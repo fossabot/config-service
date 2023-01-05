@@ -186,7 +186,7 @@ func testBadRequest(suite *MainTestSuite, method, path, expectedResponse string,
 }
 
 // //////////////////////////////////////// GET //////////////////////////////////////////
-func testGetDoc[T types.DocContent](suite *MainTestSuite, path string, expectedDoc T, compareOpts ...cmp.Option) T {
+func testGetDoc[T any](suite *MainTestSuite, path string, expectedDoc T, compareOpts ...cmp.Option) T {
 	w := suite.doRequest(http.MethodGet, path, nil)
 	suite.Equal(http.StatusOK, w.Code)
 	doc, err := decodeResponse[T](w)
@@ -260,20 +260,14 @@ func testBulkPostDocs[T types.DocContent](suite *MainTestSuite, path string, doc
 }
 
 // //////////////////////////////////////// PUT //////////////////////////////////////////
-func testPutDoc[T types.DocContent](suite *MainTestSuite, path string, oldDoc, newDoc T, compareNewOpts ...cmp.Option) {
+func testPutDoc[T any](suite *MainTestSuite, path string, oldDoc, newDoc T, compareNewOpts ...cmp.Option) {
 	w := suite.doRequest(http.MethodPut, path, newDoc)
 	suite.Equal(http.StatusOK, w.Code)
 	response, err := decodeResponseArray[T](w)
 	expectedResponse := []T{oldDoc, newDoc}
 	if err != nil {
 		suite.FailNow(err.Error())
-	}
-	sort.Slice(response, func(i, j int) bool {
-		return response[i].GetName() < response[j].GetName()
-	})
-	sort.Slice(expectedResponse, func(i, j int) bool {
-		return expectedResponse[i].GetName() < expectedResponse[j].GetName()
-	})
+	}	
 	diff := cmp.Diff(response, expectedResponse, compareNewOpts...)
 	suite.Equal("", diff)
 }
@@ -369,7 +363,7 @@ func decodeArray[T any](suite *MainTestSuite, bytes []byte) []T {
 	return content
 }
 
-func clone[T types.DocContent](orig T) T {
+func clone[T any](orig T) T {
 	origJSON, err := json.Marshal(orig)
 	if err != nil {
 		panic(err)

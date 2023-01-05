@@ -17,12 +17,12 @@ type MutatorValidator[T types.DocContent] func(c *gin.Context, docs []T) (verifi
 type BodyDecoder[T types.DocContent] func(c *gin.Context) ([]T, error)
 
 // ResponseSender is used for custom response sending it is called after the request has been processed
-type ResponseSender[T types.DocContent] func(c *gin.Context, doc *T, docs []T)
+type ResponseSender[T types.DocContent] func(c *gin.Context, doc T, docs []T)
 
 func GetCustomBodyDecoder[T types.DocContent](c *gin.Context) (BodyDecoder[T], error) {
 	if iDecoder, ok := c.Get(consts.BodyDecoder); ok {
-		if decoder, ok := iDecoder.(BodyDecoder[T]); ok {
-			return decoder, nil
+		if decoder, ok := iDecoder.(*BodyDecoder[T]); ok && decoder != nil {
+			return *decoder, nil
 		}
 		err := fmt.Errorf("invalid body decoder type")
 		log.LogNTraceError("invalid body decoder type", err, c)
@@ -33,8 +33,8 @@ func GetCustomBodyDecoder[T types.DocContent](c *gin.Context) (BodyDecoder[T], e
 
 func GetCustomResponseSender[T types.DocContent](c *gin.Context) (ResponseSender[T], error) {
 	if iSender, ok := c.Get(consts.ResponseSender); ok {
-		if sender, ok := iSender.(ResponseSender[T]); ok {
-			return sender, nil
+		if sender, ok := iSender.(*ResponseSender[T]); ok && sender != nil {
+			return *sender, nil
 		}
 		err := fmt.Errorf("invalid response sender type")
 		log.LogNTraceError("invalid response sender type", err, c)

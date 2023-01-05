@@ -14,6 +14,7 @@ type routerOptions[T types.DocContent] struct {
 	path                      string                //mandatory uri path
 	serveGet                  bool                  //default true, serve GET /<path> to get all documents and GET /<path>/<GUID> to get document by GUID
 	serveGetNamesList         bool                  //default true, GET will return all documents names if "list" query param exist
+	serveGetWithGUIDOnly      bool                  //default false, GET will return the document by GUID only
 	servePost                 bool                  //default true, serve POST
 	servePut                  bool                  //default true, serve PUT /<path> to update document by GUID in body and PUT /<path>/<GUID> to update document by GUID in path
 	serveDelete               bool                  //default true, serve DELETE  /<path>/<GUID> to delete document by GUID in path
@@ -66,7 +67,9 @@ func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *g
 
 	//add routes
 	if opts.serveGet {
-		routerGroup.GET("", HandleGet(opts))
+		if !opts.serveGetWithGUIDOnly {
+			routerGroup.GET("", HandleGet(opts))
+		}
 		routerGroup.GET("/:"+consts.GUIDField, HandleGetDocWithGUIDInPath[T])
 	}
 	if opts.servePost {
@@ -189,6 +192,13 @@ func (b *RouterOptionsBuilder[T]) WithPath(path string) *RouterOptionsBuilder[T]
 func (b *RouterOptionsBuilder[T]) WithServeGet(serveGet bool) *RouterOptionsBuilder[T] {
 	b.options = append(b.options, func(opts *routerOptions[T]) {
 		opts.serveGet = serveGet
+	})
+	return b
+}
+
+func (b *RouterOptionsBuilder[T]) WithServeGetWithGUIDOnly(serveGetIncludeGlobalDocs bool) *RouterOptionsBuilder[T] {
+	b.options = append(b.options, func(opts *routerOptions[T]) {
+		opts.serveGetWithGUIDOnly = serveGetIncludeGlobalDocs
 	})
 	return b
 }

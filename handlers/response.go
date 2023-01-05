@@ -120,8 +120,8 @@ func docResponse[T types.DocContent](c *gin.Context, doc *T) {
 		ResponseDocumentNotFound(c)
 		return
 	}
-	if sender, _ := GetCustomResponseSender[T](c); sender != nil {
-		sender(c, doc, nil)
+	if sender, _ := GetCustomResponseSender[T](c); sender != nil && doc != nil {
+		sender(c, *doc, nil)
 		return
 	}
 	c.JSON(http.StatusOK, doc)

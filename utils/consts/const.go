@@ -23,6 +23,7 @@ const (
 	CustomerPath                     = "/customer"
 	TenantPath                       = "/customer_tenant"
 	RegistryCronJobPath              = "/v1_registry_cron_job"
+	NotificationConfigPath           = "/v1_notification_config"
 
 	//DB collections
 	ClustersCollection                     = "clusters"

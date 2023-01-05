@@ -191,7 +191,7 @@ func (r *RegistryCronJob) InitNew() {
 	}
 }
 
-var commonReadOnlyFields = []string{consts.IdField, consts.NameField, consts.GUIDField, consts.UpdatedTimeField}
+var commonReadOnlyFields = []string{consts.IdField, consts.NameField, consts.GUIDField}
 var clusterReadOnlyFields = append([]string{"subscription_date"}, commonReadOnlyFields...)
 var exceptionPolicyReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
 var customerConfigReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
