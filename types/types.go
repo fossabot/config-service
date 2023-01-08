@@ -34,7 +34,7 @@ func NewDocument[T DocContent](content T, customerGUID string) Document[T] {
 // Doc Content interface for data types embedded in DB documents
 type DocContent interface {
 	*CustomerConfig | *Cluster | *PostureExceptionPolicy | *VulnerabilityExceptionPolicy | *Customer |
-		*PolicyRule | *Control | *Framework | *Repository | *RegistryCronJob
+		*Framework | *Repository | *RegistryCronJob
 	InitNew()
 	GetReadOnlyFields() []string
 	//default implementation exist in portal base
@@ -45,6 +45,8 @@ type DocContent interface {
 	GetAttributes() map[string]interface{}
 	SetAttributes(attributes map[string]interface{})
 	SetUpdatedTime(updatedTime *time.Time)
+	GetUpdatedTime() *time.Time
+	GetCreationTime() *time.Time
 }
 
 // redefine types for Doc Content implementations
@@ -54,7 +56,7 @@ type CustomerConfig struct {
 	armotypes.CustomerConfig `json:",inline" bson:"inline"`
 	GUID                     string `json:"guid" bson:"guid"`
 	CreationTime             string `json:"creationTime" bson:"creationTime"`
-	UpdatedTime             string `json:"updatedTime" bson:"updatedTime"`
+	UpdatedTime              string `json:"updatedTime" bson:"updatedTime"`
 }
 
 func (c *CustomerConfig) GetGUID() string {
@@ -98,16 +100,30 @@ func (c *CustomerConfig) SetUpdatedTime(updatedTime *time.Time) {
 	}
 	c.UpdatedTime = updatedTime.UTC().Format(time.RFC3339)
 }
+
+func (p *CustomerConfig) GetUpdatedTime() *time.Time {
+	if p.UpdatedTime == "" {
+		return nil
+	}
+	updatedTime, err := time.Parse(time.RFC3339, p.UpdatedTime)
+	if err != nil {
+		return nil
+	}
+	return &updatedTime
+}
+
+func (p *CustomerConfig) GetCreationTime() *time.Time {
+	if p.CreationTime == "" {
+		return nil
+	}
+	creationTime, err := time.Parse(time.RFC3339, p.CreationTime)
+	if err != nil {
+		return nil
+	}
+	return &creationTime
+}
+
 // DocContent implementations
-
-type PolicyRule opapolicy.PolicyRule
-
-func (*PolicyRule) GetReadOnlyFields() []string {
-	return commonReadOnlyFields
-}
-func (p *PolicyRule) InitNew() {
-	p.CreationTime = time.Now().UTC().Format(time.RFC3339)
-}
 
 type Framework opapolicy.Framework
 
@@ -118,13 +134,15 @@ func (f *Framework) InitNew() {
 	f.CreationTime = time.Now().UTC().Format(time.RFC3339)
 }
 
-type Control opapolicy.Control
-
-func (c *Control) GetReadOnlyFields() []string {
-	return commonReadOnlyFields
-}
-func (c *Control) InitNew() {
-	c.CreationTime = time.Now().UTC().Format(time.RFC3339)
+func (f *Framework) GetCreationTime() *time.Time {
+	if f.CreationTime == "" {
+		return nil
+	}
+	creationTime, err := time.Parse(time.RFC3339, f.CreationTime)
+	if err != nil {
+		return nil
+	}
+	return &creationTime
 }
 
 type Customer armotypes.PortalCustomer
@@ -134,6 +152,16 @@ func (c *Customer) GetReadOnlyFields() []string {
 }
 func (c *Customer) InitNew() {
 	c.SubscriptionDate = time.Now().UTC().Format(time.RFC3339)
+}
+func (c *Customer) GetCreationTime() *time.Time {
+	if c.SubscriptionDate == "" {
+		return nil
+	}
+	creationTime, err := time.Parse(time.RFC3339, c.SubscriptionDate)
+	if err != nil {
+		return nil
+	}
+	return &creationTime
 }
 
 type Cluster armotypes.PortalCluster
@@ -148,6 +176,17 @@ func (c *Cluster) InitNew() {
 	}
 }
 
+func (c *Cluster) GetCreationTime() *time.Time {
+	if c.SubscriptionDate == "" {
+		return nil
+	}
+	creationTime, err := time.Parse(time.RFC3339, c.SubscriptionDate)
+	if err != nil {
+		return nil
+	}
+	return &creationTime
+}
+
 type VulnerabilityExceptionPolicy armotypes.VulnerabilityExceptionPolicy
 
 func (c *VulnerabilityExceptionPolicy) GetReadOnlyFields() []string {
@@ -155,6 +194,16 @@ func (c *VulnerabilityExceptionPolicy) GetReadOnlyFields() []string {
 }
 func (c *VulnerabilityExceptionPolicy) InitNew() {
 	c.CreationTime = time.Now().UTC().Format(time.RFC3339)
+}
+func (c *VulnerabilityExceptionPolicy) GetCreationTime() *time.Time {
+	if c.CreationTime == "" {
+		return nil
+	}
+	creationTime, err := time.Parse(time.RFC3339, c.CreationTime)
+	if err != nil {
+		return nil
+	}
+	return &creationTime
 }
 
 type PostureExceptionPolicy armotypes.PostureExceptionPolicy
@@ -164,6 +213,17 @@ func (p *PostureExceptionPolicy) GetReadOnlyFields() []string {
 }
 func (p *PostureExceptionPolicy) InitNew() {
 	p.CreationTime = time.Now().UTC().Format(time.RFC3339)
+}
+
+func (p *PostureExceptionPolicy) GetCreationTime() *time.Time {
+	if p.CreationTime == "" {
+		return nil
+	}
+	creationTime, err := time.Parse(time.RFC3339, p.CreationTime)
+	if err != nil {
+		return nil
+	}
+	return &creationTime
 }
 
 type Repository armotypes.PortalRepository
@@ -178,6 +238,17 @@ func (r *Repository) InitNew() {
 	}
 }
 
+func (r *Repository) GetCreationTime() *time.Time {
+	if r.CreationDate == "" {
+		return nil
+	}
+	creationTime, err := time.Parse(time.RFC3339, r.CreationDate)
+	if err != nil {
+		return nil
+	}
+	return &creationTime
+}
+
 type RegistryCronJob armotypes.PortalRegistryCronJob
 
 func (*RegistryCronJob) GetReadOnlyFields() []string {
@@ -185,14 +256,26 @@ func (*RegistryCronJob) GetReadOnlyFields() []string {
 }
 
 func (r *RegistryCronJob) InitNew() {
+	r.CreationDate = time.Now().UTC().Format(time.RFC3339)
 	if r.Attributes == nil {
 		r.Attributes = make(map[string]interface{})
 	}
 }
 
-var commonReadOnlyFields = []string{consts.IdField, consts.NameField, consts.GUIDField, consts.UpdatedTimeField}
+func (r *RegistryCronJob) GetCreationTime() *time.Time {
+	if r.CreationDate == "" {
+		return nil
+	}
+	creationTime, err := time.Parse(time.RFC3339, r.CreationDate)
+	if err != nil {
+		return nil
+	}
+	return &creationTime
+}
+
+var commonReadOnlyFields = []string{consts.IdField, consts.NameField, consts.GUIDField}
 var clusterReadOnlyFields = append([]string{"subscription_date"}, commonReadOnlyFields...)
 var exceptionPolicyReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
 var customerConfigReadOnlyFields = append([]string{"creationTime"}, commonReadOnlyFields...)
 var repositoryReadOnlyFields = append([]string{"creationDate", "provider", "owner", "repoName", "branchName"}, commonReadOnlyFields...)
-var croneJobReadOnlyFields = append([]string{"creationTime","clusterName", "registryName"}, commonReadOnlyFields...)
+var croneJobReadOnlyFields = append([]string{"creationTime", "clusterName", "registryName"}, commonReadOnlyFields...)

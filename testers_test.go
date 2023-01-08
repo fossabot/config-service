@@ -4,6 +4,7 @@ import (
 	"config-service/types"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 
@@ -30,6 +31,10 @@ func commonTest[T types.DocContent](suite *MainTestSuite, path string, testDocs 
 	doc1 = testPostDoc(suite, path, doc1, compareNewOpts...)
 	_, err := uuid.FromString(doc1.GetGUID())
 	suite.NoError(err, "GUID should be a valid uuid")
+	//check creation time
+	suite.NotNil(doc1.GetCreationTime(), "creation time should not be nil")
+	suite.True(time.Since(*doc1.GetCreationTime()) < time.Second, "creation time is not recent")
+
 	//post doc with same name should fail
 	sameNameDoc := clone(doc1)
 	testBadRequest(suite, http.MethodPost, path, errorNameExist(sameNameDoc.GetName()), sameNameDoc, http.StatusBadRequest)
@@ -39,6 +44,12 @@ func commonTest[T types.DocContent](suite *MainTestSuite, path string, testDocs 
 	testBadRequest(suite, http.MethodPost, path, errorMissingName, &noNameDoc, http.StatusBadRequest)
 	//bulk post documents
 	documents = testBulkPostDocs(suite, path, documents, compareNewOpts...)
+	//check updated time
+	for _, doc := range documents {
+		suite.NotNil(doc.GetUpdatedTime(), "updated time should not be nil")
+		//check the the customer update date is updated
+		suite.True(time.Since(*doc.GetUpdatedTime()) < time.Second, "update time is not recent")
+	}
 	//bulk post documents with same name should fail
 	names := []string{documents[0].GetName(), documents[1].GetName()}
 	sort.Strings(names)
@@ -48,6 +59,9 @@ func commonTest[T types.DocContent](suite *MainTestSuite, path string, testDocs 
 	oldDoc1 := clone(doc1)
 	doc1 = modifyFunc(doc1)
 	testPutDoc(suite, path, oldDoc1, doc1, compareNewOpts...)
+	suite.NotNil(doc1.GetUpdatedTime(), "updated time should not be nil")
+	//check the the customer update date is updated
+	suite.True(time.Since(*doc1.GetUpdatedTime()) < time.Second, "update time is not recent")
 
 	//test changed name - should be ignored
 	changedNamedDoc := clone(doc1)
@@ -186,7 +200,7 @@ func testBadRequest(suite *MainTestSuite, method, path, expectedResponse string,
 }
 
 // //////////////////////////////////////// GET //////////////////////////////////////////
-func testGetDoc[T types.DocContent](suite *MainTestSuite, path string, expectedDoc T, compareOpts ...cmp.Option) T {
+func testGetDoc[T any](suite *MainTestSuite, path string, expectedDoc T, compareOpts ...cmp.Option) T {
 	w := suite.doRequest(http.MethodGet, path, nil)
 	suite.Equal(http.StatusOK, w.Code)
 	doc, err := decodeResponse[T](w)
@@ -260,7 +274,7 @@ func testBulkPostDocs[T types.DocContent](suite *MainTestSuite, path string, doc
 }
 
 // //////////////////////////////////////// PUT //////////////////////////////////////////
-func testPutDoc[T types.DocContent](suite *MainTestSuite, path string, oldDoc, newDoc T, compareNewOpts ...cmp.Option) {
+func testPutDoc[T any](suite *MainTestSuite, path string, oldDoc, newDoc T, compareNewOpts ...cmp.Option) {
 	w := suite.doRequest(http.MethodPut, path, newDoc)
 	suite.Equal(http.StatusOK, w.Code)
 	response, err := decodeResponseArray[T](w)
@@ -268,12 +282,6 @@ func testPutDoc[T types.DocContent](suite *MainTestSuite, path string, oldDoc, n
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
-	sort.Slice(response, func(i, j int) bool {
-		return response[i].GetName() < response[j].GetName()
-	})
-	sort.Slice(expectedResponse, func(i, j int) bool {
-		return expectedResponse[i].GetName() < expectedResponse[j].GetName()
-	})
 	diff := cmp.Diff(response, expectedResponse, compareNewOpts...)
 	suite.Equal("", diff)
 }
@@ -369,7 +377,7 @@ func decodeArray[T any](suite *MainTestSuite, bytes []byte) []T {
 	return content
 }
 
-func clone[T types.DocContent](orig T) T {
+func clone[T any](orig T) T {
 	origJSON, err := json.Marshal(orig)
 	if err != nil {
 		panic(err)

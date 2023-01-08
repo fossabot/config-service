@@ -10,10 +10,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// MutatorValidator is a function that validates the request body and returns true if the request is valid
-// a MutatorValidator may initialize the doc with required values therefor it returns the docs as well
-type MutatorValidator[T types.DocContent] func(c *gin.Context, docs []T) (verifiedDocs []T, valid bool)
-
 func ValidateGUIDExistence[T types.DocContent](c *gin.Context, docs []T) ([]T, bool) {
 	guid := c.Param(consts.GUIDField)
 	if guid != "" && len(docs) != 1 {

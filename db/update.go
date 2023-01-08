@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"k8s.io/utils/strings/slices"
 )
 
 // helpers to build db update commands
@@ -26,7 +27,8 @@ func GetUpdateFieldValueCommand(i interface{}, fieldName string) bson.D {
 }
 
 // GetUpdateFieldValueCommand creates update command for a DocContent removing excluded fields
-func GetUpdateDocCommand[T types.DocContent](i T, excludeFields ...string) (bson.D, error) {
+// if includeFields is not empty, only the fields in the list will be included
+func GetUpdateDocCommand[T types.DocContent](i T, includeFields []string, excludeFields ...string) (bson.D, error) {
 	var m map[string]interface{}
 	if data, err := json.Marshal(i); err != nil {
 		return nil, err
@@ -35,6 +37,16 @@ func GetUpdateDocCommand[T types.DocContent](i T, excludeFields ...string) (bson
 	}
 	for _, f := range excludeFields {
 		delete(m, f)
+	}
+	if len(includeFields) > 0 {
+		for k := range m {
+			if !slices.Contains(includeFields, k) {
+				delete(m, k)
+			}
+		}
+	}
+	if len(m) == 0 {
+		return nil, NoFieldsToUpdateError{}
 	}
 	return GetUpdateDocValuesCommand(m), nil
 }

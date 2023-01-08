@@ -51,9 +51,6 @@ func (suite *MainTestSuite) TestCluster() {
 
 	//put doc without alias - expect the alias not to be deleted
 	cluster := testPostDoc(suite, consts.ClusterPath, clusters[0], newClusterCompareFilter)
-	creationTime, err := time.Parse(time.RFC3339, cluster.SubscriptionDate)
-	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
 	alias := cluster.Attributes["alias"].(string)
 	suite.NotEmpty(alias)
 	delete(cluster.Attributes, "alias")
@@ -75,7 +72,7 @@ func (suite *MainTestSuite) TestCluster() {
 var posturePoliciesJson []byte
 
 var commonCmpFilter = cmp.FilterPath(func(p cmp.Path) bool {
-	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "PortalBase.UpdatedTime"
+	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "CreationDate" || p.String() == "PortalBase.UpdatedTime"
 }, cmp.Ignore())
 
 func (suite *MainTestSuite) TestPostureException() {
@@ -134,11 +131,6 @@ func (suite *MainTestSuite) TestPostureException() {
 		},
 	}
 	testGetDeleteByNameAndQuery(suite, consts.PostureExceptionPolicyPath, consts.PolicyNameParam, posturePolicies, getQueries)
-
-	policy1 := testPostDoc(suite, consts.PostureExceptionPolicyPath, posturePolicies[0], commonCmpFilter)
-	creationTime, err := time.Parse(time.RFC3339, policy1.CreationTime)
-	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
 }
 
 //go:embed test_data/vulnerabilityPolicies.json
@@ -187,12 +179,7 @@ func (suite *MainTestSuite) TestVulnerabilityPolicies() {
 			expectedIndexes: []int{0},
 		},
 	}
-	testGetDeleteByNameAndQuery(suite, consts.VulnerabilityExceptionPolicyPath, consts.PolicyNameParam, vulnerabilities, getQueries)
-
-	policy1 := testPostDoc(suite, consts.VulnerabilityExceptionPolicyPath, vulnerabilities[0], commonCmpFilter)
-	creationTime, err := time.Parse(time.RFC3339, policy1.CreationTime)
-	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
+	testGetDeleteByNameAndQuery(suite, consts.VulnerabilityExceptionPolicyPath, consts.PolicyNameParam, vulnerabilities, getQueries, commonCmpFilter)
 }
 
 //go:embed test_data/customer_config/customerConfig.json
@@ -244,13 +231,10 @@ func (suite *MainTestSuite) TestCustomerConfiguration() {
 	clusterConfigs := testBulkPostDocs(suite, consts.CustomerConfigPath, []*types.CustomerConfig{cluster1Config, cluster2Config}, compareFilter)
 	cluster1Config = clusterConfigs[0]
 	cluster2Config = clusterConfigs[1]
-	creationTime, err := time.Parse(time.RFC3339, cluster1Config.CreationTime)
-	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
-	creationTime, err = time.Parse(time.RFC3339, cluster2Config.CreationTime)
-	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
-
+	suite.NotNil(cluster1Config.GetCreationTime(), "creation time should not be nil")
+	suite.True(time.Since(*cluster1Config.GetCreationTime()) < time.Second, "creation time is not recent")
+	suite.NotNil(cluster2Config.GetCreationTime(), "creation time should not be nil")
+	suite.True(time.Since(*cluster2Config.GetCreationTime()) < time.Second, "creation time is not recent")
 	//test get names list
 	configNames := []string{defaultCustomerConfig.Name, customerConfig.Name, cluster1Config.Name, cluster2Config.Name}
 	testGetNameList(suite, consts.CustomerConfigPath, configNames)
@@ -345,7 +329,7 @@ func (suite *MainTestSuite) TestCustomerConfiguration() {
 }
 
 var customerCompareFilter = cmp.FilterPath(func(p cmp.Path) bool {
-	return p.String() == "SubscriptionDate"
+	return p.String() == "SubscriptionDate" || p.String() == "PortalBase.UpdatedTime"
 }, cmp.Ignore())
 
 func (suite *MainTestSuite) TestCustomer() {
@@ -371,15 +355,13 @@ func (suite *MainTestSuite) TestCustomer() {
 	//post new customer
 	newCustomer := testPostDoc(suite, "/customer_tenant", customer, customerCompareFilter)
 	//check creation time
-	creationTime, err := time.Parse(time.RFC3339, newCustomer.SubscriptionDate)
-	suite.NoError(err, "failed to parse SubscriptionDate time")
-	suite.True(time.Since(creationTime) < time.Second, "SubscriptionDate time is not recent")
+	suite.NotNil(newCustomer.GetCreationTime(), "creation time should not be nil")
+	suite.True(time.Since(*newCustomer.GetCreationTime()) < time.Second, "creation time is not recent")
 	//check that the guid stays the same
 	suite.Equal(customer.GUID, newCustomer.GUID, "customer GUID should be preserved")
 	//test get customer with current customer logged in - expect error 404
 	suite.login(defaultUserGUID)
 	testBadRequest(suite, http.MethodGet, "/customer", errorDocumentNotFound, nil, http.StatusNotFound)
-
 	//login new customer
 	testCustomerGUID := suite.authCustomerGUID
 	suite.login("new-customer-guid")
@@ -417,20 +399,13 @@ func (suite *MainTestSuite) TestFrameworks() {
 	}, cmp.Ignore())
 
 	testGetDeleteByNameAndQuery(suite, consts.FrameworkPath, consts.FrameworkNameParam, frameworks, nil, fwCmpIgnoreControls)
-
-	fw1 := testPostDoc(suite, consts.FrameworkPath, frameworks[0], fwCmpFilter)
-	creationTime, err := time.Parse(time.RFC3339, fw1.CreationTime)
-	updateTime, err := time.Parse(time.RFC3339, fw1.UpdatedTime)
-	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
-	suite.True(time.Since(updateTime) < time.Second, "updateTime time is not recent")
 }
 
 //go:embed test_data/registryCronJob.json
 var registryCronJobJson []byte
 
 var rCmpFilter = cmp.FilterPath(func(p cmp.Path) bool {
-	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "PortalBase.UpdatedTime"
+	return p.String() == "PortalBase.GUID" || p.String() == "CreationTime" || p.String() == "CreationDate" || p.String() == "PortalBase.UpdatedTime"
 }, cmp.Ignore())
 
 func (suite *MainTestSuite) TestRegistryCronJobs() {
@@ -445,19 +420,18 @@ func (suite *MainTestSuite) TestRegistryCronJobs() {
 	}
 	commonTest(suite, consts.RegistryCronJobPath, registryCronJobs, modifyFunc, rCmpFilter)
 
-	
 	getQueries := []queryTest[*types.RegistryCronJob]{
 		{
 			query:           "clusterName=clusterA",
-			expectedIndexes: []int{0,2},
+			expectedIndexes: []int{0, 2},
 		},
 		{
 			query:           "registryName=registryA&registryName=registryB",
-			expectedIndexes: []int{0,1,2},
+			expectedIndexes: []int{0, 1, 2},
 		},
 		{
 			query:           "registryName=registryB",
-			expectedIndexes: []int{1,2},
+			expectedIndexes: []int{1, 2},
 		},
 		{
 			query:           "registryName=registryA",
@@ -469,12 +443,7 @@ func (suite *MainTestSuite) TestRegistryCronJobs() {
 		},
 	}
 
-	testGetDeleteByNameAndQuery(suite, consts.RegistryCronJobPath, consts.NameField, registryCronJobs, getQueries)
-
-	r1 := testPostDoc(suite, consts.RegistryCronJobPath, registryCronJobs[0], rCmpFilter)
-	updateTime, err := time.Parse(time.RFC3339, r1.UpdatedTime)
-	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(updateTime) < time.Second, "updateTime time is not recent")
+	testGetDeleteByNameAndQuery(suite, consts.RegistryCronJobPath, consts.NameField, registryCronJobs, getQueries, rCmpFilter)
 }
 
 func modifyAttribute[T types.DocContent](repo T) T {
@@ -515,9 +484,6 @@ func (suite *MainTestSuite) TestRepository() {
 	repo := repositories[0]
 	repo.Name = "my-repo"
 	repo = testPostDoc(suite, consts.RepositoryPath, repo, repoCompareFilter)
-	creationTime, err := time.Parse(time.RFC3339, repo.CreationDate)
-	suite.NoError(err, "failed to parse creation time")
-	suite.True(time.Since(creationTime) < time.Second, "creation time is not recent")
 	alias := repo.Attributes["alias"].(string)
 	//expect alias to use the first latter of the repo name
 	suite.Equal("O", alias, "alias should be the first latter of the repo name")
@@ -697,4 +663,61 @@ func (suite *MainTestSuite) TestAdminAndUsers() {
 	deleteUsersUrls = fmt.Sprintf("%s/customers", consts.AdminPath)
 	testBadRequest(suite, http.MethodDelete, deleteUsersUrls, errorMissingQueryParams(consts.CustomersParam), nil, http.StatusBadRequest)
 
+}
+
+func (suite *MainTestSuite) TestCustomerNotificationConfig() {
+	testCustomerGUID := "test-notification-customer-guid"
+	customer := &types.Customer{
+		PortalBase: armotypes.PortalBase{
+			Name: "customer-test-notification-config",
+			GUID: testCustomerGUID,
+			Attributes: map[string]interface{}{
+				"customer1-attr1": "customer1-attr1-value",
+				"customer1-attr2": "customer1-attr2-value",
+			},
+		},
+		Description:        "customer1 description",
+		Email:              "customer1@customers.org",
+		LicenseType:        "kubescape",
+		InitialLicenseType: "kubescape",
+	}
+	//create customer is public so - remove auth cookie
+	suite.authCookie = ""
+	//post new customer
+	testCustomer := testPostDoc(suite, "/customer_tenant", customer, customerCompareFilter)
+	suite.Nil(testCustomer.NotificationsConfig)
+	//login as customer
+	suite.login(testCustomerGUID)
+	//get customer notification config - should be empty
+	notificationConfig := &armotypes.NotificationsConfig{}
+	configPath := consts.NotificationConfigPath + "/" + testCustomerGUID
+	testGetDoc(suite, configPath, notificationConfig, nil)
+
+	//get customer notification config without guid in path - expect 404
+	testBadRequest(suite, http.MethodGet, consts.NotificationConfigPath, "404 page not found", nil, http.StatusNotFound)
+	//get notification config on unknown customer - expect 404
+	testBadRequest(suite, http.MethodGet, consts.NotificationConfigPath+"/unknown-customer-guid", errorDocumentNotFound, nil, http.StatusNotFound)
+
+	//Post is not served on notification config - expect 404
+	testBadRequest(suite, http.MethodPost, consts.NotificationConfigPath, "404 page not found", notificationConfig, http.StatusNotFound)
+
+	//put new notification config
+	notificationConfig.UnsubscribedUsers = make(map[string]armotypes.NotificationConfigIdentifier)
+	notificationConfig.UnsubscribedUsers["user1"] = armotypes.NotificationConfigIdentifier{NotificationType: armotypes.NotificationTypeAll}
+	notificationConfig.UnsubscribedUsers["user2"] = armotypes.NotificationConfigIdentifier{NotificationType: armotypes.NotificationTypePush}
+	prevConfig := &armotypes.NotificationsConfig{}
+	testPutDoc(suite, configPath, prevConfig, notificationConfig, nil)
+	//update notification config
+	prevConfig = clone(notificationConfig)
+	notificationConfig.UnsubscribedUsers = make(map[string]armotypes.NotificationConfigIdentifier)
+	notificationConfig.UnsubscribedUsers["user3"] = armotypes.NotificationConfigIdentifier{NotificationType: armotypes.NotificationTypeWeekly}
+	testPutDoc(suite, configPath, prevConfig, notificationConfig, nil)
+
+	//make sure not other customer fields are changed
+	updatedCustomer := clone(testCustomer)
+	updatedCustomer.NotificationsConfig = notificationConfig
+	updatedCustomer = testGetDoc(suite, "/customer", updatedCustomer, customerCompareFilter)
+	//check the the customer update date is updated
+	suite.NotNil(updatedCustomer.GetUpdatedTime(), "update time should not be nil")
+	suite.True(time.Since(*updatedCustomer.GetUpdatedTime()) < time.Second, "update time is not recent")
 }

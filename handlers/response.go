@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"config-service/db"
+	"config-service/types"
 	"config-service/utils/consts"
 	"config-service/utils/log"
 	"context"
@@ -112,4 +113,29 @@ func ResponseBadRequest(c *gin.Context, msg string) {
 func ResponseFailedToBindJson(c *gin.Context, err error) {
 	log.LogNTraceError("failed to bind json", err, c)
 	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+}
+
+func docResponse[T types.DocContent](c *gin.Context, doc *T) {
+	if doc == nil {
+		ResponseDocumentNotFound(c)
+		return
+	}
+	if sender, _ := GetCustomResponseSender[T](c); sender != nil && doc != nil {
+		sender(c, *doc, nil)
+		return
+	}
+	c.JSON(http.StatusOK, doc)
+
+}
+
+func docsResponse[T types.DocContent](c *gin.Context, docs []T) {
+	if docs == nil {
+		ResponseDocumentNotFound(c)
+		return
+	}
+	if sender, _ := GetCustomResponseSender[T](c); sender != nil {
+		sender(c, nil, docs)
+		return
+	}
+	c.JSON(http.StatusOK, docs)
 }
