@@ -23,7 +23,7 @@ func addNotificationConfigRoutes(g *gin.Engine) {
 		WithPutFields([]string{notificationConfigField, consts.UpdatedTimeField}). //only update notification-config and UpdatedTime fields in customer document
 		WithServePost(false).                                                      //no post
 		WithServeDelete(false).                                                    //no delete
-		WithBodyDecoder(decodeNotificationConfig[*types.Customer]).                //custom decoder
+		WithBodyDecoder(decodeNotificationConfig).                                 //custom decoder
 		WithResponseSender(notificationConfigResponseSender).                      //custom response sender
 		Get()...)
 }
@@ -59,7 +59,7 @@ func customer2NotificationConfig(customer *types.Customer) *armotypes.Notificati
 	return customer.NotificationsConfig
 }
 
-func decodeNotificationConfig[T *types.Customer](c *gin.Context) ([]T, error) {
+func decodeNotificationConfig(c *gin.Context) ([]*types.Customer, error) {
 	var notificationConfig *armotypes.NotificationsConfig
 	//notificationConfig do not support bulk update - so we do not expect array
 	if err := c.ShouldBindJSON(&notificationConfig); err != nil {
@@ -74,5 +74,5 @@ func decodeNotificationConfig[T *types.Customer](c *gin.Context) ([]T, error) {
 	customer := &types.Customer{}
 	customer.GUID = customerGuid
 	customer.NotificationsConfig = notificationConfig
-	return []T{customer}, nil
+	return []*types.Customer{customer}, nil
 }

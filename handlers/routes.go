@@ -15,15 +15,15 @@ type routerOptions[T types.DocContent] struct {
 	serveGet                  bool                  //default true, serve GET /<path> to get all documents and GET /<path>/<GUID> to get document by GUID
 	serveGetNamesList         bool                  //default true, GET will return all documents names if "list" query param exist
 	serveGetWithGUIDOnly      bool                  //default false, GET will return the document by GUID only
+	serveGetIncludeGlobalDocs bool                  //default false, when true, in GET all the response will include global documents (with customers[""])
 	servePost                 bool                  //default true, serve POST
 	servePut                  bool                  //default true, serve PUT /<path> to update document by GUID in body and PUT /<path>/<GUID> to update document by GUID in path
 	serveDelete               bool                  //default true, serve DELETE  /<path>/<GUID> to delete document by GUID in path
+	serveDeleteByName         bool                  //default false, when true, DELETE will check for name param and will delete the document by name
 	validatePostUniqueName    bool                  //default true, POST will validate that the name is unique
 	validatePutGUID           bool                  //default true, PUT will validate GUID existence in body or path
 	nameQueryParam            string                //default empty, the param name that indicates query by name (e.g. clusterName) when set GET will check for this param and will return the document by name
 	QueryConfig               *QueryParamsConfig    //default nil, when set, GET will check for the specified query params and will return the documents by the query params
-	serveGetIncludeGlobalDocs bool                  //default false, when true, in GET all the response will include global documents (with customers[""])
-	serveDeleteByName         bool                  //default false, when true, DELETE will check for name param and will delete the document by name
 	uniqueShortName           func(T) string        //default nil, when set, POST will create a unique short name (aka "alias") attribute from the value returned from the function & Put will validate that the short name is not deleted
 	putValidators             []MutatorValidator[T] //default nil, when set, PUT will call the mutators/validators before updating the document
 	postValidators            []MutatorValidator[T] //default nil, when set, POST will call the mutators/validators before creating the document
@@ -136,6 +136,9 @@ func (opts *routerOptions[T]) validate() error {
 	}
 	if opts.uniqueShortName != nil && (!opts.servePost || !opts.servePut) {
 		return fmt.Errorf("uniqueShortName can only be set when servePost and servePut are true")
+	}
+	if opts.serveGetWithGUIDOnly && !opts.serveGet {
+		return fmt.Errorf("serveGetWithGUIDOnly can only be true when serveGet is true")
 	}
 	return nil
 }
