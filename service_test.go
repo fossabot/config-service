@@ -316,7 +316,7 @@ func (suite *MainTestSuite) TestCustomerConfiguration() {
 	testBadRequest(suite, http.MethodPut, path, errorMissingName, cluster2Config, http.StatusBadRequest)
 	//test put with no name in path but with name in config
 	cluster2Config.Name = c2Name
-	testPutDoc(suite, path, cluster2Config, cluster2Config)
+	testPutDoc(suite, path, cluster2Config, cluster2Config, compareFilter)
 
 	//post costumer config again
 	customerConfig = testPostDoc(suite, consts.CustomerConfigPath, customerConfig, compareFilter)
@@ -324,7 +324,7 @@ func (suite *MainTestSuite) TestCustomerConfiguration() {
 	oldCustomerConfig := clone(customerConfig)
 	customerConfig.Settings.PostureScanConfig.ScanFrequency = "11h"
 	path = fmt.Sprintf("%s?%s=%s", consts.CustomerConfigPath, consts.ScopeParam, consts.CustomerScope)
-	testPutDoc(suite, path, oldCustomerConfig, customerConfig)
+	testPutDoc(suite, path, oldCustomerConfig, customerConfig, compareFilter)
 
 }
 
