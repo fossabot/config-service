@@ -143,11 +143,12 @@ func GetDocByGUID[T any](c context.Context, guid string) (*T, error) {
 		return nil, err
 	}
 	var result T
-	if err := mongo.GetReadCollection(collection).FindOne(c,
-		NewFilterBuilder().
-			WithNotDeleteForCustomer(c).
-			WithGUID(guid).
-			Get()).
+	if err := mongo.GetReadCollection(collection).
+		FindOne(c,
+			NewFilterBuilder().
+				WithNotDeleteForCustomer(c).
+				WithGUID(guid).
+				Get()).
 		Decode(&result); err != nil {
 		if err == mongoDB.ErrNoDocuments {
 			return nil, nil
