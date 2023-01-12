@@ -142,14 +142,13 @@ func GetDocByGUID[T any](c context.Context, guid string) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	filter := NewFilterBuilder().WithGUID(guid)
-	if collection != consts.CustomersCollection {
-		filter.WithNotDeleteForCustomer(c)
-	} else {
-		filter.WithNotDeleted()
-	}
 	var result T
-	if err := mongo.GetReadCollection(collection).FindOne(c, filter.Get()).Decode(&result); err != nil {
+	if err := mongo.GetReadCollection(collection).FindOne(c,
+		NewFilterBuilder().
+			WithNotDeleteForCustomer(c).
+			WithGUID(guid).
+			Get()).
+		Decode(&result); err != nil {
 		if err == mongoDB.ErrNoDocuments {
 			return nil, nil
 		}
