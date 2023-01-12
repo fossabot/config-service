@@ -311,9 +311,9 @@ func HandleDeleteDocByName[T types.DocContent](nameParam string) gin.HandlerFunc
 		names, ok := c.GetQueryArray(nameParam)
 		if !ok {
 			//try to load from body
-			var boadyNames []map[string]string
-			if err := c.BindJSON(&boadyNames); err == nil {
-				for _, name := range boadyNames {
+			var bodyNames []map[string]string
+			if err := c.BindJSON(&bodyNames); err == nil {
+				for _, name := range bodyNames {
 					names = append(names, name[nameParam])
 				}
 				ok = true
