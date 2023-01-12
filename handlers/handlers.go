@@ -309,6 +309,16 @@ func HandleDeleteDocByName[T types.DocContent](nameParam string) gin.HandlerFunc
 	return func(c *gin.Context) {
 		defer log.LogNTraceEnterExit("HandleDeleteDocByName", c)()
 		names, ok := c.GetQueryArray(nameParam)
+		if !ok {
+			//try to load from body
+			var boadyNames []map[string]string
+			if err := c.BindJSON(&boadyNames); err == nil {
+				for _, name := range boadyNames {
+					names = append(names, name[nameParam])
+				}
+				ok = true
+			}
+		}
 		names = slices.Filter([]string{}, names, func(s string) bool {
 			return s != ""
 		})

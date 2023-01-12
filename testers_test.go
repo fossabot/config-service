@@ -150,14 +150,17 @@ func testGetDeleteByNameAndQuery[T types.DocContent](suite *MainTestSuite, baseP
 	//test delete by name
 	testDeleteDocByName(suite, basePath, nameParam, newDocs[0], compareOpts...)
 	//test bulk delete by name
-	docNames = docNames[1:]
-	testBulkDeleteByName(suite, basePath, nameParam, docNames)
+	docNames2 := docNames[1:]
+	testBulkDeleteByName(suite, basePath, nameParam, docNames2)
 	//test delete by name with not existing name
 	path = fmt.Sprintf("%s?%s=%s", basePath, nameParam, "notExistingName")
 	testBadRequest(suite, http.MethodDelete, path, errorDocumentNotFound, nil, http.StatusNotFound)
 	//deleteDoc by name with empty name
 	path = fmt.Sprintf("%s?%s", basePath, nameParam)
 	testBadRequest(suite, http.MethodDelete, path, errorMissingName, nil, http.StatusBadRequest)
+	//test bulk delete with body
+	testBulkPostDocs(suite, basePath, testDocs, commonCmpFilter)
+	testBulkDeleteByNameWithBody(suite, basePath, nameParam, docNames)
 
 }
 
@@ -342,6 +345,20 @@ func testBulkDeleteByName(suite *MainTestSuite, path string, nameParam string, n
 		path = fmt.Sprintf("%s&%s=%s", path, nameParam, name)
 	}
 	w := suite.doRequest(http.MethodDelete, path, nil)
+	suite.Equal(http.StatusOK, w.Code)
+	diff := cmp.Diff(fmt.Sprintf(`{"deletedCount":%d}`, len(names)), w.Body.String())
+	suite.Equal("", diff)
+}
+
+func testBulkDeleteByNameWithBody(suite *MainTestSuite, path string, nameParam string, names []string) {
+	if len(names) == 0 {
+		return
+	}
+	namesBody := []map[string]string{}
+	for _, name := range names {
+		namesBody = append(namesBody, map[string]string{nameParam: name})
+	}
+	w := suite.doRequest(http.MethodDelete, path, namesBody)
 	suite.Equal(http.StatusOK, w.Code)
 	diff := cmp.Diff(fmt.Sprintf(`{"deletedCount":%d}`, len(names)), w.Body.String())
 	suite.Equal("", diff)
