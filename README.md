@@ -220,7 +220,7 @@ go tool cover -html=coverage.out -o coverage.html \
 ### Running the service locally
 To run the service locally you need first to run a mongo instance.
 ```bash
-docker run --name=mongo -d -p 27017:27017 --network mongo -e "MONGO_INITDB_ROOT_USERNAME=admin" -e "MONGO_INITDB_ROOT_PASSWORD=admin" mongo 
+docker run --name=mongo -d -p 27017:27017 -e "MONGO_INITDB_ROOT_USERNAME=admin" -e "MONGO_INITDB_ROOT_PASSWORD=admin" mongo 
 ```
 For debug purposes you can also run a mongo-express instance to view the data in the mongo instance.
 ```bash

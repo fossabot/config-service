@@ -175,6 +175,14 @@ const (
 	errorNotAdminUser     = `{"error":"Unauthorized - not an admin user"}`
 )
 
+func errorBadTimeParam(paramName string) string {
+	return `{"error":"` + paramName + ` must be in RFC3339 format"}`
+}
+
+func errorParamType(paramName, typeName string) string {
+	return `{"error":"` + paramName + ` must be a ` + typeName + `"}`
+}
+
 func errorMissingQueryParams(params ...string) string {
 	if len(params) == 1 {
 		return `{"error":"` + params[0] + ` query param is required"}`

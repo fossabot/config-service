@@ -1,0 +1,112 @@
+[
+    {
+        "guid": "b4296beb-57f4-495a-9cea-6e7af552fdfb",
+        "name": "testing-yos",
+        "attributes": {
+            "alias": "Y",
+            "clusterAPIServerInfo": {
+                "buildDate": "2022-10-12T10:49:09Z",
+                "compiler": "gc",
+                "gitCommit": "434bfd82814af038ad94d62ebe59b133fcb50506",
+                "gitTreeState": "clean",
+                "gitVersion": "v1.25.3",
+                "goVersion": "go1.19.2",
+                "major": "1",
+                "minor": "25",
+                "platform": "linux/arm64"
+            },
+            "clusterCloudProvider": "",
+            "contextName": "dwertent",
+            "createdBy": "armo-aggregator",
+            "description": "created by Kubescape automatically",
+            "kind": "k8s",
+            "kubescapeVersion": "v2.0.180",
+            "numberOfWorkerNodes": 1,
+            "workerNodes": {
+                "lastReportDate": "2023-01-29T11:13:32Z",
+                "lastReportGUID": "0789af4e-6533-4ab5-ac23-00b5a3431c23",
+                "lastReported": 1,
+                "max": 1,
+                "maxPerMonth": 1,
+                "maxPerMonthReportGUID": "0789af4e-6533-4ab5-ac23-00b5a3431c23",
+                "maxReportGUID": "0789af4e-6533-4ab5-ac23-00b5a3431c23"
+            }
+        },
+        "updatedTime": "2023-01-10T10:02:49Z",
+        "subscription_date": "2023-01-05T07:14:04Z",
+        "last_login_date": ""
+    },
+    {
+        "guid": "6240be22-0e98-4c91-b25e-6a5ac2858cab",
+        "name": "arn-aws-eks-eu-west-2-015253967648-cluster-eran-test-hqa8e",
+        "attributes": {
+            "alias": "H",
+            "clusterAPIServerInfo": {
+                "buildDate": "2022-11-29T18:45:03Z",
+                "compiler": "gc",
+                "gitCommit": "abb98ec0631dfe573ec5eae40dc48fd8f2017424",
+                "gitTreeState": "clean",
+                "gitVersion": "v1.24.8-eks-ffeb93d",
+                "goVersion": "go1.18.8",
+                "major": "1",
+                "minor": "24+",
+                "platform": "linux/amd64"
+            },
+            "clusterCloudProvider": "eks",
+            "contextName": "arn:aws:eks:eu-west-2:015253967648:cluster/eran-test-hqa8e",
+            "createdBy": "armo-aggregator",
+            "description": "created by Kubescape automatically",
+            "kind": "k8s",
+            "kubescapeVersion": "v2.0.179",
+            "numberOfWorkerNodes": 2,
+            "workerNodes": {
+                "lastReportDate": "2022-12-29T11:13:32Z",
+                "lastReportGUID": "4ce2a639-ea27-472b-9b08-e7879d22cebd",
+                "lastReported": 2,
+                "max": 2,
+                "maxPerMonth": 2,
+                "maxPerMonthReportGUID": "4ce2a639-ea27-472b-9b08-e7879d22cebd",
+                "maxReportGUID": "4ce2a639-ea27-472b-9b08-e7879d22cebd"
+            }
+        },
+        "updatedTime": "2023-01-09T12:51:50Z",
+        "subscription_date": "2023-01-09T12:50:04Z",
+        "last_login_date": ""
+    },
+    {
+        "guid": "32fc7886-0445-4c98-8377-ec60583821e5",
+        "name": "raziel-test",
+        "attributes": {
+            "alias": "T",
+            "clusterAPIServerInfo": {
+                "buildDate": "2022-07-13T14:23:26Z",
+                "compiler": "gc",
+                "gitCommit": "aef86a93758dc3cb2c658dd9657ab4ad4afc21cb",
+                "gitTreeState": "clean",
+                "gitVersion": "v1.24.3",
+                "goVersion": "go1.18.3",
+                "major": "1",
+                "minor": "24",
+                "platform": "linux/amd64"
+            },
+            "clusterCloudProvider": "",
+            "createdBy": "armo-aggregator",
+            "description": "created by Kubescape automatically",
+            "kind": "k8s",
+            "kubescapeVersion": "v2.0.175",
+            "numberOfWorkerNodes": 1,
+            "workerNodes": {
+                "lastReportDate": "2022-11-29T11:13:32Z",
+                "lastReportGUID": "23abc429-1506-4ede-b8ce-1966b31c0ced",
+                "lastReported": 1,
+                "max": 1,
+                "maxPerMonth": 1,
+                "maxPerMonthReportGUID": "23abc429-1506-4ede-b8ce-1966b31c0ced",
+                "maxReportGUID": "23abc429-1506-4ede-b8ce-1966b31c0ced"
+            }
+        },
+        "updatedTime": "2023-01-10T17:26:53Z",
+        "subscription_date": "2022-01-10T17:26:53Z",
+        "last_login_date": ""
+    }
+]

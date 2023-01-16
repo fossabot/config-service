@@ -1,0 +1,110 @@
+[
+    {
+        "guid": "bcefd362-29ed-46a3-a88b-20d341926030",
+        "name": "minikube",
+        "attributes": {
+            "alias": "M",
+            "clusterAPIServerInfo": {
+                "buildDate": "2022-05-24T12:18:48Z",
+                "compiler": "gc",
+                "gitCommit": "3ddd0f45aa91e2f30c70734b175631bec5b5825a",
+                "gitTreeState": "clean",
+                "gitVersion": "v1.24.1",
+                "goVersion": "go1.18.2",
+                "major": "1",
+                "minor": "24",
+                "platform": "linux/amd64"
+            },
+            "clusterCloudProvider": "",
+            "contextName": "minikube",
+            "createdBy": "armo-aggregator",
+            "description": "created by Kubescape automatically",
+            "kind": "k8s",
+            "kubescapeVersion": "",
+            "numberOfWorkerNodes": 1,
+            "workerNodes": {
+                "lastReportDate": "2023-01-15T14:16:44Z",
+                "lastReportGUID": "811ff44a-af32-41fe-8fad-c43752844b80",
+                "lastReported": 1,
+                "max": 1,
+                "maxPerMonth": 1,
+                "maxPerMonthReportGUID": "811ff44a-af32-41fe-8fad-c43752844b80",
+                "maxReportGUID": "811ff44a-af32-41fe-8fad-c43752844b80"
+            }
+        },
+        "subscription_date": "2022-08-22T09:26:50.880998",
+        "last_login_date": ""
+    },
+    {
+        "guid": "07b80a1b-18cc-4ac2-ac8d-2ab98418d812",
+        "name": "kuku",
+        "attributes": {
+            "alias": "K",
+            "clusterAPIServerInfo": {
+                "buildDate": "2022-05-24T12:18:48Z",
+                "compiler": "gc",
+                "gitCommit": "3ddd0f45aa91e2f30c70734b175631bec5b5825a",
+                "gitTreeState": "clean",
+                "gitVersion": "v1.24.1",
+                "goVersion": "go1.18.2",
+                "major": "1",
+                "minor": "24",
+                "platform": "linux/amd64"
+            },
+            "clusterCloudProvider": "",
+            "contextName": "kuku",
+            "createdBy": "armo-aggregator",
+            "description": "created by Kubescape automatically",
+            "kind": "k8s",
+            "kubescapeVersion": "",
+            "numberOfWorkerNodes": 1,
+            "workerNodes": {
+                "lastReportDate": "2022-12-15T10:13:32Z",
+                "lastReportGUID": "7355716a-8809-41f4-996d-cb1b97aeed98",
+                "lastReported": 1,
+                "max": 1,
+                "maxPerMonth": 1,
+                "maxPerMonthReportGUID": "7355716a-8809-41f4-996d-cb1b97aeed98",
+                "maxReportGUID": "7355716a-8809-41f4-996d-cb1b97aeed98"
+            }
+        },
+        "subscription_date": "2022-08-22T17:04:14.822004",
+        "last_login_date": ""
+    },
+    {
+        "guid": "4d5a5571-5fd7-48df-aabe-76ae12c34ee8",
+        "name": "gke_elated-pottery-310110_us-central1-c_bez-longrun-3",
+        "attributes": {
+            "alias": "G",
+            "clusterAPIServerInfo": {
+                "buildDate": "2022-08-16T09:24:51Z",
+                "compiler": "gc",
+                "gitCommit": "e55564cf3a1384026a54920174977659c8c56a50",
+                "gitTreeState": "clean",
+                "gitVersion": "v1.22.12-gke.2300",
+                "goVersion": "go1.16.15b7",
+                "major": "1",
+                "minor": "22",
+                "platform": "linux/amd64"
+            },
+            "clusterCloudProvider": "gke",
+            "contextName": "gke_elated-pottery-310110_us-central1-c_bez-longrun-3",
+            "createdBy": "armo-aggregator",
+            "description": "created by Kubescape automatically",
+            "kind": "k8s",
+            "kubescapeVersion": "",
+            "numberOfWorkerNodes": 3,
+            "workerNodes": {
+                "lastReportDate": "2022-11-15T11:13:32Z",
+                "lastReportGUID": "59bc55b4-142d-4ad4-a86b-1a2259fb515a",
+                "lastReported": 3,
+                "max": 7,
+                "maxPerMonth": 3,
+                "maxPerMonthReportGUID": "59bc55b4-142d-4ad4-a86b-1a2259fb515a",
+                "maxReportGUID": "dbf21917-e187-4847-99e8-8d5a2e577871"
+            }
+        },
+        "subscription_date": "2022-08-25T13:43:12.627213",
+        "last_login_date": ""
+    }
+]
