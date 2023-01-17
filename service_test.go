@@ -604,7 +604,7 @@ func (suite *MainTestSuite) TestCustomerState() {
 	suite.authCookie = ""
 	//post new customer
 	testCustomer := testPostDoc(suite, "/customer_tenant", customer, customerCompareFilter)
-	suite.Nil(testCustomer.NotificationsConfig)
+	suite.Nil(testCustomer.State)
 	//login as customer
 	suite.login(testCustomerGUID)
 
