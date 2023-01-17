@@ -53,6 +53,10 @@ const (
 	PolicyNameParam    = "policyName"
 	FrameworkNameParam = "frameworkName"
 	CustomersParam     = "customers"
+	LimitParam         = "limit"
+	SkipParam          = "skip"
+	FromDateParam      = "fromDate"
+	ToDateParam        = "toDate"
 
 	//Cached documents keys
 	DefaultCustomerConfigKey = "defaultCustomerConfig"

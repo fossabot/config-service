@@ -1,0 +1,53 @@
+[
+  {
+    "$match": {
+      "attributes.workerNodes.lastReportDate": {
+        "$gte": "{{.from}}",
+        "$lte": "{{.to}}"
+      }
+    }
+  },
+  {
+    "$group": {
+      "_id": "$customers"
+    }
+  },
+  {
+    "$lookup": {
+      "from": "customers",
+      "localField": "_id",
+      "foreignField": "guid",
+      "as": "customer"
+    }
+  },
+  {
+    "$unwind": "$customer"
+  },
+  {
+    "$replaceRoot": {
+      "newRoot": "$customer"
+    }
+  },
+  {
+    "$sort": {
+      "guid": 1
+    }
+  },
+  {
+    "$facet": {
+      "metadata": [
+        {
+          "$count": "total"
+        }
+      ],
+      "results": [
+        {
+          "$skip": {{.skip}}
+        },
+        {
+          "$limit": {{.limit}}
+        }
+      ]
+    }
+  }
+]

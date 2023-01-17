@@ -1,0 +1,109 @@
+[
+    {
+        "_id": "d1925b94-8ac1-4a6d-807b-0ea053a4609e",
+        "guid": "d1925b94-8ac1-4a6d-807b-0ea053a4609e",
+        "name": "testharbor1",
+        "attributes": {
+            "alias": "T",
+            "clusterAPIServerInfo": {
+                "buildDate": "2022-05-24T12:18:48Z",
+                "compiler": "gc",
+                "gitCommit": "3ddd0f45aa91e2f30c70734b175631bec5b5825a",
+                "gitTreeState": "clean",
+                "gitVersion": "v1.24.1",
+                "goVersion": "go1.18.2",
+                "major": "1",
+                "minor": "24",
+                "platform": "linux/amd64"
+            },
+            "clusterCloudProvider": "",
+            "createdBy": "armo-aggregator",
+            "description": "created by Kubescape automatically",
+            "kind": "k8s",
+            "kubescapeVersion": "v2.0.160",
+            "numberOfWorkerNodes": 1,
+            "workerNodes": {
+                "lastReportDate": "2023-01-01T11:13:32Z",
+                "lastReportGUID": "0a641bcf-5faf-4032-b904-53366be2ffec",
+                "lastReported": 1,
+                "max": 1,
+                "maxPerMonth": 1,
+                "maxPerMonthReportGUID": "0a641bcf-5faf-4032-b904-53366be2ffec",
+                "maxReportGUID": "0a641bcf-5faf-4032-b904-53366be2ffec"
+            }
+        },
+        "subscription_date": "2022-07-07T10:27:30.600336",
+        "last_login_date": ""
+    },
+    {
+        "_id": "950fdc95-cc39-4a29-8df8-68afce5962a4",
+        "guid": "950fdc95-cc39-4a29-8df8-68afce5962a4",
+        "name": "regscandemo",
+        "attributes": {
+            "alias": "R",
+            "clusterAPIServerInfo": {
+                "buildDate": "2022-05-24T12:18:48Z",
+                "compiler": "gc",
+                "gitCommit": "3ddd0f45aa91e2f30c70734b175631bec5b5825a",
+                "gitTreeState": "clean",
+                "gitVersion": "v1.24.1",
+                "goVersion": "go1.18.2",
+                "major": "1",
+                "minor": "24",
+                "platform": "linux/amd64"
+            },
+            "clusterCloudProvider": "",
+            "createdBy": "armo-aggregator",
+            "description": "created by Kubescape automatically",
+            "kind": "k8s",
+            "kubescapeVersion": "v2.0.160",
+            "numberOfWorkerNodes": 1,
+            "workerNodes": {
+                "lastReportDate": "2022-12-01T11:13:32Z",
+                "lastReportGUID": "61260450-7ce9-4c2e-8fa5-30415835093b",
+                "lastReported": 1,
+                "max": 1,
+                "maxPerMonth": 1,
+                "maxPerMonthReportGUID": "61260450-7ce9-4c2e-8fa5-30415835093b",
+                "maxReportGUID": "61260450-7ce9-4c2e-8fa5-30415835093b"
+            }
+        },
+        "subscription_date": "2022-08-08T08:23:51.702056",
+        "last_login_date": ""
+    },
+    {
+        "guid": "8f70596d-29f0-417b-a9c0-8c39f3f1c695",
+        "name": "regscandemo2",
+        "attributes": {
+            "alias": "D2",
+            "clusterAPIServerInfo": {
+                "buildDate": "2022-05-24T12:18:48Z",
+                "compiler": "gc",
+                "gitCommit": "3ddd0f45aa91e2f30c70734b175631bec5b5825a",
+                "gitTreeState": "clean",
+                "gitVersion": "v1.24.1",
+                "goVersion": "go1.18.2",
+                "major": "1",
+                "minor": "24",
+                "platform": "linux/amd64"
+            },
+            "clusterCloudProvider": "",
+            "createdBy": "armo-aggregator",
+            "description": "created by Kubescape automatically",
+            "kind": "k8s",
+            "kubescapeVersion": "v2.0.160",
+            "numberOfWorkerNodes": 1,
+            "workerNodes": {
+                "lastReportDate": "2022-11-01T11:13:32Z",
+                "lastReportGUID": "23360ba3-f3b6-47c0-8ed9-7098085e3420",
+                "lastReported": 1,
+                "max": 1,
+                "maxPerMonth": 1,
+                "maxPerMonthReportGUID": "23360ba3-f3b6-47c0-8ed9-7098085e3420",
+                "maxReportGUID": "23360ba3-f3b6-47c0-8ed9-7098085e3420"
+            }
+        },
+        "subscription_date": "2022-08-08T11:23:04.606418",
+        "last_login_date": ""
+    }   
+]

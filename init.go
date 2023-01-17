@@ -4,6 +4,7 @@
 package main
 
 import (
+	"config-service/db"
 	"config-service/db/mongo"
 	"config-service/utils"
 	"context"
@@ -34,6 +35,8 @@ func initialize() (shutdown func()) {
 	tracer := initTracer(conf.Telemetry)
 	//connect db
 	mongo.MustConnect(conf.Mongo)
+	//init db library
+	db.Init()
 
 	//shutdown function
 	shutdown = func() {
