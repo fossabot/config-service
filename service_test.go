@@ -632,18 +632,29 @@ func (suite *MainTestSuite) TestCustomerState() {
 	state.GettingStarted = &armotypes.GettingStartedChecklist{
 		GettingStartedDismissed: true,
 	}
-	// state.GettingStarted = true
 	prevState := &armotypes.CustomerState{
 		Onboarding: &armotypes.CustomerOnboarding{
 			Completed: true,
 		},
 	}
+
+	// mongo has a millisecond precision while golang time.Time has nanosecond precision, so we need to wait at least 1 millisecond to reflect the change
+	timeBeforeUpdate := time.Now()
+	time.Sleep(1000 * time.Millisecond)
+
 	testPutDoc(suite, statePath, prevState, state, nil)
 
-	//update state
+	// update state - "GettingStarted = nil" should not be updated
+	// we skip checking it in testPutDoc because it will returned as a non-null object and comparison will fail
 	prevState = clone(state)
 	state.Onboarding.Completed = true
-	testPutDoc(suite, statePath, prevState, state, nil)
+	state.GettingStarted = nil
+	testPutDoc(suite, statePath, prevState, state, cmp.FilterPath(func(p cmp.Path) bool { return p.String() == "GettingStarted" }, cmp.Ignore()))
+	// should be returned as not null
+	state.GettingStarted = &armotypes.GettingStartedChecklist{
+		GettingStartedDismissed: true,
+	}
+	testGetDoc(suite, statePath, state, nil)
 
 	//make sure not other customer fields are changed
 	updatedCustomer := clone(testCustomer)
@@ -651,5 +662,5 @@ func (suite *MainTestSuite) TestCustomerState() {
 	updatedCustomer = testGetDoc(suite, "/customer", updatedCustomer, customerCompareFilter)
 	//check the the customer update date is updated
 	suite.NotNil(updatedCustomer.GetUpdatedTime(), "update time should not be nil")
-	suite.True(time.Since(*updatedCustomer.GetUpdatedTime()) < time.Second, "update time is not recent")
+	suite.Truef(updatedCustomer.GetUpdatedTime().After(timeBeforeUpdate), "update time should be updated")
 }

@@ -58,7 +58,11 @@ func map2BsonD(m map[string]interface{}, fieldName string) bson.D {
 		fieldName += "."
 	}
 	for k, v := range m {
-		result = append(result, bson.E{Key: fmt.Sprintf("%s%s", fieldName, k), Value: v})
+		if m, ok := v.(map[string]interface{}); ok {
+			result = append(result, map2BsonD(m, fmt.Sprintf("%s%s", fieldName, k))...)
+		} else {
+			result = append(result, bson.E{Key: fmt.Sprintf("%s%s", fieldName, k), Value: v})
+		}
 	}
 	return result
 }
