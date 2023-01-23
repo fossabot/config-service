@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"config-service/db"
 	"config-service/types"
 	"config-service/utils/consts"
 	"config-service/utils/log"
@@ -20,9 +19,12 @@ type BodyDecoder[T types.DocContent] func(c *gin.Context) ([]T, error)
 // ResponseSender is used for custom response sending it is called after the request has been processed
 type ResponseSender[T types.DocContent] func(c *gin.Context, doc T, docs []T)
 
-// type ArrayRequestHandler is used to handle request for updating internal arrays in a document
-// it returns the path to the array (e.g. "internalFields.tags"), the value to add or pull and a query filter to find the document
-type ArrayRequestHandler func(c *gin.Context) (pathToArray string, valueToAdd interface{}, queryFilter *db.FilterBuilder, valid bool)
+// type ContainerHandler is used as a middleware for containers modification APIs (e.g. add/remove items to/from arrays/maps)
+// this middleware returns:
+// containerName: the full path and name of from the root of the document (e.g. "internalFields.tags"),
+// item: the item to add or remove from the container
+// valid: is true if the request is valid, in the request is not valid the middleware needs to handle it and return the error response
+type ContainerHandler func(c *gin.Context) (containerName string, item interface{}, valid bool)
 
 func GetCustomBodyDecoder[T types.DocContent](c *gin.Context) (BodyDecoder[T], error) {
 	if iDecoder, ok := c.Get(consts.BodyDecoder); ok {

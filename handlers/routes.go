@@ -10,34 +10,43 @@ import (
 
 // router options
 type routerOptions[T types.DocContent] struct {
-	dbCollection              string                //mandatory db collection name
-	path                      string                //mandatory uri path
-	serveGet                  bool                  //default true, serve GET /<path> to get all documents and GET /<path>/<GUID> to get document by GUID
-	serveGetNamesList         bool                  //default true, GET will return all documents names if "list" query param exist
-	serveGetWithGUIDOnly      bool                  //default false, GET will return the document by GUID only
-	serveGetIncludeGlobalDocs bool                  //default false, when true, in GET all the response will include global documents (with customers[""])
-	servePost                 bool                  //default true, serve POST
-	servePut                  bool                  //default true, serve PUT /<path> to update document by GUID in body and PUT /<path>/<GUID> to update document by GUID in path
-	serveDelete               bool                  //default true, serve DELETE  /<path>/<GUID> to delete document by GUID in path
-	serveDeleteByName         bool                  //default false, when true, DELETE will check for name param and will delete the document by name
-	validatePostUniqueName    bool                  //default true, POST will validate that the name is unique
-	validatePutGUID           bool                  //default true, PUT will validate GUID existence in body or path
-	nameQueryParam            string                //default empty, the param name that indicates query by name (e.g. clusterName) when set GET will check for this param and will return the document by name
-	QueryConfig               *QueryParamsConfig    //default nil, when set, GET will check for the specified query params and will return the documents by the query params
-	uniqueShortName           func(T) string        //default nil, when set, POST will create a unique short name (aka "alias") attribute from the value returned from the function & Put will validate that the short name is not deleted
-	putValidators             []MutatorValidator[T] //default nil, when set, PUT will call the mutators/validators before updating the document
-	postValidators            []MutatorValidator[T] //default nil, when set, POST will call the mutators/validators before creating the document
-	bodyDecoder               BodyDecoder[T]        //default nil, when set, replace the default body decoder
-	responseSender            ResponseSender[T]     //default nil, when set, replace the default response sender
-	putFields                 []string              //default nil, when set, PUT will update only the specified fields
-	arraysHandlers            []arrayHandlerOptions //default nil, list of array handlers to put and delete items from document internal array
-}
-type arrayHandlerOptions struct {
-	path                string              //mandatory, the api path to handle the array
-	arrayRequestHandler ArrayRequestHandler //mandatory, the handler to handle the request and provide the data to update the array
-	servePut            bool                //Serve PUT <path> to push items to array
-	serveDelete         bool                //Serve DELETE <path> to delete items from array
+	dbCollection              string                     //mandatory db collection name
+	path                      string                     //mandatory uri path
+	serveGet                  bool                       //default true, serve GET /<path> to get all documents and GET /<path>/<GUID> to get document by GUID
+	serveGetNamesList         bool                       //default true, GET will return all documents names if "list" query param exist
+	serveGetWithGUIDOnly      bool                       //default false, GET will return the document by GUID only
+	serveGetIncludeGlobalDocs bool                       //default false, when true, in GET all the response will include global documents (with customers[""])
+	servePost                 bool                       //default true, serve POST
+	servePut                  bool                       //default true, serve PUT /<path> to update document by GUID in body and PUT /<path>/<GUID> to update document by GUID in path
+	serveDelete               bool                       //default true, serve DELETE  /<path>/<GUID> to delete document by GUID in path
+	serveDeleteByName         bool                       //default false, when true, DELETE will check for name param and will delete the document by name
+	validatePostUniqueName    bool                       //default true, POST will validate that the name is unique
+	validatePutGUID           bool                       //default true, PUT will validate GUID existence in body or path
+	nameQueryParam            string                     //default empty, the param name that indicates query by name (e.g. clusterName) when set GET will check for this param and will return the document by name
+	QueryConfig               *QueryParamsConfig         //default nil, when set, GET will check for the specified query params and will return the documents by the query params
+	uniqueShortName           func(T) string             //default nil, when set, POST will create a unique short name (aka "alias") attribute from the value returned from the function & Put will validate that the short name is not deleted
+	putValidators             []MutatorValidator[T]      //default nil, when set, PUT will call the mutators/validators before updating the document
+	postValidators            []MutatorValidator[T]      //default nil, when set, POST will call the mutators/validators before creating the document
+	bodyDecoder               BodyDecoder[T]             //default nil, when set, replace the default body decoder
+	responseSender            ResponseSender[T]          //default nil, when set, replace the default response sender
+	putFields                 []string                   //default nil, when set, PUT will update only the specified fields
+	containersHandlers        []containerHandlerOptions //default nil, list of container handlers to put and remove items from document's containers
 
+}
+
+type ContainerType string
+
+const (
+	ContainerTypeArray ContainerType = "array"
+	ContainerTypeMap   ContainerType = "map"
+)
+
+type containerHandlerOptions struct {
+	path             string           //mandatory, the api path to handle the internal field (map or array)
+	ContainerHandler ContainerHandler //mandatory, middleware function to validate the request and return the internal field and value
+	servePut         bool             //Serve PUT <path> to add items
+	serveDelete      bool             //Serve DELETE <path> to delete items
+	containerType    ContainerType    //Type of container = currently map or array are supported
 }
 
 func newRouterOptions[T types.DocContent]() *routerOptions[T] {
@@ -110,12 +119,22 @@ func AddRoutes[T types.DocContent](g *gin.Engine, options ...RouterOption[T]) *g
 		routerGroup.DELETE("/:"+consts.GUIDField, HandleDeleteDoc[T])
 	}
 	//add array handlers
-	for _, arrayHandler := range opts.arraysHandlers {
-		if arrayHandler.servePut {
-			routerGroup.PUT(arrayHandler.path, HandlerAddToArray(arrayHandler.arrayRequestHandler))
-		}
-		if arrayHandler.serveDelete {
-			routerGroup.DELETE(arrayHandler.path, HandlerRemoveFromArray(arrayHandler.arrayRequestHandler))
+	for _, containerHandler := range opts.containersHandlers {
+		switch containerHandler.containerType {
+		case ContainerTypeArray:
+			if containerHandler.servePut {
+				routerGroup.PUT(containerHandler.path, HandlerAddToArray(containerHandler.ContainerHandler))
+			}
+			if containerHandler.serveDelete {
+				routerGroup.DELETE(containerHandler.path, HandlerRemoveFromArray(containerHandler.ContainerHandler))
+			}
+		case ContainerTypeMap:
+			if containerHandler.servePut {
+				routerGroup.PUT(containerHandler.path, HandlerSetField(containerHandler.ContainerHandler, true))
+			}
+			if containerHandler.serveDelete {
+				routerGroup.DELETE(containerHandler.path, HandlerSetField(containerHandler.ContainerHandler, false))
+			}
 		}
 	}
 	return routerGroup
@@ -314,19 +333,20 @@ func (b *RouterOptionsBuilder[T]) WithGetNamesList(serveNameList bool) *RouterOp
 	return b
 }
 
-func (b *RouterOptionsBuilder[T]) WithArrayHandler(path string, arrayRequestHandler ArrayRequestHandler, servePut, serveDelete bool) *RouterOptionsBuilder[T] {
-	if path == "" || arrayRequestHandler == nil {
-		panic("path and arrayRequestHandler are mandatory")
+func (b *RouterOptionsBuilder[T]) WithContainerHandler(path string, containerHandler ContainerHandler, containerType ContainerType, servePut, serveDelete bool) *RouterOptionsBuilder[T] {
+	if path == "" || containerHandler == nil {
+		panic("path and ContainerHandler are mandatory")
 	}
 	if !servePut && !serveDelete {
 		panic("at least one of servePut and serveDelete must be true")
 	}
 	b.options = append(b.options, func(opts *routerOptions[T]) {
-		opts.arraysHandlers = append(opts.arraysHandlers, arrayHandlerOptions{
-			path:                path,
-			arrayRequestHandler: arrayRequestHandler,
-			servePut:            servePut,
-			serveDelete:         serveDelete,
+		opts.containersHandlers = append(opts.containersHandlers, containerHandlerOptions{
+			path:             path,
+			ContainerHandler: containerHandler,
+			servePut:         servePut,
+			serveDelete:      serveDelete,
+			containerType:    containerType,
 		})
 
 	})

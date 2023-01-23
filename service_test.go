@@ -48,6 +48,8 @@ func (suite *MainTestSuite) TestCluster() {
 
 	commonTest(suite, consts.ClusterPath, clusters, modifyFunc, newClusterCompareFilter)
 
+	testPartialUpdate(suite, consts.ClusterPath, &types.Cluster{}, newClusterCompareFilter)
+
 	//cluster specific tests
 
 	//put doc without alias - expect the alias not to be deleted
@@ -67,6 +69,7 @@ func (suite *MainTestSuite) TestCluster() {
 	cluster.GUID = "wrongGUID"
 	delete(cluster.Attributes, "alias")
 	testBadRequest(suite, http.MethodPut, consts.ClusterPath, errorDocumentNotFound, cluster, http.StatusNotFound)
+
 }
 
 //go:embed test_data/posturePolicies.json
@@ -132,6 +135,8 @@ func (suite *MainTestSuite) TestPostureException() {
 		},
 	}
 	testGetDeleteByNameAndQuery(suite, consts.PostureExceptionPolicyPath, consts.PolicyNameParam, posturePolicies, getQueries)
+
+	//testPartialUpdate(suite, consts.PostureExceptionPolicyPath, &types.PostureExceptionPolicy{}, commonCmpFilter)
 }
 
 //go:embed test_data/vulnerabilityPolicies.json
@@ -181,6 +186,7 @@ func (suite *MainTestSuite) TestVulnerabilityPolicies() {
 		},
 	}
 	testGetDeleteByNameAndQuery(suite, consts.VulnerabilityExceptionPolicyPath, consts.PolicyNameParam, vulnerabilities, getQueries, commonCmpFilter)
+	//testPartialUpdate(suite, consts.VulnerabilityExceptionPolicyPath, &types.VulnerabilityExceptionPolicy{}, commonCmpFilter)
 }
 
 //go:embed test_data/customer_config/customerConfig.json
@@ -367,6 +373,15 @@ func (suite *MainTestSuite) TestCustomer() {
 	testCustomerGUID := suite.authCustomerGUID
 	suite.login("new-customer-guid")
 	testGetDoc(suite, "/customer", newCustomer, nil)
+	//test put customer
+	oldCustomer := clone(newCustomer)
+	newCustomer.LicenseType = "$$$$$$"
+	newCustomer.Description = "new description"
+	testPutDoc(suite, "/customer", oldCustomer, newCustomer, customerCompareFilter)
+	oldCustomer = clone(newCustomer)
+	partialCustomer := &types.Customer{LicenseType: "partial"}
+	newCustomer.LicenseType = "partial"
+	testPutPartialDoc(suite, "/customer", oldCustomer, partialCustomer, newCustomer, customerCompareFilter)
 	//test post with existing guid - expect error 400
 	testBadRequest(suite, http.MethodPost, "/customer_tenant", errorGUIDExists, customer, http.StatusBadRequest)
 	//test post customer without GUID
@@ -400,6 +415,8 @@ func (suite *MainTestSuite) TestFrameworks() {
 	}, cmp.Ignore())
 
 	testGetDeleteByNameAndQuery(suite, consts.FrameworkPath, consts.FrameworkNameParam, frameworks, nil, fwCmpIgnoreControls)
+
+	//testPartialUpdate(suite, consts.FrameworkPath, &types.Framework{}, fwCmpFilter, fwCmpIgnoreControls)
 }
 
 //go:embed test_data/registryCronJob.json
@@ -445,6 +462,8 @@ func (suite *MainTestSuite) TestRegistryCronJobs() {
 	}
 
 	testGetDeleteByNameAndQuery(suite, consts.RegistryCronJobPath, consts.NameField, registryCronJobs, getQueries, rCmpFilter)
+
+	//testPartialUpdate(suite, consts.RegistryCronJobPath, &types.RegistryCronJob{}, rCmpFilter)
 }
 
 func modifyAttribute[T types.DocContent](repo T) T {
@@ -480,6 +499,8 @@ func (suite *MainTestSuite) TestRepository() {
 	repositories, _ := loadJson[*types.Repository](repositoriesJson)
 
 	commonTest(suite, consts.RepositoryPath, repositories, modifyAttribute[*types.Repository], repoCompareFilter)
+
+	testPartialUpdate(suite, consts.RepositoryPath, &types.Repository{}, repoCompareFilter)
 
 	//put doc without alias - expect the alias not to be deleted
 	repo := repositories[0]
@@ -647,6 +668,38 @@ func (suite *MainTestSuite) TestCustomerNotificationConfig() {
 	//check the the customer update date is updated
 	suite.NotNil(updatedCustomer.GetUpdatedTime(), "update time should not be nil")
 	suite.True(time.Since(*updatedCustomer.GetUpdatedTime()) < time.Second, "update time is not recent")
+
+	//test add push report
+	var ignoreTime = cmp.FilterValues(func(x, y time.Time) bool { return true }, cmp.Ignore())
+	pushTime := time.Now().UTC()
+	pushReport := &armotypes.PushReport{Timestamp: pushTime, ReportGUID: "push-guid", Cluster: "cluster1"}
+	pushReportPath := fmt.Sprintf("%s/%s/%s", consts.NotificationConfigPath, "latestPushReport", "cluster1")
+	w = suite.doRequest(http.MethodPut, pushReportPath, pushReport)
+	suite.Equal(http.StatusOK, w.Code)
+	res, err = decodeResponse[map[string]int](w)
+	suite.NoError(err)
+	suite.Equal(1, res["modified"])
+	notificationConfig.LatestPushReports = map[string]*armotypes.PushReport{}
+	notificationConfig.LatestPushReports["cluster1"] = pushReport
+	testGetDoc(suite, configPath, notificationConfig, ignoreTime)
+	//add one for cluster2
+	pushReportPath = fmt.Sprintf("%s/%s/%s", consts.NotificationConfigPath, "latestPushReport", "cluster2")
+	w = suite.doRequest(http.MethodPut, pushReportPath, pushReport)
+	suite.Equal(http.StatusOK, w.Code)
+	res, err = decodeResponse[map[string]int](w)
+	suite.NoError(err)
+	suite.Equal(1, res["modified"])
+	notificationConfig.LatestPushReports["cluster2"] = pushReport
+	testGetDoc(suite, configPath, notificationConfig, ignoreTime)
+	//delete cluster1
+	pushReportPath = fmt.Sprintf("%s/%s/%s", consts.NotificationConfigPath, "latestPushReport", "cluster1")
+	w = suite.doRequest(http.MethodDelete, pushReportPath, nil)
+	suite.Equal(http.StatusOK, w.Code)
+	res, err = decodeResponse[map[string]int](w)
+	suite.NoError(err)
+	suite.Equal(1, res["modified"])
+	delete(notificationConfig.LatestPushReports, "cluster1")
+	testGetDoc(suite, configPath, notificationConfig, ignoreTime)
 }
 
 func (suite *MainTestSuite) TestCustomerState() {
