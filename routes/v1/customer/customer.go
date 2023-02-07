@@ -47,6 +47,7 @@ func addInnerFieldsRoutes(g *gin.Engine) {
 	//add customer embedded objects routes
 	addNotificationConfigRoutes(g)
 	addCustomerStateRoutes(g)
+	addPaymentRoutes(g)
 }
 
 func getCustomer(c *gin.Context) {
@@ -98,4 +99,5 @@ func postCustomerTenant(c *gin.Context) {
 		Customers: []string{customer.GUID},
 	}
 	handlers.PostDBDocumentHandler(c, dbDoc)
+
 }

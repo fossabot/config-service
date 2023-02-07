@@ -783,3 +783,77 @@ func (suite *MainTestSuite) TestCustomerState() {
 	state.Onboarding.Completed = utils.BoolPointer(false)
 	testPutDoc(suite, statePath, prevState, state, nil)
 }
+
+func (suite *MainTestSuite) TestActiveSubscription() {
+	testCustomerGUID := "test-stripe-customer-guid"
+	customer := &types.Customer{
+		PortalBase: armotypes.PortalBase{
+			Name: "customer-test-stripe-customer",
+			GUID: testCustomerGUID,
+			Attributes: map[string]interface{}{
+				"customer1-attr1": "customer1-attr1-value",
+				"customer1-attr2": "customer1-attr2-value",
+			},
+		},
+		Description:        "customer1 description",
+		Email:              "customer1@customers.org",
+		LicenseType:        "kubescape",
+		InitialLicenseType: "kubescape",
+	}
+	//create customer is public so - remove auth cookie
+	suite.authCookie = ""
+	//post new customer
+	testCustomer := testPostDoc(suite, "/customer_tenant", customer, customerCompareFilter)
+	suite.Nil(testCustomer.ActiveSubscription)
+
+	// login as customer
+	suite.login(testCustomerGUID)
+
+	// define activeSubscription with licenseType default value "free"
+	activeSubscription := &armotypes.Subscription{LicenseType: armotypes.LicenseTypeFree}
+
+	// construct activeSubscription api path with customer guid
+	activeSubscriptionPath := consts.ActiveSubscriptionPath + "/" + testCustomerGUID
+
+	// test getting doc of the customer.
+	testGetDoc(suite, activeSubscriptionPath, customer.ActiveSubscription, nil)
+
+	//get activeSubscription without guid in path - expect 404
+	testBadRequest(suite, http.MethodGet, consts.ActiveSubscriptionPath, "404 page not found", nil, http.StatusNotFound)
+
+	//get activeSubscription on unknown customer - expect 404
+	testBadRequest(suite, http.MethodGet, consts.ActiveSubscriptionPath+"/unknown-customer-guid", errorDocumentNotFound, nil, http.StatusNotFound)
+
+	//Post is not served on activeSubscription - expect 404
+	testBadRequest(suite, http.MethodPost, consts.ActiveSubscriptionPath, "404 page not found", activeSubscription, http.StatusNotFound)
+
+	// define new activeSubscription values
+	activeSubscription.StripeCustomerID = "test-customer-id"
+	activeSubscription.StripeSubscriptionID = "test-subscription-id"
+	activeSubscription.SubscriptionStatus = "active"
+
+	// mongo has a millisecond precision while golang time.Time has nanosecond precision, so we need to wait at least 1 millisecond to reflect the change
+	timeBeforeUpdate := time.Now()
+	time.Sleep(1000 * time.Millisecond)
+
+	// put new activeSubscription - oldDoc is nil has we haven't configure it yet.
+	testPutDoc(suite, activeSubscriptionPath, nil, activeSubscription, nil)
+
+	// update activeSubscription partially
+	// we skip checking it in testPutDoc because it will returned as a non-null object and comparison will fail
+	prevActiveSubscription := clone(activeSubscription)
+	activeSubscription.SubscriptionStatus = "canceled"
+	expectActiveSubscription := clone(activeSubscription)
+	activeSubscription.StripeSubscriptionID = "test-subscription-id"
+	testPutPartialDoc(suite, activeSubscriptionPath, prevActiveSubscription, activeSubscription, expectActiveSubscription)
+	activeSubscription = clone(expectActiveSubscription)
+
+	// make sure no other customer fields are changed
+	updatedCustomer := clone(testCustomer)
+	updatedCustomer.ActiveSubscription = activeSubscription
+	updatedCustomer = testGetDoc(suite, "/customer", updatedCustomer, customerCompareFilter)
+
+	// check the the customer update date is updated
+	suite.NotNil(updatedCustomer.GetUpdatedTime(), "update time should not be nil")
+	suite.Truef(updatedCustomer.GetUpdatedTime().After(timeBeforeUpdate), "update time should be updated")
+}
