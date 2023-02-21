@@ -27,6 +27,7 @@ The config service provides a ```db``` package for common database `CRUD` operat
 
 
 ![Packages](docs/overview.drawio.svg)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fkubescape%2Fconfig-service.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fkubescape%2Fconfig-service?ref=badge_shield)
 
 ## Document types
 The service serves documents of [DocContent](types/types.go) type.
@@ -236,3 +237,6 @@ go run .
 {"level":"info","ts":"2022-12-21T15:59:17.594646374+02:00","msg":"mongo connection verified"}
 {"level":"info","ts":"2022-12-21T15:59:17.594796442+02:00","msg":"Starting server on port 8080"}
 ```
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fkubescape%2Fconfig-service.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fkubescape%2Fconfig-service?ref=badge_large)
